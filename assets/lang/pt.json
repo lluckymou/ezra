@@ -10,7 +10,7 @@
   },
   "title": {
     "playBtn": "▶ Jogar!",
-    "slogan": "Aprendendo coreano digitando",
+    "slogan": "Praticando coreano digitando",
     "subTitle": "EZRA 타자 - Digite coreano para derrotar monstros!",
     "bestScore": "Melhor pontuação"
   },
@@ -51,7 +51,8 @@
     "wg_ocean": "Oceano",
     "wg_elements": "Elementos",
     "wg_animals": "Animais",
-    "sfxVolume": "🔉 Efeitos Sonoros"
+    "sfxVolume": "🔉 Efeitos Sonoros",
+    "ambientMusic": "🎵 Música Ambiente"
   },
   "dict": {
     "title": "Dicionário",
@@ -207,7 +208,9 @@
     "wallsConnected": "⛏️ Todas as salas conectadas!",
     "treasureAcquired": "Tesouro Obtido! 💎",
     "firstClear": "Clique 🗺️ para ver o mapa",
-    "tabHint": "↹ Aperte TAB para trocar o modo do teclado"
+    "tabHint": "↹ Aperte TAB para trocar o modo do teclado",
+    "mapHint": "Aperte Ctrl+M para abrir o Mapa",
+    "bookHint": "Aperte Ctrl+B para abrir o Livro"
   },
   "inventory": {
     "emptyBackpack": "mochila vazia"
@@ -509,7 +512,7 @@
   "lesson": {
     "hangulBasic": {
       "title": "Básico do Hangul",
-      "content": "### **O Sistema Hangul** 📝\n\nO Hangul é um alfabeto silábico e lógico. Os caracteres representam sons que se agrupam em blocos. Cada bloco deve conter pelo menos uma consoante e uma vogal.\n\n#### **Vogais Básicas e Derivadas**\n\nAs vogais fundamentais baseiam-se em três elementos: o Homem (ㅣ), a Terra (ㅡ) e o Céu (ㆍ).\n\n- `<speak='ㅏ'>` *(a)*\n- `<speak='ㅓ'>` *(eo - som de 'ó')*\n- `<speak='ㅗ'>` *(o - som de 'ô')*\n- `<speak='ㅜ'>` *(u)*\n- `<speak='ㅣ'>` *(i)*\n- `<speak='ㅡ'>` *(eu - som gutural)*\n- `<speak='ㅔ'>` *(e - som de 'ê')*\n- `<speak='ㅐ'>` *(ae - som de 'é')*\n\n#### **Consoantes Simples**\n\n| Letra | Som / Áudio | Nome |\n|-------|-------------|------|\n| `<speak='ㄱ'>` | G/K → `<speak='그'>` | Giyeok |\n| `<speak='ㄴ'>` | N → `<speak='느'>` | Nieun |\n| `<speak='ㄷ'>` | D/T → `<speak='드'>` | Digueut |\n| `<speak='ㄹ'>` | R/L → `<speak='르'>` | Rieul |\n| `<speak='ㅁ'>` | M → `<speak='므'>` | Mieum |\n| `<speak='ㅂ'>` | B/P → `<speak='브'>` | Bieup |\n| `<speak='ㅅ'>` | S → `<speak='스'>` | Siot |\n| `<speak='ㅇ'>` | -/NG → `<speak='응'>` | Ieung |\n| `<speak='ㅈ'>` | J → `<speak='즈'>` | Jieut |\n| `<speak='ㅎ'>` | H → `<speak='흐'>` | Hieut |\n\n#### **Vogais Duplas (Diftongos)**\n\nSons combinados que exigem maior agilidade na digitação:\n\n- `<speak='ㅒ'>` *(yae)*\n- `<speak='ㅖ'>` *(ye)*\n- `<speak='ㅘ'>` *(wa)*\n- `<speak='ㅝ'>` *(wo)*\n- `<speak='ㅙ'>` *(wae)*\n- `<speak='ㅞ'>` *(we)*\n- `<speak='ㅟ'>` *(wi)*\n- `<speak='ㅢ'>` *(ui)*\n\n#### **Consoantes Aspiradas e Duplas**\n\nAs **aspiradas** possuem um sopro de ar. As **duplas (Ssang)** são tensas e sem ar.\n\n| Tipo | Letras | Som / Áudio |\n|------|--------|-------------|\n| **Aspiradas** | `<speak='ㅋ'>`, `<speak='ㅌ'>`, `<speak='ㅍ'>`, `<speak='ㅊ'>` | `<speak='크'>`, `<speak='트'>`, `<speak='프'>`, `<speak='츠'>` |\n| **Duplas** | `<speak='ㄲ'>`, `<speak='ㄸ'>`, `<speak='ㅃ'>`, `<speak='ㅆ'>`, `<speak='ㅉ'>` | `<speak='끄'>`, `<speak='뜨'>`, `<speak='쁘'>`, `<speak='쓰'>`, `<speak='쯔'>` |\n\n#### **Exemplos Práticos**\n\n- `<speak='어머니'>` *(Mãe)*\n- `<speak='아기'>` *(Bebê)*\n- `<speak='우유'>` *(Leite)*\n- `<speak='의자'>` *(Cadeira)*\n- `<speak='커피'>` *(Café)*\n- `<speak='아빠'>` *(Papai)*\n\n> **Dica:** Consoantes aspiradas são representadas por um traço extra na forma básica. Consoantes duplas apenas duplicam o caractere original!"
+      "content": "### **O Sistema Hangul** 📝\n\nO Hangul foi criado em 1443 pelo Rei Sejong. Ao contrário de outros alfabetos que evoluíram organicamente, ele foi **projetado conscientemente** — cada símbolo segue uma lógica filosófica clara.\n\n---\n\n#### **Os Três Elementos das Vogais**\n\nAs vogais do Hangul são construídas a partir de três símbolos da cosmologia coreana:\n\n| Símbolo | Representa | Forma |\n|:---:|:---:|:---:|\n| **·** (ㆍ) | **Céu** (天) — yang | Ponto ou traço curto |\n| **ㅡ** | **Terra** (地) — yin | Linha horizontal |\n| **ㅣ** | **Pessoa** (人) | Linha vertical |\n\n---\n\n#### **Como as vogais são formadas**\n\n**Grupo 1 — Pessoa + Céu** *(sons irmãos: ㅏ ↔ ㅓ)*\n\n| Vogal | Formação | Som |\n|:---:|:---:|:---:|\n| `<speak='ㅏ'>` | Pessoa (ㅣ) + Céu (·) à **direita** | *a* |\n| `<speak='ㅓ'>` | Pessoa (ㅣ) + Céu (·) à **esquerda** | *eo* (\"ó\" neutro) |\n\nㅏ e ㅓ usam a mesma posição de boca — o lado do ponto inverte o timbre.\n\n---\n\n**Grupo 2 — Terra + Céu** *(sons irmãos: ㅗ ↔ ㅜ)*\n\n| Vogal | Formação | Som |\n|:---:|:---:|:---:|\n| `<speak='ㅗ'>` | Terra (ㅡ) + Céu (·) **acima** | *o* (lábios arredondados, \"ô\") |\n| `<speak='ㅜ'>` | Terra (ㅡ) + Céu (·) **abaixo** | *u* (lábios arredondados, \"u\") |\n\nㅗ e ㅜ têm a mesma forma de lábios — o ponto indica cima vs baixo.\n\n---\n\n**Grupo 3 — Elementos Puros** *(sons irmãos: ㅡ ↔ ㅣ)*\n\n| Vogal | Elemento | Som |\n|:---:|:---:|:---:|\n| `<speak='ㅡ'>` | **Terra** sozinha | *eu* (gutural, \"i\" bem fechado) |\n| `<speak='ㅣ'>` | **Pessoa** sozinha | *i* |\n\n---\n\n**ㅔ e ㅐ** — na fala moderna soam **igual** (como \"e\"). Diferem só na escrita:\n\n- `<speak='ㅔ'>` *(e)* — historicamente de ㅓ+ㅣ\n- `<speak='ㅐ'>` *(ae)* — historicamente de ㅏ+ㅣ\n\n---\n\n#### **Consoantes Simples**\n\n| Letra | Som / Áudio | Nome |\n|-------|-------------|------|\n| `<speak='ㄱ'>` | G/K → `<speak='그'>` | Giyeok |\n| `<speak='ㄴ'>` | N → `<speak='느'>` | Nieun |\n| `<speak='ㄷ'>` | D/T → `<speak='드'>` | Digueut |\n| `<speak='ㄹ'>` | R/L → `<speak='르'>` | Rieul |\n| `<speak='ㅁ'>` | M → `<speak='므'>` | Mieum |\n| `<speak='ㅂ'>` | B/P → `<speak='브'>` | Bieup |\n| `<speak='ㅅ'>` | S → `<speak='스'>` | Siot |\n| `<speak='ㅇ'>` | -/NG → `<speak='응'>` | Ieung |\n| `<speak='ㅈ'>` | J → `<speak='즈'>` | Jieut |\n| `<speak='ㅎ'>` | H → `<speak='흐'>` | Hieut |\n\n#### **Consoantes Aspiradas e Duplas**\n\nAs **aspiradas** têm sopro de ar. As **duplas (Ssang)** são tensas e sem sopro.\n\n| Tipo | Letras | Som |\n|------|--------|-----|\n| **Aspiradas** | `<speak='ㅋ'>`, `<speak='ㅌ'>`, `<speak='ㅍ'>`, `<speak='ㅊ'>` | `<speak='크'>`, `<speak='트'>`, `<speak='프'>`, `<speak='츠'>` |\n| **Duplas** | `<speak='ㄲ'>`, `<speak='ㄸ'>`, `<speak='ㅃ'>`, `<speak='ㅆ'>`, `<speak='ㅉ'>` | `<speak='끄'>`, `<speak='뜨'>`, `<speak='쁘'>`, `<speak='쓰'>`, `<speak='쯔'>` |\n\n#### **Exemplos Práticos**\n\n- `<speak='어머니'>` *(Mãe)*\n- `<speak='아기'>` *(Bebê)*\n- `<speak='우유'>` *(Leite)*\n- `<speak='의자'>` *(Cadeira)*\n- `<speak='커피'>` *(Café)*\n- `<speak='아빠'>` *(Papai)*\n\n> **Memorize os pares:** ㅏ↔ㅓ, ㅗ↔ㅜ, ㅡ↔ㅣ — cada par vem do mesmo elemento filosófico, por isso os sons são tão próximos!"
     },
     "hanja": {
       "title": "Hanja",
@@ -959,7 +962,7 @@
     "어제": "ontem",
     "낮": "dia",
     "주말": "fim de semana",
-    "시간": "tempo",
+    "시간": "tempo/hora",
     "분": "minuto",
     "시": "hora",
     "년": "ano",
@@ -1733,7 +1736,7 @@
     "bookTitle": "📖 Diário de Treino",
     "inspectorTitle": "🔎 Guia de Traços",
     "drawJamo": "Desenhe {j}",
-    "drawSyllable": "Escreva {s}  ·  agora: {j}",
+    "drawSyllable": "Escreva {s}ㅤ·ㅤAgora: {j}",
     "great": "Ótimo!",
     "lastTry": "Última tentativa!",
     "resetJamo": "Ordem errada - tente novamente",
@@ -1792,7 +1795,7 @@
   },
   "jamo_desc": {
     "ㄱ": {
-      "base": "**기역** · consoante velar, sem aspiração\n\nNo início de sílaba soa como um 'g' suave - <speak='가'>, <speak='기다리다'>. Não é um 'k' forte do inglês, e também não é exatamente o 'g' do português. Fica num ponto intermediário, sem saída de ar.\n\nO coreano tem **três versões** de cada ponto de articulação:\n\n- **ㄱ** · sem sopro (plain) - <speak='가'>\n- **ㅋ** · com sopro (aspirado) - <speak='카'>\n- **ㄲ** · tenso, sem sopro (fortis) - <speak='까'>\n\nTente comparar os três em sequência. A diferença fica mais clara com prática!\n\nPalavras comuns: <speak='가방'> (bolsa) · <speak='고기'> (carne) · <speak='학교'> (escola)",
+      "base": "**기역** · consoante velar, sem aspiração\n\nNo início de sílaba soa como um 'g' suave - <speak='가'>, <speak='기다리다'>. Não é um 'k' forte do inglês, e também não é exatamente o 'g' do português. Fica num ponto intermediário, sem muita saída de ar.\n\nO coreano tem **três versões** de cada ponto de articulação:\n\n- **ㄱ** · sem sopro (plain) - <speak='가'>\n- **ㅋ** · com sopro (aspirado) - <speak='카'>\n- **ㄲ** · tenso, sem sopro (fortis) - <speak='까'>\n\nTente comparar os três em sequência. A diferença fica mais clara com prática!\n\nPalavras comuns: <speak='가방'> (bolsa) · <speak='고기'> (carne) · <speak='학교'> (escola)",
       "batchim": "Como batchim, o ㄱ fecha a sílaba como uma parada velar sem explodir - você sente a garganta fechar mas não sai ar. Soa como um 'k' silencioso.\n\nAo ser seguido de vogal, o ㄱ \"salta\" para a próxima sílaba:\n<speak='학이'> pronuncia-se [하기] · <speak='국어'> pronuncia-se [구거]\n\nAntes de ㅎ, os dois se fundem em ㅋ (aspiração):\n<speak='착하다'> pronuncia-se [차카다] · <speak='좋고'> pronuncia-se [조코]"
     },
     "ㄴ": {
@@ -1800,8 +1803,8 @@
       "batchim": "Como batchim, fecha a sílaba com nasal 'n'. Muito comum e fácil de identificar.\n\nAo ser seguido de vogal, o ㄴ liga-se à próxima sílaba:\n<speak='눈이'> pronuncia-se [누니] · <speak='반이'> pronuncia-se [바니]\n\nAntes de ㄹ, o ㄴ pode ser assimilado e virar ㄹ em pronúncia rápida:\n<speak='신라'> pronuncia-se [실라]"
     },
     "ㄷ": {
-      "base": "**디귿** · oclusiva alveolar, sem aspiração\n\nNo início de sílaba, soa entre 'd' e 't' - <speak='다'>, <speak='도'>. Sem saída de ar. Par não-aspirado de ㅌ.\n\n**Trio de oclusivas alveolares:**\n- **ㄷ** · sem sopro - <speak='다'>\n- **ㅌ** · com sopro - <speak='타'>\n- **ㄸ** · tenso, sem sopro - <speak='따'>\n\n**Palatalização** (regra importante!): Quando ㄷ ou ㄷ-batchim encontra ㅣ na sílaba seguinte, o som muda para ㅈ:\n- 굳이 → <speak='굳이'> soa [구지]\n- 같이 → <speak='같이'> soa [가치] (ㅌ → ㅊ pela mesma regra)",
-      "batchim": "Como batchim, ㄷ fecha com parada alveolar sem explodir - som abafado sem saída de ar.\n\nLiga-se à vogal seguinte: <speak='믿어'> pronuncia-se [미더]\n\nAntes de ㅎ, os dois se fundem em ㅌ: <speak='좋다'> pronuncia-se [조타]\n\nAntes de ㅣ na próxima sílaba, palataliza para ㅈ: <speak='굳이'> pronuncia-se [구지]"
+      "base": "**디귿** · oclusiva alveolar, sem aspiração\n\nNo início de sílaba, soa entre 'd' e 't' - <speak='다'>, <speak='도'>. Sem muita saída de ar. Par não-aspirado de ㅌ.\n\n**Trio de oclusivas alveolares:**\n- **ㄷ** · sem sopro - <speak='다'>\n- **ㅌ** · com sopro - <speak='타'>\n- **ㄸ** · tenso, sem sopro - <speak='따'>\n\n**Palatalização** (regra importante!): Quando ㄷ ou ㄷ-batchim encontra ㅣ na sílaba seguinte, o som muda para ㅈ:\n- 굳이 → <speak='굳이'> soa [구지]\n- 같이 → <speak='같이'> soa [가치] (ㅌ → ㅊ pela mesma regra)",
+      "batchim": "Como batchim, ㄷ fecha com parada alveolar sem explodir - som abafado sem muita saída de ar.\n\nLiga-se à vogal seguinte: <speak='믿어'> pronuncia-se [미더]\n\nAntes de ㅎ, os dois se fundem em ㅌ: <speak='좋다'> pronuncia-se [조타]\n\nAntes de ㅣ na próxima sílaba, palataliza para ㅈ: <speak='굳이'> pronuncia-se [구지]"
     },
     "ㄹ": {
       "base": "**리을** · o jamo mais único do coreano!\n\nㄹ é um som que não tem equivalente direto em português - fica entre 'r' e 'l' dependendo da posição.\n\n**No início de sílaba:** tap suave, como o 'r' do espanhol em \"caro\" ou o 'r' de \"para\" no português carioca - <speak='라'>, <speak='리'>\n\n**Entre vogais:** vibra rapidamente - <speak='사람'> (pessoa), <speak='바람'> (vento)\n\n**Dobrado (ㄹㄹ):** soa como 'l' longo - <speak='달리다'> (correr)\n\nDica: não tente forçar nem 'r' nem 'l' forte - é um som intermediário, levinho!",
@@ -1812,7 +1815,7 @@
       "batchim": "Como batchim, fecha com nasal bilabial 'm' - os lábios se fecham ao final da sílaba: <speak='밤'> (noite), <speak='봄'> (primavera), <speak='이름'> (nome)\n\nLiga-se naturalmente à vogal seguinte:\n<speak='이름이'> pronuncia-se [이르미] · <speak='밤이'> pronuncia-se [바미]"
     },
     "ㅂ": {
-      "base": "**비읍** · oclusiva bilabial, sem aspiração\n\nNo início de sílaba, soa entre 'b' e 'p' - <speak='바'>, <speak='비'>. Sem saída de ar. Par não-aspirado de ㅍ.\n\n**Trio bilabial:**\n- **ㅂ** · sem sopro - <speak='바'>\n- **ㅍ** · com sopro - <speak='파'>\n- **ㅃ** · tenso, sem sopro - <speak='빠'>\n\n**Atenção:** No início absoluto de frase, ㅂ tem uma leve aspiração e soa quase como 'p'. Dentro de palavras, soa mais como 'b'. Na prática, fica num ponto intermediário que não é nem 'b' nem 'p' do português!",
+      "base": "**비읍** · oclusiva bilabial, sem aspiração\n\nNo início de sílaba, soa entre 'b' e 'p' - <speak='바'>, <speak='비'>. Sem muita saída de ar. Par não-aspirado de ㅍ.\n\n**Trio bilabial:**\n- **ㅂ** · sem sopro - <speak='바'>\n- **ㅍ** · com sopro - <speak='파'>\n- **ㅃ** · tenso, sem sopro - <speak='빠'>\n\n**Atenção:** No início absoluto de frase, ㅂ tem uma leve aspiração e soa quase como 'p'. Dentro de palavras, soa mais como 'b'. Na prática, fica num ponto intermediário que não é nem 'b' nem 'p' do português!",
       "batchim": "Como batchim, ㅂ fecha com parada bilabial sem explodir - os lábios se fecham mas não abrem com força: <speak='밥'> (arroz), <speak='입'> (boca), <speak='앞'> (frente)\n\nLiga-se à vogal seguinte como 'b': <speak='밥이'> pronuncia-se [바비] · <speak='입이'> pronuncia-se [이비]\n\nAntes de ㅎ, os dois se fundem em ㅍ: <speak='잡히다'> pronuncia-se [자피다]"
     },
     "ㅅ": {
@@ -1852,14 +1855,14 @@
       "batchim": "Como batchim, idêntico ao ㄱ - oclusiva velar sem explosão."
     },
     "ㄸ": {
-      "base": "**쌍디귿** · ㄷ tenso (경음)\n\nVersão tensa de ㄷ - <speak='따'>, <speak='또'>, <speak='띠'>. Garganta contraída, sem saída de ar. Parece um 'tt' enfático.\n\n**Trio ㄷ:** ㄷ (suave) · ㅌ (com sopro) · **ㄸ** (tenso)\n\nPalavras comuns:\n- <speak='따뜻하다'> (estar quente / aconchegante)\n- <speak='또'> (também, de novo)\n- <speak='땅'> (terra, chão)",
+      "base": "**쌍디귿** · ㄷ tenso (경음)\n\nVersão tensa de ㄷ - <speak='따'>, <speak='또'>, <speak='띠'>. Garganta contraída, sem nenhuma saída de ar. Parece um 'tt' enfático.\n\n**Trio ㄷ:** ㄷ (suave) · ㅌ (com sopro) · **ㄸ** (tenso)\n\nPalavras comuns:\n- <speak='따뜻하다'> (estar quente / aconchegante)\n- <speak='또'> (também, de novo)\n- <speak='땅'> (terra, chão)",
       "batchim": "Como batchim, idêntico ao ㄷ."
     },
     "ㅃ": {
       "base": "**쌍비읍** · ㅂ tenso (경음)\n\nVersão tensa de ㅂ - <speak='빠'>, <speak='뽀'>, <speak='삐'>. Lábios pressionados com tensão, sem sopro.\n\n**Trio ㅂ:** ㅂ (suave) · ㅍ (com sopro) · **ㅃ** (tenso)\n\nPalavras comuns:\n- <speak='빠르다'> (ser rápido)\n- <speak='빵'> (pão)\n- <speak='뽀뽀'> (beijinho)"
     },
     "ㅆ": {
-      "base": "**쌍시옷** · ㅅ tenso (경음)\n\nVersão tensa de ㅅ - <speak='싸'>, <speak='쏘'>, <speak='씌'>. 'ss' forte sem saída de ar.\n\n**Muito comum!** Aparece em duas das palavras mais usadas do coreano:\n- <speak='있다'> (existir, ter) → soa [이따] em fala rápida\n- <speak='없다'> (não existir, não ter) → soa [업따] em fala rápida\n\nOutras palavras: <speak='씩'> (cada), <speak='쓰다'> (usar / escrever), <speak='쌀'> (arroz cru)",
+      "base": "**쌍시옷** · ㅅ tenso (경음)\n\nVersão tensa de ㅅ - <speak='싸'>, <speak='쏘'>, <speak='씌'>. 'ss' forte sem nenhuma saída de ar.\n\n**Muito comum!** Aparece em duas das palavras mais usadas do coreano:\n- <speak='있다'> (existir, ter) → soa [이따] em fala rápida\n- <speak='없다'> (não existir, não ter) → soa [업따] em fala rápida\n\nOutras palavras: <speak='씩'> (cada), <speak='쓰다'> (usar / escrever), <speak='쌀'> (arroz cru)",
       "batchim": "Como batchim, idêntico ao ㅅ (classe ㄷ)."
     },
     "ㅉ": {

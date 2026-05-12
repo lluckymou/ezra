@@ -2478,6 +2478,9 @@ body.touch-mode #map-panel:not(.off) {
   border-radius: 4px; text-transform: uppercase; letter-spacing: .04em;
 }
 .wiki-badge-visited { background: rgba(39,174,96,.25); color: #2ecc71; }
+.wiki-card-unknown { filter: grayscale(1); opacity: .65; }
+.wiki-card-unknown .wiki-card-title,
+.wiki-card-unknown .wiki-card-sub { color: rgba(255,255,255,.35); }
 .wiki-price { color: #f0c040; }
 .wiki-price b { font-weight: 800; }
 .wiki-desc { color: rgba(255,255,255,.5); }
@@ -2809,7 +2812,7 @@ body.touch-mode .test-big-emoji { font-size: 4rem; }
 .lang-name { font-size: 0.8rem; opacity: 0.85; letter-spacing: 0.05em; }
 
 /* ===== DICTIONARY DARK MODE TEXT ===== */
-#book-panel .dict-entry { color: #e8e8f0; }
+#book-panel .dict-entry { color: #e8e8f0; margin-bottom: 3px; }
 #book-panel .dict-en { color: rgba(232,232,240,.6); }
 #book-panel .dict-empty { color: rgba(232,232,240,.5); }
 
@@ -3014,3 +3017,274 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
   #btn-settings { background: #192869; }
   #btn-settings:hover { background: #192869; opacity: 1; }
 }
+
+/* ================================================================
+   BOOK PANEL & MAP PANEL – WHITE / PAPER MODE
+================================================================ */
+
+/* ── Book panel: notebook with thick spine on the left ── */
+#book-panel {
+  background: #fdf6e3 !important;
+  border: 5px solid #d4a017 !important;
+  border-bottom: none !important;
+  border-left: 24px solid #b8820e !important; /* thick spine */
+  isolation: isolate;
+  backdrop-filter: none !important;
+  overflow: visible !important;
+}
+#book-panel::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url('../img/noise.svg') center/cover;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Spiral holes on the spine */
+#book-panel::after {
+  content: '';
+  position: absolute;
+  left: -24px; top: 0; bottom: 0;
+  width: 24px;
+  background-image: radial-gradient(circle 5px at 12px 50%, #ffe9a0 0%, #e8b800 55%, transparent 56%);
+  background-size: 100% 34px;
+  background-repeat: repeat-y;
+  background-position: 0 12px;
+  pointer-events: none;
+  z-index: 10;
+}
+#book-panel > * { position: relative; z-index: 1; }
+
+/* ── Map panel: paper sheet — square corners, no coloured border ── */
+#map-panel {
+  background: #f5eedc !important;
+  border: none !important;
+  border-radius: 0 0 0 0 !important;
+  box-shadow: -4px 0 0 0 #c8a040, 0 -4px 0 0 #c8a040, 4px 0 12px rgba(0,0,0,.35) !important;
+  isolation: isolate;
+  backdrop-filter: none !important;
+}
+#map-panel::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url('../img/noise.svg') center/cover;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 0;
+}
+#map-panel > * { position: relative; z-index: 1; }
+
+/* ── Book panel header ── */
+#book-panel #book-panel-header {
+  color: #5a3e00;
+  border-bottom: 1px solid rgba(101,75,0,.2);
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+#book-panel .map-esc-btn {
+  background: rgba(101,75,0,.12);
+  border-color: rgba(101,75,0,.3);
+  color: rgba(90,62,0,.8);
+}
+#book-panel .map-esc-btn:hover { background: rgba(101,75,0,.2); color: #3a2800; }
+
+/* ── Map panel header ── */
+#map-panel #map-panel-header { color: #4a2e00; }
+#map-panel .map-esc-btn {
+  background: rgba(101,75,0,.12);
+  border-color: rgba(101,75,0,.3);
+  color: rgba(90,62,0,.8);
+}
+#map-panel .map-esc-btn:hover { background: rgba(101,75,0,.2); color: #3a2800; }
+
+/* ── Map panel text overrides ── */
+#map-panel #map-legend { color: #3d2d00; font-size: .75rem; }
+#map-panel #map-legend span { color: #3d2d00; }
+#map-panel #map-perms-row { border-top-color: rgba(101,75,0,.25) !important; }
+#map-panel #map-perms-row > div { color: #5a3e00 !important; }
+
+/* ── Map cells on paper background ── */
+#map-panel .map-col-lbl,
+#map-panel .map-row-lbl { color: rgba(80,50,0,.3); }
+
+#map-panel .map-cell.visited      { background: rgba(100,70,20,.22); color: rgba(50,30,0,.8); }
+#map-panel .map-cell.visited:hover { background: rgba(100,70,20,.36); }
+#map-panel .map-cell.guide-only   { background: rgba(100,70,20,.10); color: rgba(50,30,0,.4); }
+#map-panel .map-cell.guide-only:hover { background: rgba(100,70,20,.17); }
+#map-panel .map-cell.cleared      { background: rgba(30,100,40,.28); }
+#map-panel .map-cell.current      { background: rgba(90,60,0,.65) !important; box-shadow: 0 0 5px rgba(180,120,0,.6); }
+#map-panel .map-cell.current.cleared { background: rgba(30,130,50,.7) !important; box-shadow: 0 0 5px rgba(40,180,70,.7) !important; }
+#map-panel .map-cell.boss-room    { background: rgba(140,20,20,.20); color: rgba(160,30,30); }
+#map-panel .map-cell.boss-room:hover { background: rgba(160,30,30,.15); }
+#map-panel .map-cell.boss-room.current { background: rgba(180,30,30,.65) !important; }
+#map-panel .map-cell.teacher-room { background: rgba(20,80,160,.20); color: rgba(20,60,140); }
+#map-panel .map-cell.teacher-room:hover { background: rgba(20,80,160,.15); }
+#map-panel .map-cell.shop-room    { background: rgba(150,110,0,.20); color: rgba(100,70,0); }
+#map-panel .map-cell.shop-room:hover { background: rgba(160,120,0,.15); }
+#map-panel .map-cell.shop-room.current { background: rgba(160,120,0,.65) !important; }
+#map-panel .map-cell.casino-room  { background: rgba(100,30,180,.20); color: rgba(80,20,160); }
+#map-panel .map-cell.casino-room:hover { background: rgba(110,40,190,.15); }
+#map-panel .map-cell.item-room    { background: rgba(20,120,120,.20); color: rgba(10,90,90); }
+#map-panel .map-cell.item-room:hover { background: rgba(20,130,130,.15); }
+#map-panel .map-cell.treasure-room { background: rgba(180,140,0,.20); color: rgba(120,90,0); }
+#map-panel .map-cell.treasure-room:hover { background: rgba(190,150,0,.15); }
+
+/* ── Book panel: BOOKMARK-STYLE TABS ── */
+#book-panel .dict-tabs {
+  gap: 3px;
+  padding-bottom: 0;
+  border-bottom: 2px solid #ffca28;
+  margin-bottom: 0;
+}
+#book-panel .dict-tab {
+  background: #e8d9b8;
+  border: 1.5px solid #c8a855;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: #6b4c00;
+  padding: 5px 11px;
+  font-size: .82rem;
+  font-weight: 600;
+  position: relative;
+  top: 2px;
+  transition: background .1s, top .1s;
+}
+#book-panel .dict-tab:hover {
+  background: #f7e9c8;
+  color: #3d2800;
+  top: 0;
+}
+#book-panel .dict-tab.active {
+  background: #fdf6e3;
+  border-color: #ffca28;
+  color: #3d2800;
+  top: 0;
+  z-index: 2;
+  box-shadow: 0 -2px 4px rgba(101,75,0,.15);
+}
+
+/* Stats tab = light blue bookmark */
+#book-panel .dict-tab[data-cat="stats"] { background: #c8e4f5; border-color: #82bfe0; color: #1a4e6e; }
+#book-panel .dict-tab[data-cat="stats"]:hover { background: #d8eefb; }
+#book-panel .dict-tab[data-cat="stats"].active { background: #eaf5fd; border-color: #82bfe0; color: #1a4e6e; }
+
+/* Word tabs (noun, adverb, verb, adjective) = coral/red bookmark */
+#book-panel .dict-tab[data-cat="noun"],
+#book-panel .dict-tab[data-cat="adverb"],
+#book-panel .dict-tab[data-cat="verb"],
+#book-panel .dict-tab[data-cat="adjective"] {
+  background: #f5caca; border-color: #d87878; color: #7a1a1a;
+}
+#book-panel .dict-tab[data-cat="noun"]:hover,
+#book-panel .dict-tab[data-cat="adverb"]:hover,
+#book-panel .dict-tab[data-cat="verb"]:hover,
+#book-panel .dict-tab[data-cat="adjective"]:hover { background: #fbd8d8; }
+#book-panel .dict-tab[data-cat="noun"].active,
+#book-panel .dict-tab[data-cat="adverb"].active,
+#book-panel .dict-tab[data-cat="verb"].active,
+#book-panel .dict-tab[data-cat="adjective"].active {
+  background: #fff0f0; border-color: #d87878; color: #7a1a1a;
+}
+
+/* Lesson tabs = white/off-white bookmark (applied dynamically to numeric cat IDs) */
+#book-panel .dict-tab[data-cat^="1"],
+#book-panel .dict-tab[data-cat^="2"],
+#book-panel .dict-tab[data-cat^="3"],
+#book-panel .dict-tab[data-cat^="4"],
+#book-panel .dict-tab[data-cat^="5"],
+#book-panel .dict-tab[data-cat^="6"],
+#book-panel .dict-tab[data-cat^="7"],
+#book-panel .dict-tab[data-cat^="8"],
+#book-panel .dict-tab[data-cat^="9"] {
+  background: #f0f0ee; border-color: #aaa; color: #333;
+}
+
+/* ── Book panel: content area text colors ── */
+#book-panel #book-dict-search {
+  background: rgba(255,255,255,.7);
+  border-color: rgba(101,75,0,.3);
+  color: #2a1a00;
+}
+#book-panel #book-dict-search::placeholder { color: rgba(80,55,0,.45); }
+#book-panel #book-dict-list { color: #1a1000; }
+#book-panel .dict-entry { color: #1a1000 !important; }
+#book-panel .dict-en    { color: rgba(40,25,0,.6) !important; }
+#book-panel .dict-empty { color: rgba(40,25,0,.45) !important; }
+#book-panel .dict-word  { background: rgba(255,220,120,.18); border-color: rgba(180,140,0,.2); }
+#book-panel .dict-word:hover { background: rgba(255,220,120,.35); }
+#book-panel .dict-alts  { color: rgba(40,25,0,.55); }
+#book-panel .dict-hanja { color: #c44; }
+
+/* Wiki sections inside book panel */
+#book-panel .wiki-section { border-color: rgba(101,75,0,.2); }
+#book-panel .wiki-header  { color: #4a3000; background: rgba(180,130,0,.1); }
+#book-panel .wiki-header:hover { background: rgba(180,130,0,.18); }
+#book-panel .wiki-card {
+  background: rgba(255,255,255,.55);
+  border-color: rgba(101,75,0,.18);
+  color: #2a1a00;
+}
+#book-panel .wiki-card-seen { background: rgba(39,174,96,.12); border-color: rgba(39,174,96,.4); }
+#book-panel .wiki-card-unknown { filter: grayscale(1); opacity: .55; }
+#book-panel .wiki-card-title { color: #2a1a00; }
+#book-panel .wiki-card-sub   { color: rgba(40,25,0,.6); }
+#book-panel .wiki-price { color: #c87000; }
+#book-panel .wiki-desc  { color: rgba(40,25,0,.55); }
+
+/* Stats rings */
+#book-panel .dict-stats-group { color: #2a1a00; }
+#book-panel .dict-ring-lbl, #book-panel .dict-ring-val { color: #4a3000; }
+#book-panel .dict-stats { color: #2a1a00; }
+
+/* Lesson viewer inside book panel */
+#book-panel .lesson-content, #book-panel .lesson-body { color: #1a1000; }
+#book-panel .lesson-btn { background: rgba(255,202,40,.25); color: #3a2800; border-color: #ffca28; }
+#book-panel .lesson-btn:hover { background: rgba(255,202,40,.45); }
+#book-panel .lesson-example, #book-panel .example-kr { color: #1a1000; }
+#book-panel .lesson-quiz { background: rgba(255,255,255,.6); border-color: rgba(101,75,0,.25); }
+
+/* Dojang book rows inside book panel */
+#book-panel .dj-book-row { border-color: rgba(101,75,0,.15); }
+#book-panel .dj-book-jamo { color: #3d2800; }
+#book-panel .dj-book-name, #book-panel .dj-book-rom { color: #6b4c00; }
+#book-panel .dj-book-count, #book-panel .dj-book-strokes { color: rgba(80,55,0,.6); }
+#book-panel .dj-book-bar-wrap { background: rgba(101,75,0,.12); }
+#book-panel .dj-book-bar { background: #ffca28; }
+#book-panel .dj-book-expand-btn { color: #6b4c00; }
+#book-panel .dj-book-desc { color: #2a1a00; background: rgba(255,255,255,.5); }
+
+/* touch fullscreen keeps white mode too */
+body.touch-mode #book-panel:not(.off) { background: #fdf6e3 !important; }
+body.touch-mode #map-panel:not(.off)  { background: #f5eedc !important; box-shadow: none !important; }
+
+/* touch-mode map: legend and perms text on paper */
+body.touch-mode #map-panel:not(.off) #map-legend { color: #3d2d00; }
+body.touch-mode #map-panel:not(.off) #map-perms-row { border-left-color: rgba(101,75,0,.2); }
+body.touch-mode #map-panel:not(.off) #map-perms-row > div { color: #5a3e00 !important; }
+body.touch-mode #map-panel:not(.off) .mnw-name { color: #3d2800; }
+
+/* ── Book panel: speak-word, dict-text, dict-stats, tabs & header size ── */
+#book-panel .md-speak-word   { color: #2a1a00; }
+#book-panel .dict-text       { color: #1a1000 !important; }
+#book-panel .dict-stats-label { color: rgba(40,25,0,.65); }
+#book-panel #book-panel-header { font-size: 1.1rem; }
+#book-panel .dict-tab        { font-size: .9rem; }
+/* Stats rings in book panel: use dark ink on paper background */
+#book-panel .dict-stats-ring { color: #2a1a00; }
+#book-panel .dict-stats-ring circle.ring-track { stroke: rgba(0,0,0,.12); }
+
+/* ── Main-menu dict modal: dojang rows on dark background ── */
+#my-dict-modal .dj-book-jamo  { color: #ffd070; }
+#my-dict-modal .dj-book-name  { color: rgba(255,220,140,.85); }
+#my-dict-modal .dj-book-rom   { color: rgba(255,180,80,.75); }
+#my-dict-modal .dj-book-count,
+#my-dict-modal .dj-book-strokes { color: rgba(255,220,140,.55); }
+#my-dict-modal .dj-book-row   { background: rgba(255,255,255,.04); border-color: rgba(255,200,80,.1); }
+#my-dict-modal .dj-book-bar   { background: linear-gradient(90deg,#e67e22,#f39c52); }
+#my-dict-modal .dj-book-bar-wrap { background: rgba(255,255,255,.1); }
+#my-dict-modal .dj-book-expand-btn { color: rgba(255,200,80,.7); }
+#my-dict-modal .dj-book-desc  { background: rgba(0,0,0,.25); color: rgba(255,220,140,.85); }
+
+/* cursor auto-hide after 2s of inactivity in-game */
+body.cursor-hidden,
+body.cursor-hidden * { cursor: none !important; }

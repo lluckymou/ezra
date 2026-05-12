@@ -1262,6 +1262,7 @@ function spawnArrow(archer, px, py) {
     id: ++_id, type:'arrow', special:null,
     emoji:'➷', parentId: archer.id,
     x: archer.x, y: archer.y,
+    spawnNX: archer.x / G.W, spawnNY: archer.y / G.vH, progress: 0,
     hp:1, maxHp:1,
     words:[syl], wi:0,
     get word() { return this.words[this.wi]; },
@@ -1278,10 +1279,13 @@ function spawnNote(musician) {
   if (G.room?.noiseCancelled) return; // Noise Cancel consumable active
   sfx('musicianNote', 0.6);
   const syl = NOTE_SYLS[Math.floor(Math.random() * NOTE_SYLS.length)];
+  const nx = musician.x + (Math.random()-0.5)*60;
+  const ny = musician.y;
   G.room.monsters.push({
     id: ++_id, type:'note', special:null,
     emoji: NOTES[Math.floor(Math.random()*NOTES.length)], parentId: musician.id,
-    x: musician.x + (Math.random()-0.5)*60, y: musician.y,
+    x: nx, y: ny,
+    spawnNX: nx / G.W, spawnNY: ny / G.vH, progress: 0,
     hp:1, maxHp:1,
     words:[syl], wi:0,
     get word() { return this.words[this.wi]; },
@@ -1301,6 +1305,7 @@ function spawnIce(ice, px, py) {
     id:++_id, type:'iceball', special:null,
     emoji:'🧊', parentId:ice.id,
     x:ice.x, y:ice.y,
+    spawnNX: ice.x / G.W, spawnNY: ice.y / G.vH, progress: 0,
     hp:1, maxHp:1,
     words:[cons], wi:0,
     get word() { return this.words[this.wi]; },
@@ -1323,6 +1328,7 @@ function spawnFireball(px, py) {
     id:++_id, type:'fireball', special:null,
     emoji:'🔥',
     x, y,
+    spawnNX: x / G.W, spawnNY: y / G.vH, progress: 0,
     hp:1, maxHp:1,
     words:[syl], wi:0,
     get word() { return this.words[this.wi]; },
@@ -1337,11 +1343,13 @@ function spawnNinja(king) {
   const wn = G.room.wave || 1;
   const biome = G.dungeon?.worldDef?.id || 'forest';
   const words = pickWordsForMonster(wn, 1, biome);
+  const nx = king.x + (Math.random()-0.5)*200;
+  const ny = king.y + Math.random()*100;
   G.room.monsters.push({
     id:++_id, type:'normal', special:null,
     emoji:'🥷', parentId:king.id,
-    x: king.x + (Math.random()-0.5)*200,
-    y: king.y + Math.random()*100,
+    x: nx, y: ny,
+    spawnNX: nx / G.W, spawnNY: ny / G.vH, progress: 0,
     hp:2, maxHp:2, words, wi:0,
     get word() { return this.words[this.wi]; },
     size:44, baseSpd: monsterSpeed(words, false) * 1.5,
@@ -1905,6 +1913,9 @@ export function invUse() {
   if (!_checkItemUsable(item)) return;
 
   applyPowerup(item);
+  // Mark the actual used item key as learned (not the 🎲 die itself)
+  if (!G.learnedItems) G.learnedItems = [];
+  if (!G.learnedItems.includes(item)) { G.learnedItems.push(item); savePersistentState(); }
   stack.count--;
   if (stack.count <= 0) inv.stacks.splice(inv.sel, 1);
   inv.sel = Math.min(inv.sel, Math.max(0, inv.stacks.length - 1));
@@ -2227,11 +2238,19 @@ export function dismissAnnounce() {
   G.announceQ.fadeTimer = 0.38;
 }
 
+let _announceDomTimer = null;
 export function announce(msg, cb) {
   const annTxt = document.getElementById('announce-txt');
   if (annTxt) {
     annTxt.innerHTML = msg.replace(/\n/g, '<br>');
     annTxt.classList.add('on');
+    // DOM-level fallback: dismiss after 4s regardless of game-loop state
+    if (_announceDomTimer) clearTimeout(_announceDomTimer);
+    _announceDomTimer = setTimeout(() => {
+      annTxt.classList.remove('on');
+      G.announceQ = null;
+      _announceDomTimer = null;
+    }, 4000);
   }
   G.announceQ = { cb, timer: 2.1, fading: false, fadeTimer: 0.38 };
 }

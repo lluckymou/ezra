@@ -10,7 +10,7 @@
   },
   "title": {
     "playBtn": "▶ Start Game!",
-    "slogan": "Learning Korean by typing",
+    "slogan": "Practicing Korean by typing",
     "subTitle": "EZRA 타자 - Type Korean to defeat monsters!",
     "bestScore": "Best score"
   },
@@ -51,7 +51,8 @@
     "wg_ocean": "Ocean",
     "wg_elements": "Elements",
     "wg_animals": "Animals",
-    "sfxVolume": "🔉 Sound Effects"
+    "sfxVolume": "🔉 Sound Effects",
+    "ambientMusic": "🎵 Ambient Music"
   },
   "dict": {
     "title": "Dictionary",
@@ -207,7 +208,9 @@
     "wallsConnected": "⛏️ All rooms connected!",
     "treasureAcquired": "Treasure Acquired! 💎",
     "firstClear": "Click 🗺️ to view the map",
-    "tabHint": "↹ Press TAB to switch keyboard modes"
+    "tabHint": "↹ Press TAB to switch keyboard modes",
+    "mapHint": "Press Ctrl+M to open the Map",
+    "bookHint": "Press Ctrl+B to open the Book"
   },
   "inventory": {
     "emptyBackpack": "empty backpack"
@@ -454,7 +457,7 @@
   "lesson": {
     "hangulBasic": {
       "title": "Hangul Basics",
-      "content": "### **The Hangul System** 📝\n\nHangul is a logical phonetic alphabet. Characters are grouped into blocks, and each block must contain at least one consonant and one vowel.\n\n#### **Basic & Derived Vowels**\n\nVowels are based on three elements: Man (ㅣ), Earth (ㅡ), and Heaven (ㆍ).\n\n- `<speak='ㅏ'>` *(a)*\n- `<speak='ㅓ'>` *(eo - as in 'up')*\n- `<speak='ㅗ'>` *(o - as in 'home')*\n- `<speak='ㅜ'>` *(u - as in 'moon')*\n- `<speak='ㅣ'>` *(i - as in 'meet')*\n- `<speak='ㅡ'>` *(eu - guttural sound)*\n- `<speak='ㅔ'>` *(e - as in 'bed')*\n- `<speak='ㅐ'>` *(ae - as in 'apple')*\n\n#### **Basic Consonants**\n\n| Letter | Sound / Audio | Name |\n|--------|---------------|------|\n| `<speak='ㄱ'>` | G/K → `<speak='그'>` | Giyeok |\n| `<speak='ㄴ'>` | N → `<speak='느'>` | Nieun |\n| `<speak='ㄷ'>` | D/T → `<speak='드'>` | Digueut |\n| `<speak='ㄹ'>` | R/L → `<speak='르'>` | Rieul |\n| `<speak='ㅁ'>` | M → `<speak='므'>` | Mieum |\n| `<speak='ㅂ'>` | B/P → `<speak='브'>` | Bieup |\n| `<speak='ㅅ'>` | S → `<speak='스'>` | Siot |\n| `<speak='ㅇ'>` | -/NG → `<speak='응'>` | Ieung |\n| `<speak='ㅈ'>` | J → `<speak='즈'>` | Jieut |\n| `<speak='ㅎ'>` | H → `<speak='흐'>` | Hieut |\n\n#### **Double Vowels (Diphthongs)**\n\nCombined sounds that require precision:\n\n- `<speak='ㅒ'>` *(yae)*\n- `<speak='ㅖ'>` *(ye)*\n- `<speak='ㅘ'>` *(wa)*\n- `<speak='ㅝ'>` *(wo)*\n- `<speak='ㅙ'>` *(wae)*\n- `<speak='ㅞ'>` *(we)*\n- `<speak='ㅟ'>` *(wi)*\n- `<speak='ㅢ'>` *(ui)*\n\n#### **Aspirated & Double Consonants**\n\n**Aspirated** consonants have a burst of air. **Double (Ssang)** consonants are tense and airless.\n\n| Type | Letters | Sound / Audio |\n|------|---------|---------------|\n| **Aspirated** | `<speak='ㅋ'>`, `<speak='ㅌ'>`, `<speak='ㅍ'>`, `<speak='ㅊ'>` | `<speak='크'>`, `<speak='트'>`, `<speak='프'>`, `<speak='츠'>` |\n| **Double** | `<speak='ㄲ'>`, `<speak='ㄸ'>`, `<speak='ㅃ'>`, `<speak='ㅆ'>`, `<speak='ㅉ'>` | `<speak='끄'>`, `<speak='뜨'>`, `<speak='쁘'>`, `<speak='쓰'>`, `<speak='쯔'>` |\n\n#### **Practical Examples**\n\n- `<speak='어머니'>` *(Mother)*\n- `<speak='아기'>` *(Baby)*\n- `<speak='우유'>` *(Milk)*\n- `<speak='의자'>` *(Chair)*\n- `<speak='커피'>` *(Coffee)*\n- `<speak='아빠'>` *(Dad)*\n\n> **Rule of Thumb:** Aspirated consonants usually have an extra stroke compared to their basic form. Double consonants are just the basic form mirrored!"
+      "content": "### **The Hangul System** 📝\n\nHangul is a logical phonetic alphabet. Characters are grouped into blocks, and each block must contain at least one consonant and one vowel.\n\n#### **The Three Origins of Vowels**\n\nEvery Hangul vowel was built from three philosophical elements:\n\n| Symbol | Element | Represents |\n|:---:|---|---|\n| ㆍ | **Sky (天)** | Heaven — the sun |\n| **ㅡ** | **Earth (地)** | The flat horizon |\n| **ㅣ** | **Person (人)** | A human standing upright |\n\nThese three shapes combine to create all basic vowels. The direction of the Sky stroke tells you the sound:\n\n#### **Group 1 — Person + Sky (ㅏ ↔ ㅓ)**\n\nSky (·) to the *right* of Person (ㅣ) → `<speak='ㅏ'>` *(a)*\nSky (·) to the *left* of Person (ㅣ) → `<speak='ㅓ'>` *(eo - as in 'up')*\n\n#### **Group 2 — Earth + Sky (ㅗ ↔ ㅜ)**\n\nSky (·) *above* Earth (ㅡ) → `<speak='ㅗ'>` *(o - as in 'home')*\nSky (·) *below* Earth (ㅡ) → `<speak='ㅜ'>` *(u - as in 'moon')*\n\n#### **Group 3 — Pure Elements**\n\n- `<speak='ㅡ'>` *(eu - guttural sound)* — Earth alone\n- `<speak='ㅣ'>` *(i - as in 'meet')* — Person alone\n\n#### **A Note on ㅔ and ㅐ**\n\n- `<speak='ㅔ'>` *(e - as in 'bed')*\n- `<speak='ㅐ'>` *(ae — historically distinct, now identical to ㅔ in modern Korean)*\n\n> **ㅔ and ㅐ sound identical today.** Don't try to distinguish them by ear — just learn the correct spelling for each word.\n\n#### **Basic Consonants**\n\n| Letter | Sound / Audio | Name |\n|--------|---------------|------|\n| `<speak='ㄱ'>` | G/K → `<speak='그'>` | Giyeok |\n| `<speak='ㄴ'>` | N → `<speak='느'>` | Nieun |\n| `<speak='ㄷ'>` | D/T → `<speak='드'>` | Digueut |\n| `<speak='ㄹ'>` | R/L → `<speak='르'>` | Rieul |\n| `<speak='ㅁ'>` | M → `<speak='므'>` | Mieum |\n| `<speak='ㅂ'>` | B/P → `<speak='브'>` | Bieup |\n| `<speak='ㅅ'>` | S → `<speak='스'>` | Siot |\n| `<speak='ㅇ'>` | -/NG → `<speak='응'>` | Ieung |\n| `<speak='ㅈ'>` | J → `<speak='즈'>` | Jieut |\n| `<speak='ㅎ'>` | H → `<speak='흐'>` | Hieut |\n\n#### **Double Vowels (Diphthongs)**\n\nCombined sounds that require precision:\n\n- `<speak='ㅒ'>` *(yae)*\n- `<speak='ㅖ'>` *(ye)*\n- `<speak='ㅘ'>` *(wa)*\n- `<speak='ㅝ'>` *(wo)*\n- `<speak='ㅙ'>` *(wae)*\n- `<speak='ㅞ'>` *(we)*\n- `<speak='ㅟ'>` *(wi)*\n- `<speak='ㅢ'>` *(ui)*\n\n#### **Aspirated & Double Consonants**\n\n**Aspirated** consonants have a burst of air. **Double (Ssang)** consonants are tense and airless.\n\n| Type | Letters | Sound / Audio |\n|------|---------|---------------|\n| **Aspirated** | `<speak='ㅋ'>`, `<speak='ㅌ'>`, `<speak='ㅍ'>`, `<speak='ㅊ'>` | `<speak='크'>`, `<speak='트'>`, `<speak='프'>`, `<speak='츠'>` |\n| **Double** | `<speak='ㄲ'>`, `<speak='ㄸ'>`, `<speak='ㅃ'>`, `<speak='ㅆ'>`, `<speak='ㅉ'>` | `<speak='끄'>`, `<speak='뜨'>`, `<speak='쁘'>`, `<speak='쓰'>`, `<speak='쯔'>` |\n\n#### **Practical Examples**\n\n- `<speak='어머니'>` *(Mother)*\n- `<speak='아기'>` *(Baby)*\n- `<speak='우유'>` *(Milk)*\n- `<speak='의자'>` *(Chair)*\n- `<speak='커피'>` *(Coffee)*\n- `<speak='아빠'>` *(Dad)*\n\n> **Rule of Thumb:** Aspirated consonants usually have an extra stroke compared to their basic form. Double consonants are just the basic form mirrored!"
     },
     "hanja": {
       "title": "Hanja",
@@ -1733,7 +1736,7 @@
     "bookTitle": "📖 Practice Log",
     "inspectorTitle": "🔎 Stroke Guide",
     "drawJamo": "Draw {j}",
-    "drawSyllable": "Draw {s}  ·  now: {j}",
+    "drawSyllable": "Draw {s}ㅤ·ㅤNow: {j}",
     "great": "Great!",
     "lastTry": "Last try!",
     "resetJamo": "Wrong order - try again",

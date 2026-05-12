@@ -25,10 +25,14 @@ function _hourToBrightness(h) {
 }
 
 export function getGameHour() {
-  const fixed = G.dungeon?.worldDef?.fixedLighting;
-  if (fixed) {
-    const [hh, mm] = fixed.split(':').map(Number);
-    return hh + (mm || 0) / 60;
+  // On title screen, always use G.gameTime (= midday) regardless of the previous
+  // world's fixedLighting so the menu is never stuck in night mode.
+  if (G.phase !== 'title') {
+    const fixed = G.dungeon?.worldDef?.fixedLighting;
+    if (fixed) {
+      const [hh, mm] = fixed.split(':').map(Number);
+      return hh + (mm || 0) / 60;
+    }
   }
   const t = (G.gameTime || 0) % 420;
   return (t / 420) * 24; // fractional hour 0..24
@@ -193,8 +197,11 @@ export function drawBackground() {
   ctx.stroke();
   ctx.restore();
 
-  // Brick texture on walls
-  drawWallBricks(wallH, wallSide, wallBot);
+  // Wall texture (deterministic per room, 4 styles)
+  // 0=stripe-v (fan lines, current default)  1=stripe-h (horizontal/vertical flat lines)
+  // 2=cube (grid: both v+h)                  3=wide (stripe-v, sparse)
+  const _wStyle = (_rCol * 11 + _rRow * 5 + Math.abs(_rCol * _rRow)) % 4;
+  drawWallPattern(_wStyle, wallH, wallSide, wallBot);
 
   // Vignette
   const vig = ctx.createRadialGradient(W/2, H/2, H*0.15, W/2, H/2, H*0.8);
@@ -204,48 +211,50 @@ export function drawBackground() {
   ctx.fillRect(0, 0, W, H);
 }
 
-function drawWallBricks(wallH, wallSide, wallBot) {
+// Wall texture styles (deterministic per room).
+//   0 = stripe-v  : perspective fan lines, vertical feel (current default)
+//   1 = stripe-h  : flat horizontal/vertical straight lines
+//   2 = cube      : grid overlay (stripe-v + stripe-h combined)
+//   3 = wide      : stripe-v but sparse (1 line per ~6 spaces)
+function drawWallPattern(style, wallH, wallSide, wallBot) {
   if (!ctx) return;
   const W = G.W, H = G.vH;
+  const floorBot = H - wallBot;
 
-  const bH = Math.max(8, Math.floor(wallH / 3)); // line spacing for all walls
+  const bH = Math.max(8, Math.floor(wallH / 3)); // base spacing
 
   ctx.save();
   ctx.strokeStyle = 'rgba(255,255,255,0.22)';
   ctx.lineWidth = 1;
 
-  // Corner diagonal angles (radians), chosen so each wall's sequence is
-  // monotonic - no sign-flips through vertical or horizontal.
-  //
-  // Side walls (step Y): normalize to dx≥0 so angles stay in (-π/2, π/2).
-  const TL   = Math.atan2( wallH,   wallSide);  // ≈ +75°  left top
-  const BL   = Math.atan2(-wallBot, wallSide);  // ≈ -64°  left bottom
-  const TR   = Math.atan2(-wallH,   wallSide);  // ≈ -75°  right top  (dx>0 norm)
-  const BR   = Math.atan2( wallBot, wallSide);  // ≈ +64°  right bottom (dx>0 norm)
-  // Top wall (step X): normalize to dy>0 → angles stay in (0, π).
-  const TR_v = Math.atan2( wallH,  -wallSide);  // ≈ +104° top-right edge
-  // Bottom wall (step X): normalize to dy<0 → angles stay in (-π, 0).
-  const BR_v = Math.atan2(-wallBot, -wallSide); // ≈ -116° bottom-right edge
+  // ── Clip helper ────────────────────────────────────────────────
+  function withClip(pts, fn) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath(); ctx.clip();
+    fn();
+    ctx.restore();
+  }
 
-  // Unified fan-lines function.
-  // stepX=false → step along Y (side walls). Each line passes through (midX, y).
-  //   startAngle at y=ry, centerAngle at y=midY, endAngle at y=ry+rh.
-  // stepX=true  → step along X (top/bottom walls). Each line passes through (x, midY).
-  //   startAngle at x=rx, centerAngle at x=midX, endAngle at x=rx+rw.
-  // clipFn: draws & clips the exact wall polygon (trapezoidal, not rectangular).
+  // ── Fan-lines helper (perspective-correct converging lines) ────
+  // Corner diagonal angles — same derivation as original drawWallBricks.
+  const TL   = Math.atan2( wallH,   wallSide);
+  const BL   = Math.atan2(-wallBot, wallSide);
+  const TR   = Math.atan2(-wallH,   wallSide);
+  const BR   = Math.atan2( wallBot, wallSide);
+  const TR_v = Math.atan2( wallH,  -wallSide);
+  const BR_v = Math.atan2(-wallBot, -wallSide);
+
   function fanLines(rx, ry, rw, rh, stepX, startAngle, centerAngle, endAngle, spacing, clipFn) {
     if (rw <= 0 || rh <= 0) return;
-    ctx.save();
-    clipFn();
+    ctx.save(); clipFn();
     const reach = Math.hypot(W, H);
-    const midX = rx + rw / 2;
-    const midY = ry + rh / 2;
-
+    const midX = rx + rw / 2, midY = ry + rh / 2;
     if (stepX) {
       for (let x = rx; x <= rx + rw + spacing; x += spacing) {
-        const t = x <= midX
-          ? (midX - x) / Math.max(1, midX - rx)
-          : (x - midX) / Math.max(1, rx + rw - midX);
+        const t = x <= midX ? (midX - x) / Math.max(1, midX - rx) : (x - midX) / Math.max(1, rx + rw - midX);
         const angle = centerAngle + ((x <= midX ? startAngle : endAngle) - centerAngle) * t;
         const ux = Math.cos(angle), uy = Math.sin(angle);
         ctx.beginPath();
@@ -255,9 +264,7 @@ function drawWallBricks(wallH, wallSide, wallBot) {
       }
     } else {
       for (let y = ry; y <= ry + rh + spacing; y += spacing) {
-        const t = y <= midY
-          ? (midY - y) / Math.max(1, midY - ry)
-          : (y - midY) / Math.max(1, ry + rh - midY);
+        const t = y <= midY ? (midY - y) / Math.max(1, midY - ry) : (y - midY) / Math.max(1, ry + rh - midY);
         const angle = centerAngle + ((y <= midY ? startAngle : endAngle) - centerAngle) * t;
         const ux = Math.cos(angle), uy = Math.sin(angle);
         ctx.beginPath();
@@ -269,41 +276,63 @@ function drawWallBricks(wallH, wallSide, wallBot) {
     ctx.restore();
   }
 
-  // Left wall  - TL(+75°) → horizontal(0°) → BL(-64°)
-  // Clip: trapezoid (0,0)→(0,H)→(wallSide,H-wallBot)→(wallSide,wallH)
-  fanLines(0, 0, wallSide, H, false, TL, 0, BL, bH, () => {
-    ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(0, H);
-    ctx.lineTo(wallSide, H - wallBot); ctx.lineTo(wallSide, wallH);
-    ctx.closePath(); ctx.clip();
-  });
+  // ── Style 0 / 3: stripe-v (perspective fan lines) ─────────────
+  function drawStripeV(spacing) {
+    fanLines(0,           0, wallSide, H,      false, TL,  0,            BL,   spacing, () => {
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,H); ctx.lineTo(wallSide,floorBot); ctx.lineTo(wallSide,wallH); ctx.closePath(); ctx.clip();
+    });
+    fanLines(W-wallSide,  0, wallSide, H,      false, TR,  0,            BR,   spacing, () => {
+      ctx.beginPath(); ctx.moveTo(W,0); ctx.lineTo(W,H); ctx.lineTo(W-wallSide,floorBot); ctx.lineTo(W-wallSide,wallH); ctx.closePath(); ctx.clip();
+    });
+    fanLines(0,           0, W,       wallH,   true,  TL,  Math.PI/2,    TR_v, spacing, () => {
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(W,0); ctx.lineTo(W-wallSide,wallH); ctx.lineTo(wallSide,wallH); ctx.closePath(); ctx.clip();
+    });
+    fanLines(0, floorBot,    W,       wallBot, true,  BL, -Math.PI/2,    BR_v, spacing, () => {
+      ctx.beginPath(); ctx.moveTo(0,H); ctx.lineTo(W,H); ctx.lineTo(W-wallSide,floorBot); ctx.lineTo(wallSide,floorBot); ctx.closePath(); ctx.clip();
+    });
+  }
 
-  // Right wall - TR(-75°) → horizontal(0°) → BR(+64°)   [dx>0 normalisation]
-  // Clip: trapezoid (W,0)→(W,H)→(W-wallSide,H-wallBot)→(W-wallSide,wallH)
-  fanLines(W - wallSide, 0, wallSide, H, false, TR, 0, BR, bH, () => {
-    ctx.beginPath();
-    ctx.moveTo(W, 0); ctx.lineTo(W, H);
-    ctx.lineTo(W - wallSide, H - wallBot); ctx.lineTo(W - wallSide, wallH);
-    ctx.closePath(); ctx.clip();
-  });
+  // ── Style 1: stripe-h (flat horizontal + vertical straight lines) ─
+  function drawStripeH() {
+    // Side walls: straight vertical lines stepped across the wall width
+    const xSp = Math.max(4, Math.floor(wallSide / 3));
+    withClip([[0,0],[0,H],[wallSide,floorBot],[wallSide,wallH]], () => {
+      for (let x = xSp; x < wallSide; x += xSp) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+    });
+    withClip([[W,0],[W,H],[W-wallSide,floorBot],[W-wallSide,wallH]], () => {
+      for (let x = W - xSp; x > W - wallSide; x -= xSp) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+    });
+    // Top/bottom walls: straight horizontal lines stepped across the wall height
+    withClip([[0,0],[W,0],[W-wallSide,wallH],[wallSide,wallH]], () => {
+      for (let y = bH; y < wallH; y += bH) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+    });
+    withClip([[0,H],[W,H],[W-wallSide,floorBot],[wallSide,floorBot]], () => {
+      for (let y = H - bH; y > floorBot; y -= bH) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+    });
+  }
 
-  // Top wall  - TL(+75°) → vertical(+90°) → TR_v(+104°)  [dy>0 normalisation]
-  // Clip: trapezoid (0,0)→(W,0)→(W-wallSide,wallH)→(wallSide,wallH)
-  fanLines(0, 0, W, wallH, true, TL, Math.PI / 2, TR_v, bH, () => {
-    ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(W, 0);
-    ctx.lineTo(W - wallSide, wallH); ctx.lineTo(wallSide, wallH);
-    ctx.closePath(); ctx.clip();
-  });
-
-  // Bottom wall - BL(-64°) → vertical-up(-90°) → BR_v(-116°)  [dy<0 normalisation]
-  // Clip: trapezoid (0,H)→(W,H)→(W-wallSide,H-wallBot)→(wallSide,H-wallBot)
-  fanLines(0, H - wallBot, W, wallBot, true, BL, -Math.PI / 2, BR_v, bH, () => {
-    ctx.beginPath();
-    ctx.moveTo(0, H); ctx.lineTo(W, H);
-    ctx.lineTo(W - wallSide, H - wallBot); ctx.lineTo(wallSide, H - wallBot);
-    ctx.closePath(); ctx.clip();
-  });
+  // ── Dispatch by style ──────────────────────────────────────────
+  if (style === 0) {
+    drawStripeV(bH);
+  } else if (style === 1) {
+    drawStripeH();
+  } else if (style === 2) {
+    // Cube: overlay both (slightly dimmer so they don't overpower each other)
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    drawStripeV(bH);
+    drawStripeH();
+  } else {
+    // Wide/espaçado: same fan lines but much sparser
+    drawStripeV(bH * 6);
+  }
 
   ctx.restore();
 }
@@ -392,7 +421,7 @@ export function drawMenuBackground(worldDef, openDirs = [], patIdx = 0) {
   ctx.stroke();
   ctx.restore();
 
-  drawWallBricks(wallH, wallSide, wallBot);
+  drawWallPattern(patIdx % 4, wallH, wallSide, wallBot);
 
   // Draw door openings (no labels)
   const doorW = Math.min(90, W * 0.14);

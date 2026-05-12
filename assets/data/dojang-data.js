@@ -80,38 +80,39 @@ export function syllableToJamos(syllable) {
 //   45 = down-right (↘)   135 = down-left (↙)
 // 'circle' = closed arc stroke
 // Array [a,b] = compound stroke: first segment goes toward a, then bends toward b
-//  t = tolerance in degrees (default 55°)
+//  t = tolerance in degrees (D=35° simple, DC=45° compound L-shapes)
 
-const D = 55; // default tolerance
+const D  = 35; // simple stroke tolerance (→, ↓, ↙, ↘, etc.)
+const DC = 45; // compound (L-shape) stroke tolerance — slightly looser for the bend
 
 export const JAMO_STROKES = {
   // ── Basic consonants (SVG-verified stroke counts) ─────────────
   // Compound [firstDir, secondDir] strokes capture L-shaped single motions
-  'ㄱ': [{a:[0,90],  t:D}],                                      // 1: →↓ (L-shape)
-  'ㄴ': [{a:[90,0],  t:D}],                                      // 1: ↓→ (rev-L)
-  'ㄷ': [{a:0,t:D},  {a:[90,0],t:D}],                            // 2: →  then ↓→
-  'ㄹ': [{a:[0,90],t:D}, {a:0,t:D}, {a:[90,0],t:D}],            // 3: →↓ → ↓→
-  'ㅁ': [{a:90,t:D}, {a:[0,90],t:D}, {a:0,t:D}],                // 3: ↓  →↓  →
-  'ㅂ': [{a:90,t:D}, {a:90,t:D}, {a:0,t:D}, {a:0,t:D}],        // 4: ↓↓ →→
+  'ㄱ': [{a:[0,90],  t:DC}],                                     // 1: →↓ (L-shape)
+  'ㄴ': [{a:[90,0],  t:DC}],                                     // 1: ↓→ (rev-L)
+  'ㄷ': [{a:0,t:D},  {a:[90,0],t:DC}],                           // 2: →  then ↓→
+  'ㄹ': [{a:[0,90],t:DC}, {a:0,t:D}, {a:[90,0],t:DC}],          // 3: →↓ → ↓→
+  'ㅁ': [{a:90,t:D}, {a:[0,90],t:DC}, {a:0,t:D}],               // 3: ↓  →↓  →
+  'ㅂ': [{a:90,t:D}, {a:90,t:D}, {a:0,t:D,betweenVerts:[0,1]}, {a:0,t:D,betweenVerts:[0,1]}], // 4: ↓↓ →→
   'ㅅ': [{a:135,t:D},{a:45,t:D}],                                // 2: ↙ ↘
   'ㅇ': [{a:'circle'}],                                           // 1: ○
   // ㅈ/ㅊ: stroke 1 is →↙ (like the number 7: horiz then bends down-left)
   // SVG arrow-1 confirms: h274.67 then l-115.46 127.56 (right then down-left)
-  'ㅈ': [{a:[0,135],t:D}, {a:45,t:D}],                           // 2: →↙  ↘
-  'ㅊ': [{a:0,t:60},  {a:[0,135],t:D}, {a:45,t:D}],              // 3: →   →↙  ↘
-  'ㅋ': [{a:[0,90],t:D}, {a:0,t:D}],                             // 2: →↓  →
-  'ㅌ': [{a:0,t:D},  {a:0,t:D},  {a:[90,0],t:D}],               // 3: →  →  ↓→
+  'ㅈ': [{a:[0,135],t:DC}, {a:45,t:D,bsr:0}],                    // 2: →↙  ↘  (↘ must start below-right of →↙ start)
+  'ㅊ': [{a:0,t:60},  {a:[0,135],t:DC}, {a:45,t:D,bsr:1}],      // 3: →   →↙  ↘  (↘ below-right of →↙ start)
+  'ㅋ': [{a:[0,90],t:70}, {a:0,t:D}],                            // 2: →↓  →  (wider tolerance for the bend)
+  'ㅌ': [{a:0,t:D},  {a:0,t:D},  {a:[90,0],t:DC}],              // 3: →  →  ↓→
   'ㅍ': [{a:0,t:D},  {a:90,t:D}, {a:90,t:D}, {a:0,t:D}],       // 4: →  ↓  ↓  →
   // ㅎ: short → tick at top, long → bar, then ○
   'ㅎ': [{a:0,t:60}, {a:0,t:D},  {a:'circle'}],                  // 3: →  →  ○
 
   // ── Tense consonants ─────────────────────────────────────────
-  'ㄲ': [{a:[0,90],t:D}, {a:[0,90],t:D}],                       // 2: ㄱ×2
-  'ㄸ': [{a:0,t:D},{a:[90,0],t:D}, {a:0,t:D},{a:[90,0],t:D}],  // 4: ㄷ×2
-  'ㅃ': [{a:90,t:D},{a:90,t:D},{a:0,t:D},{a:0,t:D},
-          {a:90,t:D},{a:90,t:D},{a:0,t:D},{a:0,t:D}],           // 8: ㅂ×2
+  'ㄲ': [{a:[0,90],t:DC}, {a:[0,90],t:DC}],                     // 2: ㄱ×2
+  'ㄸ': [{a:0,t:D},{a:[90,0],t:DC}, {a:0,t:D},{a:[90,0],t:DC}], // 4: ㄷ×2
+  'ㅃ': [{a:90,t:D},{a:90,t:D},{a:0,t:D,betweenVerts:[0,1]},{a:0,t:D,betweenVerts:[0,1]},
+          {a:90,t:D},{a:90,t:D},{a:0,t:D,betweenVerts:[4,5]},{a:0,t:D,betweenVerts:[4,5]}], // 8: ㅂ×2
   'ㅆ': [{a:135,t:D},{a:45,t:D},{a:135,t:D},{a:45,t:D}],        // 4: ㅅ×2
-  'ㅉ': [{a:[0,135],t:D},{a:45,t:D},{a:[0,135],t:D},{a:45,t:D}], // 4: ㅈ×2
+  'ㅉ': [{a:[0,135],t:DC},{a:45,t:D,bsr:0},{a:[0,135],t:DC},{a:45,t:D,bsr:2}], // 4: ㅈ×2 (each ↘ below-right of its →↙)
 
   // ── Vowels ───────────────────────────────────────────────────
   // ㅓ/ㅕ/ㅔ/ㅖ: tick → (left-to-right) FIRST, then ↓ vertical
@@ -206,6 +207,23 @@ export const WORDS_UNLOCK_PCT    = 0.5; // 50% of all jamos → show words
 //  3 = batchim (CVC syllables)
 export const INTRO_JAMOS = PHASE1_JAMOS.slice(0, 24); // 14 basic cons + 10 basic vows
 export const EXTRA_JAMOS = PHASE1_JAMOS.slice(24);    // 11 compound vows + 5 tense cons
+
+// Display order for the training diary / wiki — groups by sound family rather than
+// pedagogical introduction order.
+export const DOJANG_BOOK_ORDER = [
+  // Core vowels (yin/yang pairs)
+  'ㅏ','ㅓ','ㅗ','ㅜ','ㅡ','ㅣ','ㅔ','ㅐ',
+  // Basic consonants
+  'ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ',
+  // Aspirated (breathy) consonants
+  'ㅊ','ㅋ','ㅌ','ㅍ','ㅎ',
+  // Extended vowels (y- series)
+  'ㅑ','ㅕ','ㅛ','ㅠ','ㅖ','ㅒ',
+  // Tense (double) consonants
+  'ㄲ','ㄸ','ㅃ','ㅆ','ㅉ',
+  // Compound vowels
+  'ㅘ','ㅙ','ㅚ','ㅝ','ㅞ','ㅟ','ㅢ',
+];
 
 // Precomputed list of all 19×21=399 CV syllables (no batchim)
 export const ALL_CV_SYLLABLES = CHOSUNGS.flatMap((_, ci) =>

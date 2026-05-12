@@ -241,6 +241,10 @@
           <div class="gopt-label" data-i18n="options.sfxVolume">🔉 Sound Effects</div>
           <input type="range" id="sfx-vol-slider" min="0" max="100" value="50" style="width:30%;accent-color:#4a9eff">
         </div>
+        <div class="gopt-card" style="grid-column:1/-1">
+          <div class="gopt-label" data-i18n="options.ambientMusic">🎵 Ambient Music</div>
+          <input type="range" id="music-vol-slider" min="0" max="100" value="35" style="width:30%;accent-color:#4a9eff">
+        </div>
       </div>
       <div id="settings-credits">
         <div class="credits-by" data-i18n="credits.byLine">🫰 By Lucas Nascimento</div>
@@ -298,6 +302,10 @@
         <div class="pause-opt-row">
           <span class="pause-opt-label">🔉 SFX</span>
           <input type="range" id="pause-sfx-vol" min="0" max="100" value="50" style="width:90px;accent-color:#4a9eff">
+        </div>
+        <div class="pause-opt-row">
+          <span class="pause-opt-label" data-i18n="options.ambientMusic">🎵 Ambient Music</span>
+          <input type="range" id="pause-music-vol" min="0" max="100" value="35" style="width:90px;accent-color:#4a9eff">
         </div>
         <div class="pause-opt-row">
           <span class="pause-opt-label" data-i18n="options.weather">🌤️ Weather</span>
@@ -551,6 +559,9 @@
 <!-- ── DAY/NIGHT CANVAS (never opacity-animated) ─────────── -->
 <canvas id="dn-canvas"></canvas>
 
+<!-- ── DOJANG PAPER BACKGROUND (between gc and stroke canvas) ── -->
+<div id="dojang-paper-bg"></div>
+
 <!-- ── DOJANG STROKE CANVAS (drawing input layer) ────────── -->
 <canvas id="dojang-canvas"></canvas>
 
@@ -707,7 +718,7 @@
   <div id="dojang-player">
     <button class="dj-player-btn" id="dojang-btn-speak" title="Speak again">🔊</button>
     <div id="dojang-player-sprite"></div>
-    <button class="dj-player-btn" id="dojang-btn-restart" title="Restart">♻️</button>
+    <button class="dj-player-btn" id="dojang-btn-restart" title="Restart">❌</button>
   </div>
 
   <!-- Pause overlay (inside scr-dojang so it inherits pointer-events: all from .screen) -->
