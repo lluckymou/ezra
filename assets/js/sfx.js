@@ -114,3 +114,117 @@ export function setVolume(v) {
   if (_masterGain) _masterGain.gain.value = _vol;
   localStorage.setItem(STORAGE_KEY, String(_vol));
 }
+
+/* ================================================================
+   AMBIENT MUSIC SYSTEM
+   Looping background music. Each track is an <audio> element for
+   reliable looping (Web Audio API looping has gaps on some browsers).
+   Volume stored under 'krr_music_vol' (0–1, default 0.35).
+================================================================ */
+const MUSIC_STORAGE_KEY = 'krr_music_vol';
+let _musicVol = parseFloat(localStorage.getItem(MUSIC_STORAGE_KEY) ?? '0.35');
+
+const MUSIC_TRACKS = {
+  // World tracks
+  palace:     'assets/music/palace.mp3',
+  jeju:       'assets/music/jeju.mp3',
+  haeundae:   'assets/music/haeundae.mp3',
+  myeongdong: 'assets/music/myeongdong.mp3',
+  seoraksan:  'assets/music/seoraksan.mp3',
+  baekdu:     'assets/music/baekdu.mp3',
+  insadong:   'assets/music/insadong.mp3',
+  eastsea:    'assets/music/eastsea.mp3',
+  jeonju:     'assets/music/jeonju.mp3',
+  gyeongju:   'assets/music/gyeongju.mp3',
+  yeouido:    'assets/music/yeouido.mp3',
+  dokdo:      'assets/music/dokdo.mp3',
+  gangnam:    'assets/music/gangnam.mp3',
+  yonggoong:  'assets/music/yonggoong.mp3',
+  cosmos:     'assets/music/cosmos.mp3',
+  // Special tracks
+  forest:     'assets/music/forest.mp3',
+  boss:       'assets/music/boss.mp3',
+  casino:     'assets/music/casino.mp3',
+  gift:       'assets/music/gift.mp3',
+  camp:       'assets/music/camp.mp3',
+  menu:       'assets/music/menu.mp3',
+};
+
+let _musicEl    = null; // current <audio> element
+let _musicTrack = null; // currently playing track key
+let _musicFade  = null; // { to: AudioElement, fadeIn: 0, fadeOut: 0, dur }
+let _fadeTick   = null; // requestAnimationFrame handle
+
+function _createAudio(src) {
+  const a = new Audio(src);
+  a.loop   = true;
+  a.volume = _musicVol;
+  return a;
+}
+
+function _stopFade() {
+  if (_fadeTick) { cancelAnimationFrame(_fadeTick); _fadeTick = null; }
+  _musicFade = null;
+}
+
+export function getMusicVolume() { return _musicVol; }
+
+export function setMusicVolume(v) {
+  _musicVol = Math.max(0, Math.min(1, v));
+  localStorage.setItem(MUSIC_STORAGE_KEY, String(_musicVol));
+  if (_musicEl) _musicEl.volume = _musicVol;
+  if (_musicFade?.to) _musicFade.to.volume = 0; // will ramp to _musicVol
+}
+
+export function playMusic(trackKey, crossfadeDur = 1.2) {
+  if (_musicVol <= 0) return;
+  const src = MUSIC_TRACKS[trackKey];
+  if (!src) return;
+  if (_musicTrack === trackKey && _musicEl && !_musicEl.paused) return; // already playing
+
+  const next = _createAudio(src);
+  next.volume = 0;
+  next.play().catch(() => {}); // silent fail if file missing or before user gesture
+
+  _stopFade();
+
+  const prev = _musicEl;
+  const prevStartVol = prev ? prev.volume : 0;
+  const startTime = performance.now();
+
+  _musicFade = { to: next, dur: crossfadeDur * 1000 };
+  _musicEl    = next;
+  _musicTrack = trackKey;
+
+  function tick() {
+    const p = Math.min(1, (performance.now() - startTime) / _musicFade?.dur);
+    if (next) next.volume = p * _musicVol;
+    if (prev) prev.volume = prevStartVol * (1 - p);
+    if (p < 1) {
+      _fadeTick = requestAnimationFrame(tick);
+    } else {
+      if (prev) { prev.pause(); prev.src = ''; }
+      if (next) next.volume = _musicVol;
+      _stopFade();
+    }
+  }
+  _fadeTick = requestAnimationFrame(tick);
+}
+
+export function stopMusic(fadeDur = 0.8) {
+  if (!_musicEl) return;
+  const el = _musicEl;
+  const startVol = el.volume;
+  const startTime = performance.now();
+  _stopFade();
+  _musicEl    = null;
+  _musicTrack = null;
+
+  function tick() {
+    const p = Math.min(1, (performance.now() - startTime) / (fadeDur * 1000));
+    el.volume = startVol * (1 - p);
+    if (p < 1) requestAnimationFrame(tick);
+    else { el.pause(); el.src = ''; }
+  }
+  requestAnimationFrame(tick);
+}

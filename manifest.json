@@ -1,7 +1,7 @@
 {
   "name": "EZRA Taja",
   "short_name": "EZRA",
-  "description": "Learning Korean by typing",
+  "description": "Practicing Korean by typing",
   "start_url": "./",
   "display": "fullscreen",
   "orientation": "landscape",

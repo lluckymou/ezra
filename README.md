@@ -4,7 +4,7 @@
   </a>
   <br><br>
 
-  _Learning Korean by typing_ | _타이핑으로 한국어 배우기_
+  _Practicing Korean by typing_ | _타이핑으로 한국어 배우기_
 
   <a href="https://github.com/sponsors/lluckymou?frequency=one-time">
     <img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=github-sponsors&style=flat-square" alt="Sponsor">

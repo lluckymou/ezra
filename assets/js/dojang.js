@@ -4,7 +4,7 @@
 ================================================================ */
 import { G } from './state.js';
 import {
-  JAMO_STROKES, JAMO_INFO, JAMO_HAS_BATCHIM, PHASE1_JAMOS,
+  JAMO_STROKES, JAMO_INFO, JAMO_HAS_BATCHIM, PHASE1_JAMOS, DOJANG_BOOK_ORDER,
   INTRO_JAMOS, MAX_JAMO_COUNT, BATCHIM_UNLOCK_COUNT, WORDS_UNLOCK_PCT,
   ALL_CV_SYLLABLES, COMPLEX_SYLLABLES,
   syllableToJamos, computeHangulStage, pickNextChallenge,
@@ -18,6 +18,9 @@ const STORAGE_KEY = 'krr_dojang';
 const MAX_ERRORS  = 3;     // errors before resetting current character
 const MIN_STROKE_LEN = 10; // minimum stroke px to count (avoids taps)
 const CIRCLE_CLOSE_RATIO = 0.45; // end/start dist must be < ratio * total length
+
+// First stroke of each double consonant's second copy (used for L→R ordering check)
+const DOUBLE_CONS_HALF = { 'ㄲ': 1, 'ㄸ': 2, 'ㅃ': 4, 'ㅆ': 2, 'ㅉ': 2 };
 
 // ── Persistent stats schema ──────────────────────────────────
 // {
@@ -93,6 +96,10 @@ export class DojangManager {
     this.nextDelay      = 0;
     // TTS queue: if speech is playing, next auto-speak is stored here
     this._pendingSpeak  = null;
+    // Velocity tracking for speed-based stroke width
+    this._lastMoveTime  = null;
+    this._currentWidth  = null; // EMA-smoothed width for continuity
+    this._poolR         = 0;    // current ink-pool radius (grows when stationary)
     // Callbacks set by game.js
     this.onStartAdventure = null;
     this.onExitToMenu     = null;
@@ -149,6 +156,22 @@ export class DojangManager {
         this._nextChallenge();
       }
     }
+    // Ink pooling: when held stationary, grow a dot at the cursor position
+    if (this.drawing && this.lastPt && this._lastMoveTime !== null) {
+      const idle = performance.now() - this._lastMoveTime;
+      if (idle > 80) {
+        const baseR  = (this._currentWidth ?? 9) / 2;
+        const maxExtra = 10;
+        const progress = Math.min(1, (idle - 80) / 800);
+        const targetR = baseR + maxExtra * progress;
+        this._poolR = targetR;
+        const { x, y } = this.lastPt;
+        this.sCtx.beginPath();
+        this.sCtx.arc(x, y, this._poolR, 0, Math.PI * 2);
+        this.sCtx.fillStyle = '#333333';
+        this.sCtx.fill();
+      }
+    }
   }
 
   // Draw onto the main gc canvas (background + ghost guide)
@@ -156,7 +179,11 @@ export class DojangManager {
     const W = G.W, H = G.vH || G.H;
 
     // ── Background ────────────────────────────────────────
-    ctx.fillStyle = '#05081a';
+    const grad = ctx.createRadialGradient(0, 0, 0, W * 0.35, H * 0.35, Math.max(W, H) * 0.9);
+    grad.addColorStop(0, 'hsla(48,68%,94%,1)');
+    grad.addColorStop(0.5, 'hsla(46,52%,90%,1)');
+    grad.addColorStop(1, 'hsla(44,38%,86%,1)');
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
     const cx      = W / 2;
@@ -167,7 +194,7 @@ export class DojangManager {
       : Math.min(W * 0.55, H * 0.45, 280);
 
     // Grid centered on ghost character (half-char-height grid cells)
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.05)';
     ctx.lineWidth = 1;
     const gSize  = size / 2;
     const startX = ((cx % gSize) + gSize) % gSize;
@@ -191,7 +218,7 @@ export class DojangManager {
 
     ctx.save();
     ctx.globalAlpha = 0.07;
-    ctx.fillStyle  = '#ffffff';
+    ctx.fillStyle  = '#333333';
     ctx.font = `bold ${size}px "Nanum Myeongjo", "SongMyung", serif`;
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
@@ -225,13 +252,18 @@ export class DojangManager {
     const isMob   = H < 600;
     const guideY  = isMob ? H * 0.73 : H * 0.70;
     const isDesk  = H >= 600;
-    const maxItemW = isDesk ? 90 : 64;
-    const itemW   = Math.max(44, Math.min(maxItemW, (W * 0.72) / Math.max(strokes.length, 1)));
+    const maxItemW = isDesk ? 62 : 50;
+    const itemW   = Math.max(32, Math.min(maxItemW, (W * 0.60) / Math.max(strokes.length, 1)));
     const totalW  = strokes.length * itemW;
     const startX  = W / 2 - totalW / 2 + itemW / 2;
-    const rNum    = Math.max(12, H * 0.026); // circle radius
+    const rNum    = Math.max(8, H * 0.016);  // circle radius
     const circleY = guideY - rNum * 2.2;     // center of the numbered circle
-    const arrowY  = guideY + H * 0.008;      // center of the arrow glyph
+    const arrowY  = guideY + H * 0.006;      // center of the arrow glyph
+
+    const sqPad = rNum * 0.7;
+    const sqTop = circleY - rNum - sqPad;
+    const sqBot = arrowY + rNum * 1.0 + sqPad;
+    const sqH   = sqBot - sqTop;
 
     ctx.save();
     ctx.textAlign    = 'center';
@@ -240,32 +272,48 @@ export class DojangManager {
       const x = startX + i * itemW;
       const isCompleted = i < strokeIdx;
       const isCurrent   = i === strokeIdx;
+      const sqW = itemW * 0.82;
+      const sqX = x - sqW / 2;
+
+      // Background square
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(sqX, sqTop, sqW, sqH, 7);
+      else ctx.rect(sqX, sqTop, sqW, sqH);
 
       if (isCompleted) {
-        ctx.globalAlpha = 0.8;
-        ctx.fillStyle   = 'rgba(80,220,120,0.9)';
-        ctx.strokeStyle = 'rgba(80,220,120,0.6)';
+        ctx.fillStyle = 'rgba(50,170,90,0.85)';
+        ctx.fill();
       } else if (isCurrent) {
-        ctx.globalAlpha = 1;
-        ctx.fillStyle   = 'rgba(255,255,255,1)';
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillStyle = 'rgba(80,220,120,0.18)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(50,170,90,0.7)';
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
       } else {
-        ctx.globalAlpha = 0.45;
-        ctx.fillStyle   = 'rgba(255,255,255,0.5)';
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillStyle = 'rgba(100,100,100,0.08)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(100,100,100,0.2)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
 
-      // Circled stroke number - arc and text share the same center
-      ctx.beginPath();
-      ctx.arc(x, circleY, rNum, 0, Math.PI * 2);
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.font = `bold ${Math.round(rNum * 1.1)}px "Pretendard Variable", sans-serif`;
+      // Text colors on top of squares
+      if (isCompleted) {
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      } else if (isCurrent) {
+        ctx.fillStyle = 'rgba(20,100,50,1)';
+      } else {
+        ctx.fillStyle = 'rgba(80,80,80,0.55)';
+      }
+
+      // Stroke number
+      ctx.font = `bold ${Math.round(rNum * 1.0)}px "Pretendard Variable", sans-serif`;
       ctx.fillText(String(i + 1), x, circleY);
 
       // Direction arrow
       const arrow = strokeAngleToArrow(stroke.a);
-      ctx.font = `${Math.round(Math.max(20, H * 0.038))}px "Pretendard Variable", sans-serif`;
+      ctx.font = `${Math.round(Math.max(12, H * 0.020))}px "Pretendard Variable", sans-serif`;
       ctx.fillText(arrow, x, arrowY);
     });
     ctx.restore();
@@ -280,20 +328,20 @@ export class DojangManager {
     if (jamoIdx >= jamos.length) {
       // Show all dots green
       const dotY   = isMob ? H * 0.895 : H * 0.856;
-      const dotR   = H * 0.013;
-      const dotGap = dotR * 3.2;
+      const dotR   = H * 0.009;
+      const dotGap = dotR * 3.5;
       const startX = W / 2 - (totalStrokes - 1) * dotGap / 2;
       for (let i = 0; i < totalStrokes; i++) {
         ctx.beginPath();
         ctx.arc(startX + i * dotGap, dotY, dotR, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(80,220,120,0.9)';
+        ctx.fillStyle = 'rgba(50,170,90,0.9)';
         ctx.fill();
       }
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(80,220,120,0.9)';
-      ctx.font = `bold ${Math.round(H * 0.032)}px "Pretendard Variable", sans-serif`;
+      ctx.fillStyle = 'rgba(30,140,70,0.9)';
+      ctx.font = `bold ${Math.round(H * 0.026)}px "Nanum Myeongjo", "SongMyung", serif`;
       ctx.fillText(i18n('dojang.great'), W / 2, isMob ? H * 0.84 : H * 0.80);
       ctx.restore();
       return;
@@ -309,12 +357,12 @@ export class DojangManager {
     ctx.textBaseline = 'middle';
 
     if (this.errors >= MAX_ERRORS - 1 && this.challenge.globalStrokeIdx > 0) {
-      ctx.fillStyle = 'rgba(255,160,80,0.9)';
-      ctx.font = `bold ${Math.round(Math.max(16, H * 0.034))}px "Pretendard Variable", sans-serif`;
+      ctx.fillStyle = 'rgba(200,80,20,0.9)';
+      ctx.font = `bold ${Math.round(Math.max(13, H * 0.026))}px "Nanum Myeongjo", "SongMyung", serif`;
       ctx.fillText(i18n('dojang.lastTry'), W / 2, instrY);
     } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.75)';
-      ctx.font = `${Math.round(Math.max(15, H * 0.032))}px "Pretendard Variable", sans-serif`;
+      ctx.fillStyle = 'rgba(50,40,30,0.7)';
+      ctx.font = `${Math.round(Math.max(12, H * 0.024))}px "Nanum Myeongjo", "SongMyung", serif`;
       const stage = computeHangulStage(this.stats);
       let msg;
       if (stage <= 1) {
@@ -328,8 +376,8 @@ export class DojangManager {
     // Stroke counter dots - sliding window of max 10, centered on current stroke
     const MAX_DOTS  = 10;
     const dotY      = isMob ? H * 0.895 : H * 0.856;
-    const dotR      = H * 0.013;
-    const dotGap    = dotR * 3.2;
+    const dotR      = H * 0.009;
+    const dotGap    = dotR * 3.5;
     let winStart = 0;
     if (totalStrokes > MAX_DOTS) {
       // Keep current stroke in the middle half of the window (start scrolling at index 5)
@@ -342,22 +390,22 @@ export class DojangManager {
       ctx.beginPath();
       ctx.arc(startX + w * dotGap, dotY, dotR, 0, Math.PI * 2);
       if (i < globalStrokeIdx) {
-        ctx.fillStyle = 'rgba(80,220,120,0.9)';   // completed
+        ctx.fillStyle = 'rgba(50,170,90,0.9)';    // completed
       } else if (i === globalStrokeIdx) {
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';  // current
+        ctx.fillStyle = 'rgba(40,40,40,0.85)';    // current
       } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.25)'; // upcoming
+        ctx.fillStyle = 'rgba(100,100,100,0.25)'; // upcoming
       }
       ctx.fill();
     }
 
     // Jamo name label above ghost area
     if (info) {
-      const sz = Math.round(Math.max(14, H * 0.030));
-      ctx.font = `${sz}px "Pretendard Variable", sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      const sz = Math.round(Math.max(12, H * 0.022));
+      ctx.font = `${sz}px "Nanum Myeongjo", "SongMyung", serif`;
+      ctx.fillStyle = 'rgba(60,45,30,0.55)';
       ctx.textAlign = 'center';
-      ctx.fillText(`${curJamo}  ${info.name} · ${info.rom}`, W / 2, H * 0.22);
+      ctx.fillText(`${curJamo}ㅤ(${info.name})ㅤ·ㅤ${info.rom}`, W / 2, H * 0.22);
     }
 
     ctx.restore();
@@ -403,18 +451,54 @@ export class DojangManager {
     this.drawing = true;
     this.points  = [{ x, y }];
     this.lastPt  = { x, y };
+    this._lastMoveTime = performance.now();
+    this._currentWidth = null;
+    this._poolR = 0;
     this.sCtx.beginPath();
     this.sCtx.moveTo(x, y);
   }
 
   _moveStroke(x, y) {
-    this.points.push({ x, y });
+    // Speed-based stroke width: slow = thick (ink pooling), fast = thin
+    const now = performance.now();
+    let speed = 0;
+    if (this._lastMoveTime !== null && this.lastPt) {
+      const dt = Math.max(1, now - this._lastMoveTime);
+      speed = Math.hypot(x - this.lastPt.x, y - this.lastPt.y) / dt;
+    }
+    this._lastMoveTime = now;
+    // If exiting a pool (first move after stationary), start line at pool diameter
+    // so the stroke tapers naturally from the blob size down to normal width.
+    if (this._poolR > 0) {
+      this.points[0].w = this._poolR * 2; // record pool size on the start point for replay
+      this._currentWidth = this._poolR * 2;
+    }
+    this._poolR = 0;
+    const minW = 4, maxW = 15;
+    const targetW = maxW - (maxW - minW) * Math.min(1, speed / 1.8);
+    // EMA smoothing: prevents sudden width jumps that create visible dots
+    this._currentWidth = this._currentWidth
+      ? this._currentWidth * 0.65 + targetW * 0.35
+      : targetW;
+    const lw = this._currentWidth;
+
+    this.points.push({ x, y, w: lw }); // store width per point for authentic replay
+
+    // Draw segment
+    this.sCtx.beginPath();
+    this.sCtx.moveTo(this.lastPt.x, this.lastPt.y);
     this.sCtx.lineTo(x, y);
-    this.sCtx.strokeStyle = '#ffffff';
-    this.sCtx.lineWidth   = Math.max(3, Math.min(this.strokeCanvas.width * 0.006, 7));
+    this.sCtx.strokeStyle = '#333333';
+    this.sCtx.lineWidth   = lw;
     this.sCtx.lineCap  = 'round';
     this.sCtx.lineJoin = 'round';
     this.sCtx.stroke();
+    // Fill a circle at the endpoint to bridge width transitions between segments
+    this.sCtx.beginPath();
+    this.sCtx.arc(x, y, lw / 2, 0, Math.PI * 2);
+    this.sCtx.fillStyle = '#333333';
+    this.sCtx.fill();
+
     this.sCtx.beginPath();
     this.sCtx.moveTo(x, y);
     this.lastPt = { x, y };
@@ -456,6 +540,16 @@ export class DojangManager {
     if (strokeDef.a === 'circle') {
       const closeDist = Math.hypot(end.x - start.x, end.y - start.y);
       valid = closeDist < len * CIRCLE_CLOSE_RATIO && len > MIN_STROKE_LEN * 2;
+      if (valid) {
+        // Circle must start at the top (≈270° from center), with ±65° tolerance
+        let cx = 0, cy = 0;
+        for (const p of pts) { cx += p.x; cy += p.y; }
+        cx /= pts.length; cy /= pts.length;
+        const startAngle = (Math.atan2(pts[0].y - cy, pts[0].x - cx) * 180 / Math.PI + 360) % 360;
+        let angleDiff = Math.abs(startAngle - 270);
+        if (angleDiff > 180) angleDiff = 360 - angleDiff;
+        if (angleDiff > 65) valid = false;
+      }
 
     } else if (Array.isArray(strokeDef.a)) {
       // Compound stroke (L-shape, 7-shape, etc.): check start and end segment directions
@@ -469,7 +563,7 @@ export class DojangManager {
       const a1  = (Math.atan2(dy1, dx1) * 180 / Math.PI + 360) % 360;
       const a2  = (Math.atan2(dy2, dx2) * 180 / Math.PI + 360) % 360;
 
-      const t = strokeDef.t ?? 55;
+      const t = strokeDef.t ?? 45;
       let d1 = Math.abs(a1 - strokeDef.a[0]); if (d1 > 180) d1 = 360 - d1;
       let d2 = Math.abs(a2 - strokeDef.a[1]); if (d2 > 180) d2 = 360 - d2;
 
@@ -482,11 +576,58 @@ export class DojangManager {
       const dx = end.x - start.x;
       const dy = end.y - start.y;
       const drawnAngle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
-      const tolerance  = strokeDef.t ?? 55;
+      const tolerance  = strokeDef.t ?? 35;
       let diff = Math.abs(drawnAngle - strokeDef.a);
       if (diff > 180) diff = 360 - diff;
       // Also reject if the stroke is too curvy (lots of direction changes or deviation)
       valid = diff <= tolerance && this._isStraightEnough(pts, len);
+    }
+
+    if (valid && !this._checkStrokeOrder(strokeDef, pts)) valid = false;
+
+    // bsr (below-start-right): new stroke's start must be below AND right of ref stroke's start.
+    // strokeDef.bsr = index of the reference stroke within the current jamo.
+    if (valid && strokeDef.bsr !== undefined) {
+      const { strokeIdx, completedPaths } = this.challenge;
+      const refIdx = completedPaths.length - strokeIdx + strokeDef.bsr;
+      if (refIdx >= 0 && completedPaths[refIdx]) {
+        const refStart = completedPaths[refIdx].pts[0];
+        const newStart = pts[0];
+        const MIN = 8;
+        if (newStart.x < refStart.x - MIN || newStart.y < refStart.y - MIN) valid = false;
+      }
+    }
+
+    // betweenVerts: horizontal stroke's x-midpoint must fall between the two reference verticals.
+    if (valid && strokeDef.betweenVerts) {
+      const [vi0, vi1] = strokeDef.betweenVerts;
+      const { strokeIdx: sIdx, completedPaths } = this.challenge;
+      const base  = completedPaths.length - sIdx;
+      const path0 = completedPaths[base + vi0];
+      const path1 = completedPaths[base + vi1];
+      if (path0 && path1) {
+        const cx0 = this._pathCenter(path0.pts).x;
+        const cx1 = this._pathCenter(path1.pts).x;
+        const minX = Math.min(cx0, cx1) - 15;
+        const maxX = Math.max(cx0, cx1) + 15;
+        const newMidX = (pts[0].x + pts[pts.length - 1].x) / 2;
+        if (newMidX < minX || newMidX > maxX) valid = false;
+      }
+    }
+
+    // Double consonant L→R ordering: the first stroke of the right copy must start
+    // to the RIGHT of the center-of-mass of all left-copy strokes.
+    if (valid) {
+      const halfIdx = DOUBLE_CONS_HALF[curJamo];
+      if (halfIdx !== undefined && this.challenge.strokeIdx === halfIdx) {
+        const { strokeIdx: sIdx, completedPaths } = this.challenge;
+        const firstCopyPaths = completedPaths.slice(-sIdx);
+        let totalX = 0, totalPts = 0;
+        for (const { pts: rpts } of firstCopyPaths) {
+          for (const p of rpts) { totalX += p.x; totalPts++; }
+        }
+        if (totalPts > 0 && pts[0].x < (totalX / totalPts) + 10) valid = false;
+      }
     }
 
     if (valid) this._onStrokeOk();
@@ -519,7 +660,16 @@ export class DojangManager {
       const jamos = this.challenge.jamos;
       const curJamo = jamos[this.challenge.jamoIdx];
       const isWideStroke = ((curJamo === 'ㅂ' || curJamo === 'ㅃ') && strokeIdx === 1)
-                        || (curJamo === 'ㅁ' && strokeIdx === 1);
+                        || (curJamo === 'ㅃ' && (strokeIdx === 4 || strokeIdx === 5))
+                        || (curJamo === 'ㅁ' && strokeIdx === 1)
+                        // Compound vowels: the ㅣ bar (or shared strokes) often lands
+                        // far from prior strokes — give it extra proximity room.
+                        || (curJamo === 'ㅚ' && strokeIdx === 2)
+                        || (curJamo === 'ㅟ' && strokeIdx === 2)
+                        || (curJamo === 'ㅢ' && strokeIdx === 1)
+                        || (curJamo === 'ㅘ' && strokeIdx === 2)
+                        || (curJamo === 'ㅞ' && (strokeIdx === 2 || strokeIdx === 3))
+                        || (curJamo === 'ㅙ' && (strokeIdx === 2 || strokeIdx === 3));
       margin = size * (isWideStroke ? 0.56 : 0.28);
     } else {
       // First stroke of a new jamo: compare against all previous strokes
@@ -538,15 +688,30 @@ export class DojangManager {
       }
     }
 
-    // Expand bbox by margin
-    minX -= margin; minY -= margin;
-    maxX += margin; maxY += margin;
+    // Expand bbox - for the first stroke of a new jamo, use asymmetric margins:
+    // generous downward/rightward (new jamo goes right or below) but tight
+    // upward/leftward (new jamo must never appear above or left of existing strokes).
+    if (strokeIdx === 0) {
+      const snap = size * 0.08; // ~22px for size=280
+      minX -= snap;
+      minY -= snap;
+      maxX += margin;
+      maxY += margin;
+    } else {
+      minX -= margin; minY -= margin;
+      maxX += margin; maxY += margin;
+    }
 
-    // The centroid of the new stroke must fall within the expanded bbox
+    // Accept if the start point OR centroid falls within the expanded bbox.
+    // Start point is used for compound strokes (↓→ etc.) whose centroid drifts far from
+    // the connection point with the previous stroke (e.g. ㄷ stroke 2 goes well below stroke 1).
+    const inBbox = (x, y) => x >= minX && x <= maxX && y >= minY && y <= maxY;
+    const sx = pts[0].x, sy = pts[0].y;
+    if (inBbox(sx, sy)) return true;
     let sumX = 0, sumY = 0;
     for (const p of pts) { sumX += p.x; sumY += p.y; }
     const cx = sumX / pts.length, cy = sumY / pts.length;
-    return cx >= minX && cx <= maxX && cy >= minY && cy <= maxY;
+    return inBbox(cx, cy);
   }
 
   // Simple strokes should be mostly straight (no erratic zig-zags)
@@ -562,8 +727,58 @@ export class DojangManager {
       const dev = Math.abs(dy * p.x - dx * p.y + end.x * start.y - end.y * start.x) / len;
       maxDev = Math.max(maxDev, dev);
     }
-    // Allow up to 18% of stroke length as deviation (tighter - rejects wavy strokes)
-    return maxDev <= Math.max(12, 0.18 * len);
+    // Allow up to 12% of stroke length as deviation
+    return maxDev <= Math.max(8, 0.12 * len);
+  }
+
+  // Returns the center (midpoint of first and last point) of a path
+  _pathCenter(pts) {
+    const s = pts[0], e = pts[pts.length - 1];
+    return { x: (s.x + e.x) / 2, y: (s.y + e.y) / 2 };
+  }
+
+  // For repeated same-direction strokes in a jamo, enforce spatial ordering:
+  //   repeated ↓ (angle ~90°) → each new stroke must be to the RIGHT (larger centerX)
+  //   repeated → (angle ~0°)  → each new stroke must be BELOW (larger centerY)
+  // Returns true if position is acceptable, false to reject.
+  _checkStrokeOrder(strokeDef, newPts) {
+    if (!this.challenge) return true;
+    const { jamos, jamoIdx, strokeIdx, completedPaths } = this.challenge;
+    if (strokeIdx === 0) return true; // first stroke of jamo: no constraint
+
+    const expectedAngle = Array.isArray(strokeDef.a) ? strokeDef.a[0] : strokeDef.a;
+    if (expectedAngle === 'circle') return true;
+
+    // Only enforce ordering when the immediately preceding stroke has the same direction.
+    // This handles ㅠ (→↓↓ — consecutive ↓s) while leaving complex compounds like
+    // ㅙ (↓→↓→↓) unaffected, since their same-direction strokes are not adjacent.
+    const jamoStrokes = JAMO_STROKES[jamos[jamoIdx]] || [];
+    const prevDef = jamoStrokes[strokeIdx - 1];
+    if (!prevDef) return true;
+    const prevAngle = Array.isArray(prevDef.a) ? prevDef.a[0] : prevDef.a;
+    if (prevAngle !== expectedAngle) return true; // previous stroke has a different direction
+
+    const jamoCompletedPaths = completedPaths.slice(-strokeIdx);
+    let prevMatchPts = null;
+    const pathOffset = jamoCompletedPaths.length - 1;
+    if (pathOffset >= 0 && jamoCompletedPaths[pathOffset]) {
+      prevMatchPts = jamoCompletedPaths[pathOffset].pts;
+    }
+
+    if (!prevMatchPts) return true;
+
+    const prevCenter = this._pathCenter(prevMatchPts);
+    const newCenter  = this._pathCenter(newPts);
+    const isVertical = Math.abs(((expectedAngle % 360 + 360) % 360) - 90) < 45; // ~90° = ↓
+    const MIN_OFFSET = 8; // minimum pixel separation to enforce ordering
+
+    if (isVertical) {
+      // ↓ strokes: new must be to the RIGHT of previous (larger X)
+      return newCenter.x >= prevCenter.x - MIN_OFFSET;
+    } else {
+      // → strokes: new must be BELOW previous (larger Y)
+      return newCenter.y >= prevCenter.y - MIN_OFFSET;
+    }
   }
 
   _onStrokeOk() {
@@ -571,6 +786,7 @@ export class DojangManager {
 
     // Record the completed path so we can redraw it in green
     this.challenge.completedPaths.push({ pts: [...this.points] });
+    this._updateRestartBtn();
 
     // Redraw canvas: completed strokes in green, in-progress cleared
     this._clearStrokes();
@@ -671,6 +887,7 @@ export class DojangManager {
       this.challenge.completedPaths  = [];
       this._clearStrokes();
       this._announce(i18n('dojang.resetJamo'));
+      this._updateRestartBtn();
     } else {
       sfx('doMinorError', 0.3);
     }
@@ -683,22 +900,38 @@ export class DojangManager {
     this.points  = [];
     this.lastPt  = null;
     this.drawing = false;
+    this._lastMoveTime = null;
+    this._currentWidth = null;
+    this._poolR = 0;
     this.sCtx.beginPath();
   }
 
   _redrawCompletedStrokes() {
     const ctx = this.sCtx;
-    const lw  = Math.max(3, Math.min(this.strokeCanvas.width * 0.006, 7));
+    ctx.lineCap  = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(30,140,70,1)';
+    ctx.fillStyle   = 'rgba(30,140,70,1)';
     (this.challenge?.completedPaths || []).forEach(({ pts }) => {
       if (pts.length < 2) return;
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.strokeStyle = 'rgba(80,220,120,0.85)';
-      ctx.lineWidth   = lw;
-      ctx.lineCap     = 'round';
-      ctx.lineJoin    = 'round';
-      ctx.stroke();
+      // Draw pool dot at start point if one was recorded
+      if (pts[0].w) {
+        ctx.beginPath();
+        ctx.arc(pts[0].x, pts[0].y, pts[0].w / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Replay each segment at its original width for authentic appearance
+      for (let i = 1; i < pts.length; i++) {
+        const lw = pts[i].w ?? Math.max(5, Math.min(10, this.strokeCanvas.width * 0.008));
+        ctx.beginPath();
+        ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
+        ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.lineWidth = lw;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(pts[i].x, pts[i].y, lw / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
     });
   }
 
@@ -743,9 +976,10 @@ export class DojangManager {
       completedPaths: [],
     };
     this._speakText(char);
+    this._updateRestartBtn();
   }
 
-  // Restart current character from the beginning (bound to ♻️ button)
+  // Restart current character from the beginning (bound to ❌ button)
   restartChallenge() {
     if (!this.challenge) return;
     this.challenge.jamoIdx = 0;
@@ -754,6 +988,7 @@ export class DojangManager {
     this.challenge.completedPaths = [];
     this.errors = 0;
     this._clearStrokes();
+    this._updateRestartBtn();
   }
 
   // Re-speak the current character (bound to 🔊 button) - always interrupts
@@ -809,6 +1044,22 @@ export class DojangManager {
       const stageLabels = ['phase1','phase2','phaseCV','phase3','phase4'];
       phaseEl.textContent = i18n(`dojang.${stageLabels[Math.min(stage, 4)] || 'phase4'}`);
     }
+
+    // Speak button: show muted icon when TTS is unavailable
+    const speakBtn = document.getElementById('dojang-btn-speak');
+    if (speakBtn) {
+      const canSpeak = G.ttsEnabled && typeof speechSynthesis !== 'undefined';
+      speakBtn.textContent = canSpeak ? '🔊' : '🔇';
+    }
+
+    this._updateRestartBtn();
+  }
+
+  _updateRestartBtn() {
+    const btn = document.getElementById('dojang-btn-restart');
+    if (!btn) return;
+    const hasProgress = this.challenge && this.challenge.globalStrokeIdx > 0;
+    btn.style.opacity = hasProgress ? '1' : '0.4';
   }
 
   // ── Announce ──────────────────────────────────────────────
@@ -828,7 +1079,11 @@ export class DojangManager {
   togglePause() {
     this.paused = !this.paused;
     this._showPauseMenu(this.paused);
-    if (this.paused) this._clearStrokes();
+    if (this.paused) {
+      this._clearStrokes();
+    } else {
+      this._redrawCompletedStrokes(); // restore ink after unpausing
+    }
   }
 
   _showPauseMenu(show) {
@@ -878,7 +1133,7 @@ export class DojangManager {
     const countTip   = i18n('dojang.timesWritten');
     const strokesTip = i18n('dojang.strokeCountTip');
 
-    const rows = PHASE1_JAMOS.map(j => {
+    const rows = DOJANG_BOOK_ORDER.map(j => {
       const count   = jp[j]?.count || 0;
       const strokes = (JAMO_STROKES[j] || []).length;
       const bar     = Math.min(100, Math.round(count / MAX_JAMO_COUNT * 100));

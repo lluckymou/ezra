@@ -1,7 +1,7 @@
 /* ================================================================
    WORLD - dungeon generation + room management + navigation
 ================================================================ */
-import { G, resetRoomState } from './state.js';
+import { G, resetRoomState, savePersistentState } from './state.js';
 import { get as i18n } from './i18n.js';
 import { genRoomEnemies, initRoomSpawner, setRoomClearedCallback, announce, dismissAnnounce, flashAnnounce, addToInventory, mkMonster, collectCoins, explodeCoins } from './combat.js';
 import { mpSend, getMpTemplates } from './multiplayer.js';
@@ -118,7 +118,7 @@ export const WORLDS = [
   {
     id: 'eastsea',
     name: '동해',
-    emoji: '🌊',           transport: '🛥️',
+    emoji: '⛴️',           transport: '🛥️',
     bgTop: '#000c1a',      bgBot: '#00142a',
     bossEmoji: '🦈',       // Great white shark - deep East Sea
     bossName: '상어왕',
@@ -1377,7 +1377,7 @@ export function startNewWorld(worldIdx) {
   // Track worlds ever visited (persistent, all-time)
   const _wid = G.dungeon.worldDef.id;
   if (!G.seenWorlds) G.seenWorlds = [];
-  if (!G.seenWorlds.includes(_wid)) G.seenWorlds.push(_wid);
+  if (!G.seenWorlds.includes(_wid)) { G.seenWorlds.push(_wid); savePersistentState(); }
 
   // Pre-generate "next worlds" preview (stable until next world transition)
   G.run.nextWorldsPreview = previewNextWorlds(7);
@@ -1470,6 +1470,8 @@ export function pickModifierItem(cell, choiceIdx) {
       G.run.permanents.push(perm.id);
       perm.onAcquire(G);
       G.itemsEverAcquired = (G.itemsEverAcquired || 0) + 1;
+      if (!G.learnedItems) G.learnedItems = [];
+      if (!G.learnedItems.includes(perm.id)) { G.learnedItems.push(perm.id); savePersistentState(); }
       flashAnnounce(`${perm.emoji} ${i18n('world.acquired')}`, '#ffcc44');
       // Side effects
       if (perm.id === 'crystal_ball' && typeof window !== 'undefined' && window._mapUpdate) window._mapUpdate();
@@ -1478,6 +1480,8 @@ export function pickModifierItem(cell, choiceIdx) {
   } else {
     // consumable
     addItemToInventory(choice.itemKey);
+    if (!G.learnedItems) G.learnedItems = [];
+    if (!G.learnedItems.includes(choice.itemKey)) { G.learnedItems.push(choice.itemKey); savePersistentState(); }
     flashAnnounce(`${choice.itemKey} ${i18n('world.acquired')}`, '#88ff44');
   }
 
@@ -1509,6 +1513,8 @@ export function shopBuy(cell, entry, price) {
       G.run.permanents.push(perm.id);
       perm.onAcquire(G);
       G.itemsEverAcquired = (G.itemsEverAcquired || 0) + 1;
+      if (!G.learnedItems) G.learnedItems = [];
+      if (!G.learnedItems.includes(perm.id)) { G.learnedItems.push(perm.id); savePersistentState(); }
       flashAnnounce(`${perm.emoji}!`, '#aaffaa');
       // Side effects for special modifiers
       if (perm.id === 'crystal_ball' && typeof window !== 'undefined' && window._mapUpdate) window._mapUpdate();
@@ -1519,6 +1525,8 @@ export function shopBuy(cell, entry, price) {
     G.run.coinsSpent = (G.run.coinsSpent || 0) + price;
     G.run.itemsTaken = (G.run.itemsTaken || 0) + 1;
     addItemToInventory(entry.itemKey);
+    if (!G.learnedItems) G.learnedItems = [];
+    if (!G.learnedItems.includes(entry.itemKey)) { G.learnedItems.push(entry.itemKey); savePersistentState(); }
     flashAnnounce(`${entry.itemKey} ${i18n('world.purchased')}`, '#88ff44');
   }
   if (typeof window !== 'undefined' && window._hudUpdate) window._hudUpdate();

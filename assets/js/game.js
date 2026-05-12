@@ -52,8 +52,8 @@ import {
   MP, mpSend, startHost, startGuest, leaveMultiplayer, genRoomCode,
   getHostPersistentSnapshot, applyHostPersistentState, storeMpTemplates,
 } from './multiplayer.js';
-import { computeHangulStage, PHASE1_JAMOS, MAX_JAMO_COUNT, JAMO_INFO, JAMO_STROKES, JAMO_HAS_BATCHIM, BATCHIM_UNLOCK_COUNT } from '../data/dojang-data.js';
-import { play as sfx, preloadSFX, getVolume, setVolume } from './sfx.js';
+import { computeHangulStage, PHASE1_JAMOS, DOJANG_BOOK_ORDER, MAX_JAMO_COUNT, JAMO_INFO, JAMO_STROKES, JAMO_HAS_BATCHIM, BATCHIM_UNLOCK_COUNT } from '../data/dojang-data.js';
+import { play as sfx, preloadSFX, getVolume, setVolume, getMusicVolume, setMusicVolume } from './sfx.js';
 
 // Parse lesson word string, handling disambiguation like 'text:emoji'
 function parseLessonWord(str) {
@@ -2270,6 +2270,19 @@ function buildTitleScreen() {
   // Init slider positions from saved volume
   _syncSfxSliders(getVolume());
 
+  // Music volume sliders (settings + pause)
+  function _syncMusicSliders(v) {
+    const pct = Math.round(v * 100);
+    ['music-vol-slider','pause-music-vol'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.value !== String(pct)) el.value = String(pct);
+    });
+  }
+  function _onMusicSlider(e) { setMusicVolume(e.target.value / 100); _syncMusicSliders(getMusicVolume()); }
+  document.getElementById('music-vol-slider')?.addEventListener('input', _onMusicSlider);
+  document.getElementById('pause-music-vol')?.addEventListener('input', _onMusicSlider);
+  _syncMusicSliders(getMusicVolume());
+
   // hangulSize is determined by screen size at run start (hardcoded; no slider)
   document.getElementById('chk-hanja')?.addEventListener('change', e => {
     G.hanjaEnabled = e.target.checked;
@@ -2646,6 +2659,21 @@ function buildTitleScreen() {
     });
     document.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
   }
+
+  // ── Cursor auto-hide: hide after 2s of no mouse movement while in-game ─
+  if (!document.body.dataset.cursorHideInit) {
+    document.body.dataset.cursorHideInit = '1';
+    let _cursorHideTimer = null;
+    document.addEventListener('mousemove', () => {
+      document.body.classList.remove('cursor-hidden');
+      if (_cursorHideTimer) clearTimeout(_cursorHideTimer);
+      if (G.phase === 'run') {
+        _cursorHideTimer = setTimeout(() => {
+          if (G.phase === 'run') document.body.classList.add('cursor-hidden');
+        }, 2000);
+      }
+    });
+  }
 }
 
 function _initMenuPreview() {
@@ -2764,12 +2792,12 @@ function _renderStatsContent() {
     return `
       <div class="dict-stats-ring">
         <svg viewBox="0 0 100 100" width="96" height="96" aria-hidden="true">
-          <circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="10"/>
+          <circle class="ring-track" cx="50" cy="50" r="${r}" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="10"/>
           <circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="10"
             stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
             stroke-linecap="round" transform="rotate(-90 50 50)"/>
-          <text x="50" y="46" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="inherit">${line1}</text>
-          ${line2 ? `<text x="50" y="63" text-anchor="middle" fill="rgba(255,255,255,.5)" font-size="11" font-family="inherit">${line2}</text>` : ''}
+          <text x="50" y="46" text-anchor="middle" fill="currentColor" font-size="16" font-weight="bold" font-family="inherit">${line1}</text>
+          ${line2 ? `<text x="50" y="63" text-anchor="middle" fill="currentColor" opacity="0.5" font-size="11" font-family="inherit">${line2}</text>` : ''}
         </svg>
         <div class="dict-stats-label">${i18n(labelKey)}</div>
       </div>`;
@@ -2826,20 +2854,26 @@ function _renderStatsContent() {
     ancient_scroll:2000,sloth:700,phoenix_heart:1400,magnet:1000,dummy_turtle:600,
     god_run:1800,crystal_ball:1200,wall_breaker:1800,punching_glove:1200 };
 
+  const learnedItems = G.learnedItems || [];
+  const dictProgDisabled = G.dictProgressionDisabled;
+
   // ── World wiki rows ───────────────────────────────────────────────
   const worldRows = WORLDS.map(w => {
-    const visited   = seenWorlds.includes(w.id);
+    const visited   = dictProgDisabled || seenWorlds.includes(w.id);
     const timeTip   = w.fixedLighting ? `${w.fixedLighting} 🌙` : null;
     const weatherTip= worldWeatherIcons(w);
     const tipContent= [timeTip, weatherTip].filter(Boolean).join('\n');
     const tooltip   = tipContent ? ` data-tooltip="${tipContent}"` : '';
     const visitedBadge = visited
       ? `<span class="wiki-badge wiki-badge-visited">${i18n('dict.wikiVisited')}</span>` : '';
-    return `<div class="wiki-card${visited ? ' wiki-card-seen' : ''}">
+    const unknownCls = visited ? '' : ' wiki-card-unknown';
+    const title = visited ? (i18n('worlds.'+w.id+'.name') || w.name) : '???????';
+    const sub   = visited ? `${w.bossEmoji} · ${i18n('worlds.'+w.id+'.desc') || ''}` : '???????';
+    return `<div class="wiki-card${visited ? ' wiki-card-seen' : ''}${unknownCls}">
       <div class="wiki-card-icon"${tooltip}>${w.emoji}</div>
       <div class="wiki-card-body">
-        <div class="wiki-card-title">${i18n('worlds.'+w.id+'.name') || w.name} ${visitedBadge}</div>
-        <div class="wiki-card-sub">${w.bossEmoji} · ${i18n('worlds.'+w.id+'.desc') || ''}</div>
+        <div class="wiki-card-title">${title} ${visitedBadge}</div>
+        <div class="wiki-card-sub">${sub}</div>
       </div>
     </div>`;
   }).join('');
@@ -2848,32 +2882,36 @@ function _renderStatsContent() {
   const itemRows = POWERUP_KEYS.map(emoji => {
     const def = POWERUP_DEFS[emoji];
     if (!def) return '';
-    const base = CON_BASES[emoji] || 300;
-    const pr   = priceRange(base);
-    return `<div class="wiki-card">
+    const known = dictProgDisabled || learnedItems.includes(emoji);
+    const base  = CON_BASES[emoji] || 300;
+    const pr    = priceRange(base);
+    const unknownCls = known ? '' : ' wiki-card-unknown';
+    return `<div class="wiki-card${unknownCls}">
       <div class="wiki-card-icon">${emoji}</div>
       <div class="wiki-card-body">
-        <div class="wiki-card-title">${i18n('items.'+def.id+'.name')}</div>
-        <div class="wiki-card-sub">${pr} · <span class="wiki-desc">${i18n('items.'+def.id+'.desc')}</span></div>
+        <div class="wiki-card-title">${known ? i18n('items.'+def.id+'.name') : '???????'}</div>
+        <div class="wiki-card-sub">${pr} · <span class="wiki-desc">${known ? i18n('items.'+def.id+'.desc') : '???????'}</span></div>
       </div>
     </div>`;
   }).join('');
 
   // ── Permanent buffs wiki rows ─────────────────────────────────────
   const permRows = PERMANENTS.map(p => {
-    const base = MOD_BASES[p.id] || 800;
-    const pr   = priceRange(base);
-    return `<div class="wiki-card">
+    const known = dictProgDisabled || learnedItems.includes(p.id);
+    const base  = MOD_BASES[p.id] || 800;
+    const pr    = priceRange(base);
+    const unknownCls = known ? '' : ' wiki-card-unknown';
+    return `<div class="wiki-card${unknownCls}">
       <div class="wiki-card-icon">${p.emoji}</div>
       <div class="wiki-card-body">
-        <div class="wiki-card-title">${i18n('items.'+p.id+'.name')}</div>
-        <div class="wiki-card-sub">${pr} · <span class="wiki-desc">${i18n('items.'+p.id+'.desc')}</span></div>
+        <div class="wiki-card-title">${known ? i18n('items.'+p.id+'.name') : '???????'}</div>
+        <div class="wiki-card-sub">${pr} · <span class="wiki-desc">${known ? i18n('items.'+p.id+'.desc') : '???????'}</span></div>
       </div>
     </div>`;
   }).join('');
 
   // ── Dojang wiki rows (same as dojang book, read-only) ─────────────
-  const dojangRows = PHASE1_JAMOS.map(j => {
+  const dojangRows = DOJANG_BOOK_ORDER.map(j => {
     const count   = jp[j]?.count || 0;
     const strokes = (JAMO_STROKES[j] || []).length;
     const bar     = Math.min(100, Math.round(count / MAX_JAMO_COUNT * 100));
@@ -3167,9 +3205,9 @@ function ctrlPanelAction(action) {
   if (action === 'use') {
     invUse(); refreshInventoryUI();
   } else if (action === 'map') {
-    window.toggleMap();
+    window.toggleMap(true);
   } else if (action === 'book') {
-    window.toggleBook();
+    window.toggleBook(true);
   }
 }
 
@@ -3877,7 +3915,7 @@ window._mapCloseCleanup = function() {
   _mapOpenedWhileRunning = false;
   document.body.classList.remove('map-open');
 };
-window.toggleMap = function() {
+window.toggleMap = function(quiet = false) {
   const panel = document.getElementById('map-panel');
   if (!panel) return;
   panel.classList.toggle('off');
@@ -3885,6 +3923,7 @@ window.toggleMap = function() {
   sfx('mapOpen', 0.7);
   document.body.classList.toggle('map-open', mapOpen);
   if (mapOpen) {
+    if (!quiet && !G.touchMode) flashAnnounce(i18n('announce.mapHint'), '#aaddff');
     window._onMapOpen?.();
     updateMap(); updateMapExtras();
     setMapPlaceholder(true);
@@ -3911,7 +3950,7 @@ document.getElementById('my-dict-expand-btn')?.addEventListener('click', () => {
   document.getElementById('my-dict-modal')?.classList.toggle('dict-expanded');
 });
 
-window.toggleBook = function() {
+window.toggleBook = function(quiet = false) {
   const panel = document.getElementById('book-panel');
   if (!panel) return;
   panel.classList.toggle('off');
@@ -3919,6 +3958,7 @@ window.toggleBook = function() {
   sfx('bookOpen', 0.7);
   document.body.classList.toggle('book-open', bookOpen);
   if (bookOpen) {
+    if (!quiet && !G.touchMode) flashAnnounce(i18n('announce.bookHint'), '#aaddff');
     updateBook();
     if (G.touchMode && G.phase === 'run') {
       _bookOpenedWhileRunning = true;
@@ -4936,13 +4976,13 @@ document.addEventListener('keydown', e => {
     if ((e.key === 'b' || e.key === 'B') && e.ctrlKey) {
       const inOtherInput = document.activeElement !== typingEl &&
         document.activeElement?.closest('input, textarea, select');
-      if (!inOtherInput && !teacherOpen) { e.preventDefault(); window.toggleBook(); }
+      if (!inOtherInput && !teacherOpen) { e.preventDefault(); window.toggleBook(true); }
     }
     // Ctrl+M: toggle Map (skip if another input has focus, or teacher screen is open)
     if ((e.key === 'm' || e.key === 'M') && e.ctrlKey) {
       const inOtherInput = document.activeElement !== typingEl &&
         document.activeElement?.closest('input, textarea, select');
-      if (!inOtherInput && !teacherOpen) { e.preventDefault(); window.toggleMap(); }
+      if (!inOtherInput && !teacherOpen) { e.preventDefault(); window.toggleMap(true); }
     }
     // Cheat: Enter instantly interacts with NPC if cheat menu is open
     if (!G.inTransition && e.key === 'Enter' && G.mode === 'navigate') {
@@ -6160,6 +6200,12 @@ function _mpHandleMessage(msg) {
       if (msg.blueprint) {
         G.dungeon = reconstructDungeon(msg.blueprint);
         G.currentRoom = { ...G.dungeon.start };
+        // Track visited worlds for the guest (host already does this in startNewWorld)
+        const _gwid = G.dungeon.worldDef?.id;
+        if (_gwid) {
+          if (!G.seenWorlds) G.seenWorlds = [];
+          if (!G.seenWorlds.includes(_gwid)) { G.seenWorlds.push(_gwid); savePersistentState(); }
+        }
       }
       if (msg.weather) startWeatherFade(msg.weather);
       // If the guest is mid-animation (triggered by world_transition_start), let it finish

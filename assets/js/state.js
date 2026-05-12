@@ -94,6 +94,10 @@ export const G = {
   transition:       null,  // null | {phase:'out'|'in', t:0, dur:0.4, cb}
   worldTransition:  null,  // null | world-change cinematic state
 
+  // ── Item & world discovery (cross-run, localStorage) ─────────
+  // learnedItems: ['❤️‍🩹', 'block', ...] - items learned by buying or using (not just picking up)
+  learnedItems: [],
+
   // ── Hangul Dojang (cross-run, localStorage) ──────────────────
   // dojangStats: null | { jamoProgress, globalThreshold, unlockedGuides, ... }
   // Loaded by loadPersistentState(); saved by DojangManager.exit()
@@ -305,6 +309,14 @@ export function loadPersistentState() {
 
   // Load total items ever acquired (consumables + permanents, all-time counter)
   G.itemsEverAcquired = parseInt(localStorage.getItem('krr_itemsAcquired') || '0');
+
+  // Load learned items (bought or used)
+  const savedLearnedItems = localStorage.getItem('krr_learnedItems');
+  if (savedLearnedItems) {
+    try { G.learnedItems = JSON.parse(savedLearnedItems); } catch(e) { G.learnedItems = []; }
+  } else {
+    G.learnedItems = [];
+  }
 }
 
 export function savePersistentState() {
@@ -317,6 +329,7 @@ export function savePersistentState() {
   if (G.avatar) localStorage.setItem('krr_avatar', JSON.stringify(G.avatar));
   localStorage.setItem('krr_seenWorlds', JSON.stringify(G.seenWorlds || []));
   localStorage.setItem('krr_itemsAcquired', String(G.itemsEverAcquired || 0));
+  localStorage.setItem('krr_learnedItems', JSON.stringify(G.learnedItems || []));
 }
 
 // Helper: increment word kill count and update hidden status
