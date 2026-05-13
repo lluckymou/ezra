@@ -365,23 +365,29 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 #my-dict-header {
-  display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid rgba(101,75,0,.2); padding-bottom: 6px; margin-bottom: 4px;
+  position: static !important; /* keep out of positioned context so children anchor to modal-inner */
+  display: block;
+  border-bottom: none; padding-bottom: 0; margin-bottom: 0;
 }
-#my-dict-header > span { font-size: 1.25rem; font-weight: 700; color: #5a3e00; }
+#my-dict-header > span { font-size: 0.9rem; font-weight: 700; color: #5a3e00; }
 #my-dict-close {
-  background: rgba(101,75,0,.12); border: 1px solid rgba(101,75,0,.3);
+  position: absolute; top: 5px; right: 5px; z-index: 16;
+  background: rgba(255,255,255,.38); border: 1px solid rgba(101,75,0,.25);
   font-size: 1.1rem; cursor: pointer;
-  color: rgba(90,62,0,.8); padding: 4px 8px; border-radius: 6px; font-family: inherit;
+  color: rgba(70,48,0,.9); padding: 0; border-radius: 6px; font-family: inherit;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
 }
-#my-dict-close:hover { color: #3a2800; background: rgba(101,75,0,.2); }
+#my-dict-close:hover { color: #3a2800; background: rgba(255,255,255,.6); }
 #my-dict-expand-btn {
-  margin-left: auto; margin-right: 5px;
-  background: rgba(101,75,0,.12); border: 1px solid rgba(101,75,0,.3);
+  position: absolute; top: 5px; right: 42px; z-index: 16;
+  background: rgba(255,255,255,.38); border: 1px solid rgba(101,75,0,.25);
   font-size: 1.1rem; cursor: pointer;
-  color: rgba(90,62,0,.8); padding: 4px 8px; border-radius: 6px; font-family: inherit;
+  color: rgba(70,48,0,.9); padding: 0; border-radius: 6px; font-family: inherit;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
 }
-#my-dict-expand-btn:hover { color: #3a2800; background: rgba(101,75,0,.2); }
+#my-dict-expand-btn:hover { color: #3a2800; background: rgba(255,255,255,.6); }
 #my-dict-expand-btn .icon-fs-enter,
 #my-dict-expand-btn .icon-fs-exit { width: 14px; height: 14px; }
 #my-dict-expand-btn .icon-fs-exit { display: none; }
@@ -3041,6 +3047,7 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
   border: 5px solid #d4a017 !important;
   border-left: 24px solid #b8820e !important; /* thick spine */
   padding-top: 44px !important; /* 38px tab strip + 6px breathing room */
+  padding-left: 10px !important;
   isolation: isolate;
   backdrop-filter: none !important;
 }
@@ -3093,19 +3100,20 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 }
 #map-panel > * { position: relative; z-index: 1; }
 
-/* ── Book panel header ── */
+/* ── Book panel header: buttons float in the gold bar, top-right ── */
 #book-panel #book-panel-header {
-  color: #5a3e00;
-  border-bottom: 1px solid rgba(101,75,0,.2);
-  padding-bottom: 6px;
-  margin-bottom: 10px;
+  position: absolute !important;
+  top: 5px; right: 6px;
+  background: transparent !important;
+  border: none !important; padding: 0 !important; margin: 0 !important;
+  z-index: 16; display: flex; gap: 5px; align-items: center;
 }
 #book-panel .map-esc-btn {
-  background: rgba(101,75,0,.12);
-  border-color: rgba(101,75,0,.3);
-  color: rgba(90,62,0,.8);
+  background: rgba(255,255,255,.38);
+  border-color: rgba(101,75,0,.25);
+  color: rgba(70,48,0,.9);
 }
-#book-panel .map-esc-btn:hover { background: rgba(101,75,0,.2); color: #3a2800; }
+#book-panel .map-esc-btn:hover { background: rgba(255,255,255,.6); color: #3a2800; }
 
 /* ── Map panel header ── */
 #map-panel #map-panel-header { color: #4a2e00; }
@@ -3153,19 +3161,31 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 #book-panel .dict-tabs,
 #my-dict-modal-inner .dict-tabs {
   position: absolute;
-  top: 5px;           /* just below the outer border edge */
-  left: 24px;         /* clear the spine */
+  top: 4px;           /* just below the outer border edge */
   right: 0;
   height: 34px;
   display: flex;
   align-items: flex-end;
-  padding: 0 8px;
   gap: 3px;
   overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180,130,0,.45) transparent;
   border-bottom: none;
   margin: 0;
   z-index: 15;
 }
+#book-panel .dict-tabs::-webkit-scrollbar,
+#my-dict-modal-inner .dict-tabs::-webkit-scrollbar { height: 3px; }
+#book-panel .dict-tabs::-webkit-scrollbar-thumb,
+#my-dict-modal-inner .dict-tabs::-webkit-scrollbar-thumb { background: rgba(180,130,0,.45); border-radius: 2px; }
+/* Full border-radius on tabs when the strip is wide enough to scroll */
+#book-panel .dict-tabs.tabs-overflowing .dict-tab,
+#my-dict-modal-inner .dict-tabs.tabs-overflowing .dict-tab {
+  border-radius: 6px !important;
+  border-bottom: 1.5px solid rgba(180,130,0,.5) !important;
+}
+#book-panel .dict-tabs        { left: 8px; right: 78px; }
+#my-dict-modal-inner .dict-tabs { left: 8px; right: 78px; }
 #book-panel .dict-tab,
 #my-dict-modal-inner .dict-tab {
   background: rgba(255,240,190,.75);
@@ -3273,21 +3293,31 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 #book-panel .dict-hanja,
 #my-dict-modal-inner .dict-hanja { color: #c44; }
 
-/* Wiki sections inside book panel */
-#book-panel .wiki-section { border-color: rgba(101,75,0,.2); }
-#book-panel .wiki-header  { color: #4a3000; background: rgba(180,130,0,.1); }
-#book-panel .wiki-header:hover { background: rgba(180,130,0,.18); }
-#book-panel .wiki-card {
+/* Wiki sections inside book panel + main-menu dict modal */
+#book-panel .wiki-section,
+#my-dict-modal-inner .wiki-section { border-color: rgba(101,75,0,.2); }
+#book-panel .wiki-header,
+#my-dict-modal-inner .wiki-header  { color: #4a3000; background: rgba(180,130,0,.1); }
+#book-panel .wiki-header:hover,
+#my-dict-modal-inner .wiki-header:hover { background: rgba(180,130,0,.18); }
+#book-panel .wiki-card,
+#my-dict-modal-inner .wiki-card {
   background: rgba(255,255,255,.55);
   border-color: rgba(101,75,0,.18);
   color: #2a1a00;
 }
-#book-panel .wiki-card-seen { background: rgba(39,174,96,.12); border-color: rgba(39,174,96,.4); }
-#book-panel .wiki-card-unknown { filter: grayscale(1); opacity: .55; }
-#book-panel .wiki-card-title { color: #2a1a00; }
-#book-panel .wiki-card-sub   { color: rgba(40,25,0,.6); }
-#book-panel .wiki-price { color: #c87000; }
-#book-panel .wiki-desc  { color: rgba(40,25,0,.55); }
+#book-panel .wiki-card-seen,
+#my-dict-modal-inner .wiki-card-seen { background: rgba(39,174,96,.12); border-color: rgba(39,174,96,.4); }
+#book-panel .wiki-card-unknown,
+#my-dict-modal-inner .wiki-card-unknown { filter: grayscale(1); opacity: .55; }
+#book-panel .wiki-card-title,
+#my-dict-modal-inner .wiki-card-title { color: #2a1a00; }
+#book-panel .wiki-card-sub,
+#my-dict-modal-inner .wiki-card-sub   { color: rgba(40,25,0,.6); }
+#book-panel .wiki-price,
+#my-dict-modal-inner .wiki-price { color: #c87000; }
+#book-panel .wiki-desc,
+#my-dict-modal-inner .wiki-desc  { color: rgba(40,25,0,.55); }
 
 /* Stats rings */
 #book-panel .dict-stats-group,
@@ -3328,8 +3358,8 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 #book-panel .dj-book-desc,
 #my-dict-modal-inner .dj-book-desc { color: #2a1a00; background: rgba(255,255,255,.5); }
 
-/* touch fullscreen keeps white mode too */
-body.touch-mode #book-panel:not(.off) { background: #fdf6e3 !important; }
+/* touch fullscreen: keep parchment gradient; put close button on the left */
+body.touch-mode #book-panel:not(.off) #book-panel-header { right: auto; left: 8px; }
 body.touch-mode #map-panel:not(.off)  { background: #f5eedc !important; box-shadow: none !important; }
 
 /* touch-mode map: legend and perms text on paper */

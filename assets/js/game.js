@@ -2989,6 +2989,11 @@ function _wireStatsInteractions(root) {
   });
 }
 
+function _checkTabsOverflow(el) {
+  if (!el) return;
+  el.classList.toggle('tabs-overflowing', el.scrollWidth > el.clientWidth);
+}
+
 function buildTitleDict(filter) {
   const container = document.getElementById('dict-list');
   const searchWrap = document.getElementById('title-dict-search-wrap');
@@ -3026,6 +3031,7 @@ function buildTitleDict(filter) {
     // Remove tabs that shouldn't be there
     const allowedIds = new Set(G.dictProgressionDisabled ? LESSONS_BASE.map(l => l.id) : (G.completedLessons || []));
     [...titleTabContainer.querySelectorAll('[data-cat]')].filter(b => /^\d/.test(b.dataset.cat) && !allowedIds.has(b.dataset.cat)).forEach(b => b.remove());
+    _checkTabsOverflow(titleTabContainer);
   }
 
   // ── Lesson tab: show markdown content ─────────────────────────
@@ -4009,6 +4015,7 @@ function updateBook() {
     // Remove tabs that shouldn't be there
     const allowedIds = new Set(G.dictProgressionDisabled ? LESSONS_BASE.map(l => l.id) : (G.completedLessons || []));
     [...tabContainer.querySelectorAll('[data-cat]')].filter(b => /^\d/.test(b.dataset.cat) && !allowedIds.has(b.dataset.cat)).forEach(b => b.remove());
+    _checkTabsOverflow(tabContainer);
 
     // Wire static tabs once
     if (!tabContainer.dataset.wired) {

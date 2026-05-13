@@ -178,8 +178,8 @@ body:not(.phase-dojang) #dojang-canvas {
 body.mobile-fs #dojang-ring-wrap {
   top: calc(10px + var(--tb-h));
 }
-/* Narrow screens (phone portrait): move ring to bottom-right */
-@media (max-width: 600px) {
+/* Phone portrait (narrow) or landscape (short): move ring to bottom-right */
+@media (max-width: 600px), (max-height: 600px) {
   #dojang-ring-wrap {
     top: auto;
     left: auto;

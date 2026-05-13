@@ -271,7 +271,7 @@
       <img src="assets/img/donate-icon.svg" alt="GitHub Sponsors">
       <span data-i18n="donate.btnLabel">Support on GitHub Sponsors</span>
     </a>
-    <p id="donate-pix">Brasileiros: Minha Chave Pix é meu e-mail secundário <i>lluckymou@gmail.com</i></p>
+    <p id="donate-pix">Brasileiros: Minha Chave Pix é meu e-mail secundário <i style="color:rgba(255,255,255,.75)">lluckymou@gmail.com</i></p>
   </div>
 </div>
 <!-- ── TTS WARNING MODAL ───────────────────────────────────── -->
@@ -495,19 +495,18 @@
 
 <!-- ── DICTIONARY PANEL ───────────────────────────────────── -->
 <div id="book-panel" class="off">
+  <div class="dict-tabs">
+    <button class="dict-tab active" data-cat="stats" data-i18n="dict.tabStatistics">📊</button>
+    <button class="dict-tab" data-cat="noun" data-i18n="dict.tabNoun">🍓 Noun</button>
+    <button class="dict-tab" data-cat="adverb" data-i18n="dict.tabAdverb">⏳ Adv.</button>
+    <button class="dict-tab" data-cat="verb" data-i18n="dict.tabVerb">✅ Verb</button>
+    <button class="dict-tab" data-cat="adjective" data-i18n="dict.tabAdj">📌 Adj.</button>
+  </div>
   <div id="book-panel-header">
-    <span>📒 <span data-i18n="dict.myDict">My Dictionary</span></span>
     <button class="map-esc-btn no-touch" id="book-expand-btn" title="Expand"><span class="icon-fs-enter"></span><span class="icon-fs-exit"></span></button>
     <button class="map-esc-btn" onclick="toggleBook()"><span>🗙</span></button>
   </div>
   <div id="book-content">
-    <div class="dict-tabs">
-      <button class="dict-tab active" data-cat="stats" data-i18n="dict.tabStatistics">📊</button>
-      <button class="dict-tab" data-cat="noun" data-i18n="dict.tabNoun">🍓 Noun</button>
-      <button class="dict-tab" data-cat="adverb" data-i18n="dict.tabAdverb">⏳ Adv.</button>
-      <button class="dict-tab" data-cat="verb" data-i18n="dict.tabVerb">✅ Verb</button>
-      <button class="dict-tab" data-cat="adjective" data-i18n="dict.tabAdj">📌 Adj.</button>
-    </div>
     <div id="book-dict-search-wrap" style="margin:6px 0">
       <input id="book-dict-search" type="text" placeholder="Search…" data-i18n-placeholder="dict.searchPlaceholder" autocomplete="off" style="width:100%;box-sizing:border-box">
     </div>
@@ -975,6 +974,21 @@
 <script type="module" src="assets/js/game.js"></script>
 <script>
   document.addEventListener('contextmenu', e => e.preventDefault());
+  (function() {
+    let _t, _fired = false;
+    const btn = document.getElementById('btn-play');
+    if (!btn) return;
+    btn.addEventListener('pointerdown', () => {
+      _fired = false;
+      _t = setTimeout(() => {
+        _fired = true;
+        document.getElementById('donate-modal')?.classList.remove('off');
+      }, 2000);
+    });
+    btn.addEventListener('pointerup',    () => clearTimeout(_t));
+    btn.addEventListener('pointerleave', () => clearTimeout(_t));
+    btn.addEventListener('click', e => { if (_fired) { e.stopImmediatePropagation(); _fired = false; } }, true);
+  })();
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }

@@ -303,9 +303,9 @@ export class DojangManager {
 
     const cx      = W / 2;
     const isMob   = H < 600;
-    const cy      = H * 0.42;
+    const cy      = isMob ? H * 0.44 : H * 0.42;
     const size    = isMob
-      ? Math.min(W * 0.44, H * 0.34, 200)
+      ? Math.min(W * 0.50, H * 0.42, 230)
       : Math.min(W * 0.55, H * 0.45, 280);
 
     // Grid centered on ghost character (half-char-height grid cells)
@@ -374,10 +374,9 @@ export class DojangManager {
     if (strokes.length === 0) return;
 
     const isMob   = H < 600;
-    const guideY  = isMob ? H * 0.73 : H * 0.70;
-    const isDesk  = H >= 600;
-    const maxItemW = isDesk ? 62 : 50;
-    const itemW   = Math.max(32, Math.min(maxItemW, (W * 0.60) / Math.max(strokes.length, 1)));
+    const guideY  = isMob ? H * 0.84 : H * 0.70;
+    const maxItemW = isMob ? 46 : 62;
+    const itemW   = Math.max(28, Math.min(maxItemW, (W * 0.60) / Math.max(strokes.length, 1)));
     const totalW  = strokes.length * itemW;
     const startX  = W / 2 - totalW / 2 + itemW / 2;
     const rNum    = Math.max(8, H * 0.016);  // circle radius
@@ -450,9 +449,9 @@ export class DojangManager {
 
     const isMob = H < 600;
     // Mobile layout constants (push UI elements toward edges for more drawing room)
-    const mobInstrY = H * 0.875;
-    const mobDotY   = H * 0.935;
-    const mobLabelY = H * 0.13;
+    const mobInstrY = H * 0.920;
+    const mobDotY   = H * 0.963;
+    const mobLabelY = H * 0.08;
     // Guard against out-of-bounds after challenge complete (during nextDelay)
     if (jamoIdx >= jamos.length) {
       // Show all dots green
@@ -604,7 +603,8 @@ export class DojangManager {
       this._currentWidth = this._poolR * 2;
     }
     this._poolR = 0;
-    const minW = 5, maxW = 20;
+    const isMob = window.innerHeight < 600;
+    const minW = isMob ? 4 : 5, maxW = isMob ? 14 : 20;
     const targetW = maxW - (maxW - minW) * Math.min(1, speed / 1.0);
     // EMA smoothing: prevents sudden width jumps that create visible dots
     this._currentWidth = this._currentWidth
