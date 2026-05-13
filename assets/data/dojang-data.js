@@ -122,10 +122,10 @@ export const JAMO_STROKES = {
   'ㅑ': [{a:90,t:D},  {a:0,t:60},  {a:0,t:60}],                 // 3: ↓ → →
   'ㅓ': [{a:0,t:60},  {a:90,t:D}],                              // 2: → ↓  (tick left-to-right first)
   'ㅕ': [{a:0,t:60},  {a:0,t:60},  {a:90,t:D}],                 // 3: → → ↓
-  'ㅗ': [{a:90,t:60}, {a:0,t:D}],                               // 2: ↓ →
-  'ㅛ': [{a:90,t:60}, {a:90,t:60}, {a:0,t:D}],                  // 3: ↓ ↓ →
-  'ㅜ': [{a:0,t:D},   {a:90,t:60}],                             // 2: → ↓
-  'ㅠ': [{a:0,t:D},   {a:90,t:60}, {a:90,t:60}],                // 3: → ↓ ↓
+  'ㅗ': [{a:90,t:60}, {a:0,t:D,vertBelow:[0]}],                  // 2: ↓ → (bar below leg)
+  'ㅛ': [{a:90,t:60}, {a:90,t:60}, {a:0,t:D,vertBelow:[0,1]}],  // 3: ↓ ↓ → (bar below both legs)
+  'ㅜ': [{a:0,t:D},   {a:90,t:60,vertBelow:[0]}],               // 2: → ↓ (leg below bar)
+  'ㅠ': [{a:0,t:D},   {a:90,t:60,vertBelow:[0]}, {a:90,t:60,vertBelow:[0]}], // 3: → ↓ ↓
   'ㅐ': [{a:90,t:D},  {a:0,t:60},  {a:90,t:D}],                 // 3: ↓ → ↓
   'ㅒ': [{a:90,t:D},  {a:0,t:60},  {a:0,t:60},  {a:90,t:D}],   // 4: ↓ → → ↓
   'ㅔ': [{a:0,t:60},  {a:90,t:D},  {a:90,t:D}],                 // 3: → ↓ ↓
@@ -161,11 +161,11 @@ export const JAMO_INFO = {
   'ㅍ': { name: '피읖',   rom: 'p'    },
   'ㅎ': { name: '히읗',   rom: 'h'    },
   'ㅏ': { name: '아',     rom: 'a'    },
-  'ㅐ': { name: '애',     rom: 'ae'   },
+  'ㅐ': { name: '아이',   rom: 'ae'   },
   'ㅑ': { name: '야',     rom: 'ya'   },
   'ㅒ': { name: '얘',     rom: 'yae'  },
   'ㅓ': { name: '어',     rom: 'eo'   },
-  'ㅔ': { name: '에',     rom: 'e'    },
+  'ㅔ': { name: '어이',   rom: 'e'    },
   'ㅕ': { name: '여',     rom: 'yeo'  },
   'ㅖ': { name: '예',     rom: 'ye'   },
   'ㅗ': { name: '오',     rom: 'o'    },

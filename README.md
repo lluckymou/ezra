@@ -13,29 +13,60 @@
 
 ---
 
-**EZRA Taja** is a roguelite dungeon crawler where you defeat monsters by typing Korean words. It was born out of a frustration: my Korean teacher showed me [Hancom Taja](https://taja.hancom.com), a classic Korean typing trainer, but I couldn't use it because my system locale wasn't set to Korean. So I built my own version - and then kept going.
+**EZRA Taja** is a Korean language practice platform built around typing. It started as a roguelite dungeon crawler where you defeat monsters by typing Korean words, and grew into a broader set of tools for practicing the language - vocabulary through gameplay, Hangul stroke order through drawing, and more.
+
+It was born out of a frustration: my Korean teacher showed me [Hancom Taja](https://taja.hancom.com), a classic Korean typing trainer, but I couldn't use it because my system locale wasn't set to Korean. So I built my own version - and then kept going.
 
 The philosophy here isn't to _gamify_ learning. It's the opposite: to *"learnify"* a game - take something genuinely fun and challenging, and weave language learning into its game design so naturally that vocabulary acquisition becomes a side effect of playing. The goal is a game worth playing on its own merits, where Korean just happens to be the mechanic.
 
+---
+
+## Modes
+
+### Dungeon (Roguelite)
+
+A full roguelite dungeon crawler where you defeat monsters by typing Korean words. 15 worlds inspired by real Korean locations, a 800+ word vocabulary system, boss encounters, items, and persistent progression.
+
 The first version took roughly a month to build and ships with a full roguelite feature set alongside a serious vocabulary system.
+
+### Hangul Dojang (도장 - Stroke Practice)
+
+A dedicated mode for learning how to write Hangul from scratch — stroke by stroke, on a drawing canvas. Each jamo (letter) is taught through animated guides showing the correct stroke order, direction, and spatial relationships. Progress is tracked in a personal record book.
+
+- Draw strokes directly on screen with mouse or touch
+- Animated guides for every stroke of every jamo
+- Stroke inspector with direction animations, opened automatically when you're struggling
+- Cumulative error detection and idle detection auto-open the inspector
+- Personal record book tracking accuracy and attempt history per jamo
+- Covers all consonants and vowels including compound forms
 
 ---
 
 ## Features
 
+### Vocabulary & Gameplay
 - **800+ Korean words** across 20+ thematic categories (places, food, animals, body, emotions, verbs, adjectives, culture, hanja...)
-- **Emoji disambiguation system** - every word has a primary emoji and optional secondary for homonyms (눈 👁️ vs 눈 ❄️)
+- **Unambiguous word representation** - every word has their own unique icon or icon combinations
 - **Vocabulary progression** - words unlock gradually as you improve; kill counts hide mastered words from the enemy pool
-- **15 dungeon worlds** inspired by real Korean locations, each with its own biome, enemy pool, and visual theme
+- **15 worlds** inspired by real Korean locations, each with its own biome, enemy pool, and visual theme
 - **Boss encounters** with multiple special types: archer, ice, musician, warrior, eruptor, king
 - **Item system** - consumables, permanent upgrades, modifier rooms, treasure rooms
 - **Casino room** with slot mechanics
 - **Teacher NPC** - in-run lesson room with a cooldown system; lessons unlock new vocabulary
 - **Vocabulary exam system** - level up your word knowledge through structured tests
+
+### Hangul Dojang
+- **Stroke-by-stroke drawing** with spatial constraint validation (position, direction, order)
+- **Animated stroke guides** rendered in-canvas and in the inspector panel
+- **Adaptive difficulty** - error allowance scales with stroke count per jamo
+- **Auto-inspector** - opens automatically after 10 cumulative errors or 10s idle in the same challenge
+- **Record book** - tracks every jamo you've practiced with accuracy history
+
+### Platform
 - **Character creation** - full Avataaars-based character editor with unlockable weapon skins
 - **My Dictionary** - persistent cross-run vocabulary book tracking every word you've encountered
 - **Day/night cycle** (420s full cycle: dawn, day, dusk, night) with visual lighting changes
-- **Dynamic weather events** - fog, rain, snow, blizzard, blossoms, autumn leaves; affects readability and immersion
+- **Dynamic weather events** - fog, rain, snow, blizzard, blossoms, autumn leaves
 - **Text-to-speech** - Korean pronunciation for every word you type
 - **Varying fonts** - randomized Korean typefaces per monster to train reading across styles
 - **Minimap** with full dungeon layout, room type indicators, and fog of war
@@ -43,6 +74,7 @@ The first version took roughly a month to build and ships with a full roguelite 
 - **Touch support** - full on-screen Hangul keyboard with composition for mobile play
 - **Responsive layout** - works on desktop, tablet, and mobile without needing Korean locale
 - **Hanja powerup system** - optional Chinese character pickups for advanced learners
+- **P2P multiplayer** - cooperative and competitive play over peer-to-peer connections, no server required
 
 ---
 
@@ -68,6 +100,11 @@ No build step required - this is plain ES6 modules. You just need a local HTTP s
 - **M** - toggle minimap
 - **B** - open dictionary
 - **북/남/동/서** (north/south/east/west) - navigate between rooms
+
+### Hangul Dojang
+- **Mouse / touch** - draw strokes on the canvas
+- **Inspector button** - open stroke guide for the current jamo
+- **Book button** - open your practice record
 
 ### Mobile
 - Touch input with on-screen Hangul composition keyboard

@@ -1442,6 +1442,14 @@ export function startRun() {
   }
   G.currentRoom = { ...G.dungeon.start };
   G.run.nextWorldsPreview = previewNextWorlds(7);
+
+  // Track first world (startNewWorld handles worldIdx > 0; startRun never calls it for idx 0)
+  const _startWid = G.dungeon.worldDef?.id;
+  if (_startWid) {
+    if (!G.seenWorlds) G.seenWorlds = [];
+    if (!G.seenWorlds.includes(_startWid)) { G.seenWorlds.push(_startWid); savePersistentState(); }
+  }
+
   enterRoom(G.dungeon.start.col, G.dungeon.start.row);
 
   const worldDef = G.dungeon.worldDef;

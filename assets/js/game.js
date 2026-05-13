@@ -117,7 +117,7 @@ const AVA_CATS = [
     'pink','red','white',
   ]},
   { key: 'clothingGraphic', label: 'Shirt Graphic', values: [
-    'skrullOutline','pizza','hola','diamond','deer','bear','bat',
+    'skrullOutline','pizza','hola','diamond','deer','bear','bat','korea',
   ]},
   { key: 'accessories', label: 'Accessories', values: [
     'none','kurt','prescription01','prescription02','round','sunglasses','wayfarers',
@@ -176,7 +176,7 @@ const AVA_VAL_LABELS = {
   pastelOrange:'Pastel Orange', pastelRed:'Pastel Red',
   pastelYellow:'Pastel Yellow', pink:'Pink', white:'White',
   skrullOutline:'Skull Outline', pizza:'Pizza', hola:'Hola!',
-  diamond:'Diamond', deer:'Deer', bear:'Bear', bat:'Bat',
+  diamond:'Diamond', deer:'Deer', bear:'Bear', bat:'Bat', korea:'Korea',
   none:'None', kurt:'Kurt', prescription01:'Prescription 1',
   prescription02:'Prescription 2', round:'Round',
   sunglasses:'Sunglasses', wayfarers:'Wayfarers',
@@ -448,6 +448,9 @@ function _avaRandomize() {
     hairColor = pick(hcPool);
   }
 
+  // dark skin tones → black hair only
+  if (skin === 'darkBrown' || skin === 'black') hairColor = 'black';
+
   // 7. Eyes - xDizzy rare (weight 2); hearts rare and 2× rarer on males (weight 2 female / 1 male)
   //    base weight = 6 for normal eyes
   const eyesWeighted = [];
@@ -522,7 +525,9 @@ function _avaRandomize() {
     mouth,
     clothing,
     clothingColor:   pick(catVals('clothingColor')),
-    clothingGraphic: pick(catVals('clothingGraphic')),
+    clothingGraphic: clothing === 'graphicShirt'
+      ? (Math.random() < 0.5 ? 'korea' : pick(catVals('clothingGraphic').filter(g => g !== 'korea')))
+      : pick(catVals('clothingGraphic')),
     accessories,
     accessoriesColor: 'black',
     facialHair,

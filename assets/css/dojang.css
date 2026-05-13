@@ -163,13 +163,14 @@ body:not(.phase-dojang) #dojang-canvas {
   transform: translateX(-50%);
   z-index: 162;
   pointer-events: all;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(50px, max-content);
+  justify-items: center;
+  row-gap: 4px;
+  max-width: 160px;
   background: rgba(0,0,0, .30);
   border-radius: 10px;
-  padding: 6px 24px;
+  padding: 6px 16px;
   transition: transform .2s ease;
   transform-origin: 50% 0; /* scale from top edge → grows downward */
 }
@@ -177,7 +178,24 @@ body:not(.phase-dojang) #dojang-canvas {
 body.mobile-fs #dojang-ring-wrap {
   top: calc(10px + var(--tb-h));
 }
+/* Narrow screens (phone portrait): move ring to bottom-right */
+@media (max-width: 600px) {
+  #dojang-ring-wrap {
+    top: auto;
+    left: auto;
+    right: 12px;
+    bottom: 12px;
+    transform: none;
+    transform-origin: 100% 100%;
+  }
+  body.mobile-fs #dojang-ring-wrap {
+    top: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+}
 #dojang-ring-svg {
+  grid-row: 1;
+  grid-column: 1;
   transform: rotate(-90deg);
 }
 #dojang-ring-bg { fill: none; stroke: rgba(255,255,255,.28); }
@@ -190,18 +208,27 @@ body.mobile-fs #dojang-ring-wrap {
   transition: stroke-dashoffset .4s ease;
 }
 #dojang-threshold {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: center;
+  justify-self: center;
   font-size: .85rem;
   font-weight: 700;
   color: rgba(255,255,255,.8);
   font-variant-numeric: tabular-nums;
-  position: absolute;
-  top: 23.5px;
+  pointer-events: none;
+  z-index: 1;
 }
 #dojang-phase-label {
-  font-size: .7rem;
+  grid-row: 2;
+  grid-column: 1;
+  font-size: .65rem;
   font-weight: 600;
   color: hsl(70deg 93% 89% / 90%);
-  white-space: nowrap;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.25;
 }
 
 /* HUD icon buttons */
@@ -645,10 +672,23 @@ body.mobile-fs #dojang-player {
 }
 .dj-insp-strokes {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
-  justify-content: center;
   margin-top: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,.18) transparent;
+}
+.dj-insp-strokes::-webkit-scrollbar {
+  height: 4px;
+}
+.dj-insp-strokes::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dj-insp-strokes::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,.18);
+  border-radius: 2px;
 }
 .dj-insp-stroke-row {
   display: flex;
@@ -667,9 +707,12 @@ body.mobile-fs #dojang-player {
   font-weight: 700;
 }
 .dj-insp-arrow {
-  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: rgba(30,20,10,.85);
-  line-height: 1;
+  width: 24px;
+  height: 24px;
 }
 /* Inspector nav as notebook tabs, below the dark header */
 #dojang-inspector-nav {
@@ -729,5 +772,4 @@ body.mobile-fs #dojang-announce { top: calc(26% + var(--tb-h)); }
   #dojang-player-sprite svg { width: 60px; height: 60px; }
   .dj-player-btn { width: 30px; height: 30px; font-size: .8rem; margin-bottom: 14px; }
   #dojang-announce { top: 24%; }
-  #dojang-threshold { position: absolute; top: 18px; }
 }
