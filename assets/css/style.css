@@ -892,6 +892,10 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
   margin-bottom: 6px;
 }
 .wave-body { display: flex; align-items: center; gap: 10px; }
+/* Each small HUD nav item: fixed icon height so all items are the same total height */
+.hud-nav-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; margin: 0 4px; height: 2.5rem; }
+.hud-nav-icon { height: 1.6rem; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; line-height: 1; }
+.hud-nav-lbl  { font-size: .72rem; opacity: .65; white-space: nowrap; line-height: 1; }
 .wave-ring-wrap { flex-shrink: 0; }
 .wave-text { display: flex; flex-direction: column; }
 #hw-num { font-size: 2rem; font-weight: bold; line-height: 1; }
@@ -1348,12 +1352,12 @@ body.phase-title #pl-emoji {
 #pl-chevron {
   display: none;
   position: absolute;
-  top: -20px; left: 50%;
+  top: -14px; left: 50%;
   transform: translateX(-50%);
-  font-size: 2.3rem; line-height: 1;
-  color: rgba(255,255,255,.7);
+  font-size: 1.3rem; line-height: 1;
+  color: rgba(255,255,255,.35);
   pointer-events: none;
-  animation: chevronBounce 1.1s ease-in-out infinite;
+  animation: chevronBounce 1.8s ease-in-out infinite;
   white-space: nowrap;
 }
 #pl-chevron.coins-flash {
@@ -1369,8 +1373,8 @@ body.phase-title #pl-emoji {
   100% { transform: translateX(-50%) translateY(-4px) scale(1); opacity:1; }
 }
 @keyframes chevronBounce {
-  0%, 100% { transform: translateX(-50%) translateY(0);   opacity: .5; }
-  50%       { transform: translateX(-50%) translateY(-7px); opacity: 1;  }
+  0%, 100% { transform: translateX(-50%) translateY(0);   opacity: .2; }
+  50%       { transform: translateX(-50%) translateY(-4px); opacity: .5; }
 }
 
 /* ── Mini keyboard panels (shown in Korean IME mode) ── */
@@ -1823,9 +1827,10 @@ body.touch-mode .ctrl-esc-btn p { font-size: 1.3rem !important; line-height: 0.8
 /* ===== TOUCH MODE ===== */
 body.touch-mode #ctrl-hint       { display: none         !important; }
 body.touch-mode #touch-space-btn { display: inline-flex  !important; align-items: center; justify-content: center; }
-body.touch-mode #inv-hud    { display: none   !important; }
-body.touch-mode #inp-wrap   { cursor: pointer !important; }
-body.touch-mode #pl-chevron { display: block; }
+body.touch-mode #inv-hud          { display: none   !important; }
+body.touch-mode #inp-wrap         { cursor: pointer !important; }
+body.touch-mode #pl-chevron       { display: block; }
+body.touch-mode #hud-backpack-btn { display: flex !important; flex-direction: column; align-items: center; }
 body.touch-mode #typing { caret-color: transparent; cursor: pointer; user-select: none; }
 body.touch-mode #hcard-score .hlbl { display: none; }
 /* kb-panels-active: layout now baked into #player-area base rule */
@@ -1870,6 +1875,8 @@ body.touch-mode #perm-bar,
 body.touch-mode .ctrl-actions,
 body.touch-mode .ctrl-center { width: min(90vw, 320px); }
 body.touch-mode .ctrl-wallet { font-size: 1.5rem; }
+body.touch-mode .cak-letter  { display: none; }
+body.touch-mode .cak-sub     { font-size: .75rem; color: #fff; }
 /* Map panel and ctrl zoom: only apply 1.2/1.5× on tall screens */
 @media (min-height: 700px) {
   #map-panel { zoom: 1.2; }

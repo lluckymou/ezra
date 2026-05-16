@@ -2239,10 +2239,10 @@ function _benchmarkWeatherQuality() {
     Math.sin(count * 0.1); Math.cos(count * 0.15); Math.random();
     count++;
   }
-  if (count > 400000) return 1;      // desktop / flagship
-  if (count > 120000) return 0.75;   // good mid-range
-  if (count > 50000)  return 0.5;    // average mid-range
-  if (count > 20000)  return 0.25;   // budget / older device
+  if (count > 200000) return 1;      // desktop / flagship
+  if (count > 80000)  return 0.75;   // good mid-range
+  if (count > 30000)  return 0.5;    // average mid-range
+  if (count > 12000)  return 0.25;   // budget / older device
   return 0.1;                         // minimal — very slow device
 }
 
@@ -3180,7 +3180,8 @@ window.invUseClick   = function() { invUse(); refreshInventoryUI(); };
 function openCtrlPanel() {
   sfx('backpackOpen', 0.8);
   G.ctrlPanelOpen = true;
-  _panelFadeAlpha = 0; // RAF fades panel in
+  _ctrlState = 'open';
+  _panelFadeAlpha = 1;
   // Show ctrl panel (opacity starts at 0, RAF fades it in)
   const panel = document.getElementById('ctrl-panel');
   if (!panel) return;
@@ -3268,6 +3269,7 @@ function ctrlPanelAction(action) {
 window.ctrlPanelAction  = ctrlPanelAction;
 window.ctrlInvNav       = ctrlInvNav;
 window.closeCtrlPanel   = closeCtrlPanel;
+window.openCtrlPanel    = openCtrlPanel;
 window.ctrlPauseAction  = function() { closeCtrlPanel(); pauseGame(); };
 
 /* ================================================================

@@ -431,20 +431,25 @@
           <text id="ring-world-icon" x="18" y="23" text-anchor="middle" font-size="14" style="pointer-events:none;font-family:serif">🌲</text>
         </svg>
       </div>
+      <!-- Backpack button (touch/mobile only) -->
+      <div id="hud-backpack-btn" class="hud-nav-item" onclick="openCtrlPanel()" style="cursor:pointer;pointer-events:all;display:none;user-select:none" title="Backpack">
+        <div class="hud-nav-icon">🎒</div>
+        <div class="hud-nav-lbl">가방</div>
+      </div>
       <!-- Dictionary button -->
-      <div onclick="toggleBook()" style="cursor:pointer;pointer-events:all;display:flex;flex-direction:column;align-items:center;gap:2px;margin:0 4px" title="Dictionary (B)">
-        <div style="font-size:1.4rem;line-height:1.5rem">📒</div>
-        <div style="font-size:.72rem;opacity:.65;white-space:nowrap">사전</div>
+      <div class="hud-nav-item" onclick="toggleBook()" style="cursor:pointer;pointer-events:all" title="Dictionary (B)">
+        <div class="hud-nav-icon">📒</div>
+        <div class="hud-nav-lbl">사전</div>
       </div>
       <!-- Map icon + room code below -->
-      <div onclick="toggleMap()" style="cursor:pointer;pointer-events:all;display:flex;flex-direction:column;align-items:center;gap:2px;margin:0 4px" title="Map (M)">
-        <div style="font-size:1.5rem;line-height:1">🗺️</div>
-        <div id="hw-room" style="font-size:.72rem;opacity:.65;white-space:nowrap">A1</div>
+      <div class="hud-nav-item" onclick="toggleMap()" style="cursor:pointer;pointer-events:all" title="Map (M)">
+        <div class="hud-nav-icon">🗺️</div>
+        <div id="hw-room" class="hud-nav-lbl">A1</div>
       </div>
       <!-- Clock widget -->
-      <div id="hud-clock" style="display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 4px;pointer-events:none;user-select:none;cursor:default">
-        <div id="hud-clock-icon" style="font-size:1.3rem;line-height:1;position:relative;display:inline-block">☀️<span id="hud-clock-weather" style="position:absolute;bottom:-1px;right:-3px;font-size:.55rem;line-height:1"></span></div>
-        <div id="hud-clock-time" style="font-size:.72rem;opacity:.65;white-space:nowrap;width:28px;text-align:center">12:00</div>
+      <div id="hud-clock" class="hud-nav-item" style="pointer-events:none;user-select:none;cursor:default">
+        <div class="hud-nav-icon" id="hud-clock-icon" style="position:relative">☀️<span id="hud-clock-weather" style="position:absolute;bottom:-1px;right:-3px;font-size:.55rem;line-height:1"></span></div>
+        <div id="hud-clock-time" class="hud-nav-lbl" style="width:28px;text-align:center">12:00</div>
       </div>
     </div>
   </div>
