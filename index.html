@@ -6,6 +6,9 @@
 <title>EZRA</title>
 <meta name="description" content="EZRA 타자 is a typing-based roguelike dungeon crawler designed to help you learn Korean in a fun and engaging way. Explore procedurally generated dungeons, battle monsters, and collect loot - all by typing Korean words!">
 <meta name="author" content="Lucas Nascimento">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="assets/img/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/img/favicon.png">
 <link rel="manifest" href="manifest.json">
@@ -51,6 +54,7 @@
     <div id="menu-logo-wrap">
       <img id="menu-logo-gif" draggable="false" src="assets/img/logo.gif" alt="logo">
       <p id="menu-slogan" data-i18n="title.slogan"></p>
+      <button id="btn-play" data-i18n="title.playBtn">▶ Start Game!</button>
     </div>
     <div id="menu-left-btns">
       <div class="btn-group">
@@ -119,9 +123,6 @@
   </div>
 
 </div><!-- /menu-wrap -->
-
-<!-- Play button: fixed right-edge tab -->
-<button id="btn-play" data-i18n="title.playBtn">▶ Start Game!</button>
 </div>
 
 <!-- ── MY DICTIONARY FLOATING MODAL ──────────────────────── -->
@@ -966,6 +967,7 @@
 
 <!-- ── FULLSCREEN REQUEST OVERLAY ─────────────────────────── -->
 <div id="fs-overlay" class="off">
+  <img id="fs-bg-art" src="assets/img/menu-img.png" alt="">
   <button id="fs-btn"><span class="icon-fs-enter"></span></button>
   <p id="fs-prompt"></p>
 </div>
@@ -984,11 +986,12 @@
 
 <!-- ── ROTATE OVERLAY (portrait mode) ─────────────────────── -->
 <div id="rotate-overlay">
+  <img id="rotate-bg-art" src="assets/img/menu-right.png" alt="">
   <div id="rotate-content">
     <div id="rotate-phone-icon" style="font-size:3.5rem">📱</div>
     <div id="rotate-text" style="font-size:1.1rem;margin-top:12px;opacity:.9"></div>
   </div>
-  <div style="position:absolute;bottom:15px;left:0;right:0;text-align:center;font-size:.72rem;opacity:.3;letter-spacing:.3px">Made by Lucas Nascimento 🌲</div>
+  <div style="position:absolute;bottom:15px;left:0;right:0;text-align:center;font-size:.72rem;opacity:.75;letter-spacing:.3px">Made by Lucas Nascimento 🌲</div>
 </div>
 
 <script src="assets/js/avataaars.js"></script>

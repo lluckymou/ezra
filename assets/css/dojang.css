@@ -334,6 +334,7 @@ body.mobile-fs #dojang-player {
   transition: opacity .3s;
 }
 #dojang-announce.on { opacity: 1; }
+body:not(.phase-dojang) #dojang-announce { opacity: 0 !important; }
 
 /* ── Pause Overlay ───────────────────────────────────────────── */
 #dojang-pause-overlay {

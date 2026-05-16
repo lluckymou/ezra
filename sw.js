@@ -1,4 +1,4 @@
-const CACHE = '0.8.5';
+const CACHE = '0.8.6';
 
 // On install: cache only the bare minimum to allow offline play
 const OFFLINE_SHELL = [
@@ -26,7 +26,7 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
     fetch(e.request).then(res => {
-      if (res.ok) {
+      if (res.status === 200) {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
       }

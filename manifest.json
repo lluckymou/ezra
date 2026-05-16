@@ -4,6 +4,7 @@
   "description": "Practicing Korean by typing",
   "start_url": "./",
   "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
   "orientation": "landscape",
   "background_color": "#030d1a",
   "theme_color": "#030d1a",

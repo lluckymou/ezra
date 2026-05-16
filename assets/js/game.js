@@ -677,6 +677,17 @@ function _checkStartupModals() {
 /* ================================================================
    STARTUP ANIMATION
 ================================================================ */
+let _keypressAudio = null;
+function _playKeypressSound() {
+  const sfxVol = parseFloat(localStorage.getItem('krr_sfx_vol') ?? '0.5');
+  if (sfxVol <= 0) return;
+  if (!_keypressAudio) _keypressAudio = new Audio('assets/sounds/keypress.mp3');
+  const clone = _keypressAudio.cloneNode();
+  clone.volume = 0.25 * sfxVol;
+  clone.playbackRate = 0.6 + Math.random() * 0.75; // pitch variation
+  clone.play().catch(() => {});
+}
+
 function runStartupAnimation(onPrepare, onDone) {
   const overlay  = document.getElementById('startup-overlay');
   const inner    = document.getElementById('startup-inner');
@@ -804,7 +815,9 @@ function runStartupAnimation(onPrepare, onDone) {
       let i = 0;
       const typeInterval = setInterval(() => {
         if (i < text.length) {
-          textEl.innerHTML = text.slice(0, ++i) + '<span id="startup-cursor">▌</span>';
+          ++i;
+          textEl.innerHTML = '<span id="startup-typed">' + text.slice(0, i) + '<span id="startup-cursor">▌</span></span>';
+          _playKeypressSound?.();
         } else {
           clearInterval(typeInterval);
           // Phase 3: after typing done, wait 600ms
@@ -862,8 +875,18 @@ export function init() {
       // Register the callback to be called when orientation changes to landscape
       window._registerStartupAnimation?.(() => runStartupAnimation(startupPrepare, _checkStartupModals));
     } else {
-      // Not in portrait, run animation immediately
-      runStartupAnimation(startupPrepare, _checkStartupModals);
+      // On mobile without fullscreen: show fullscreen prompt FIRST (forces user interaction),
+      // then run the animation after they tap the button.
+      const needsFsFirst = !_isPWA && window.innerHeight < 500
+        && !(document.fullscreenElement || document.webkitFullscreenElement);
+      if (needsFsFirst) {
+        // Apply saved language now so the fs prompt shows in the right language
+        const _earlyLang = localStorage.getItem('krr_lang') || 'en';
+        setLanguage(_earlyLang);
+        window._showFsOverlay?.(() => runStartupAnimation(startupPrepare, _checkStartupModals));
+      } else {
+        runStartupAnimation(startupPrepare, _checkStartupModals);
+      }
     }
   }).catch(err => {
     console.error('Failed to load languages:', err);
@@ -876,15 +899,22 @@ export function init() {
     const promptEl = document.getElementById('fs-prompt');
     if (!promptEl) return;
     if (_fsPromptTimer) return; // already running
+    // Use the player's saved language — no need to cycle through every language
+    const savedLang = localStorage.getItem('krr_lang');
+    if (savedLang) {
+      promptEl.textContent = i18n('misc.fullscreenPrompt');
+      return;
+    }
+    // First-time user: cycle through all languages so anyone can read it
     const langs = getAvailableLanguages();
     if (!langs.length) {
-      promptEl.textContent = 'EZRA 타자 runs in full-screen on mobile. Tap above to go full-screen.';
+      promptEl.textContent = i18n('misc.fullscreenPrompt');
       return;
     }
     let _idx = 0;
     function showNext() {
-      const meta = getLangMeta(langs[_idx % langs.length].code);
-      promptEl.textContent = meta.fullscreenPrompt || 'EZRA 타자 runs in full-screen on mobile.';
+      setLanguage(langs[_idx % langs.length].code);
+      promptEl.textContent = i18n('misc.fullscreenPrompt');
       _idx++;
     }
     showNext();
@@ -901,8 +931,11 @@ export function init() {
   window._showFsOverlay = function(cb) {
     _fsOverlayCallback = cb || null;
     _syncMobileFs(); // let _syncMobileFs decide visibility based on current state
-    // If not mobile anymore, just call cb immediately
-    if (window.innerHeight >= 500) { const c = _fsOverlayCallback; _fsOverlayCallback = null; c?.(); return; }
+    // Call cb immediately if fullscreen is not needed (large screen, PWA, or already in fullscreen)
+    const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    if (window.innerHeight >= 500 || inFs || _isPWA) {
+      const c = _fsOverlayCallback; _fsOverlayCallback = null; c?.(); return;
+    }
     _startFsPromptCycle();
   };
   document.getElementById('fs-btn')?.addEventListener('click', () => {
@@ -2445,17 +2478,17 @@ function buildTitleScreen() {
 
   // Logo easter egg: click randomizes menu weather (5s cooldown)
   (function() {
-    const logoWrap = document.getElementById('menu-logo-wrap');
-    if (!logoWrap) return;
+    const logoGif = document.getElementById('menu-logo-gif');
+    if (!logoGif) return;
     let _cooldown = false;
-    logoWrap.addEventListener('click', () => {
+    logoGif.addEventListener('click', () => {
       if (G.phase !== 'title' || !G.menuPreview || _cooldown) return;
       const allowed = ALL_WEATHERS.filter(w => w !== 'clear' && w !== 'foggy' && w !== 'drizzle' && w !== 'raining' && w !== 'blizzard' && w !== G.weather);
       if (!allowed.length) return;
       startWeatherFade(allowed[Math.floor(Math.random() * allowed.length)]);
       _cooldown = true;
-      logoWrap.style.cursor = 'default';
-      setTimeout(() => { _cooldown = false; logoWrap.style.cursor = ''; }, 5000);
+      logoGif.style.cursor = 'default';
+      setTimeout(() => { _cooldown = false; logoGif.style.cursor = ''; }, 5000);
     });
   })();
 
@@ -3029,16 +3062,11 @@ function _renderLessonsContent() {
   const completed = G.dictProgressionDisabled ? LESSONS_BASE.map(l => l.id) : (G.completedLessons || []);
   const lessons = LESSONS_BASE.filter(l => completed.includes(l.id));
 
-  const jp = (G.dojangStats || loadDojangStats() || {}).jamoProgress || {};
-  const unlockedJamos = DOJANG_BOOK_ORDER.filter(j =>
-    G.dictProgressionDisabled || (jp[j]?.count || 0) >= 1
-  );
-
-  if (!lessons.length && !unlockedJamos.length) {
+  if (!lessons.length) {
     return `<div style="padding:24px 12px;text-align:center;color:rgb(0 0 0 / 40%);font-size:.85rem;">${i18n('dict.lessonsEmpty')}</div>`;
   }
 
-  const lessonHtml = lessons.map(lesson => {
+  return lessons.map(lesson => {
     const contentKey = lesson.title_key.replace('.title', '') + '.content';
     const content = parseLessonMarkdown(i18n(contentKey));
     return `<div class="wiki-section">
@@ -3048,24 +3076,6 @@ function _renderLessonsContent() {
       <div class="wiki-body"><div class="lesson-viewer-inner">${content}</div></div>
     </div>`;
   }).join('');
-
-  const jamoHtml = unlockedJamos.map(j => {
-    const info  = JAMO_INFO[j];
-    const count = jp[j]?.count || 0;
-    const baseText = i18n(`jamo_desc.${j}.base`);
-    if (!baseText || baseText.startsWith('jamo_desc.')) return '';
-    const showBatchim = (G.dictProgressionDisabled || count >= BATCHIM_UNLOCK_COUNT) && JAMO_HAS_BATCHIM.has(j);
-    const batchimText = showBatchim ? i18n(`jamo_desc.${j}.batchim`) : '';
-    const fullMd = baseText + (batchimText ? `\n\n**받침:** ${batchimText}` : '');
-    return `<div class="wiki-section">
-      <button class="wiki-header" onclick="this.parentElement.classList.toggle('open')">
-        <span>${j} <span style="font-size:.85em;opacity:.75">${info?.name || ''} · ${info?.rom || ''}</span></span><span class="wiki-chevron">▼</span>
-      </button>
-      <div class="wiki-body"><div class="lesson-viewer-inner">${parseLessonMarkdown(fullMd)}</div></div>
-    </div>`;
-  }).join('');
-
-  return lessonHtml + jamoHtml;
 }
 
 function buildTitleDict(filter) {

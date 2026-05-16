@@ -1632,6 +1632,12 @@ export function tickParts(dt) {
    POWERUP / INVENTORY (verbatim from typing-game.html)
 ================================================================ */
 export function shouldDropItem() {
+  // In the taekwondo dojang world, only drop items in border rooms (harder outer ring).
+  // COLS=8, ROWS=6 are the fixed dojang grid dimensions from world.js.
+  if (G.dungeon?.worldDef?.id === 'taekwondo_dojang') {
+    const { col, row } = G.currentRoom || {};
+    if (col == null || !(col === 0 || col === 7 || row === 0 || row === 5)) return false;
+  }
   let base = 0.06;
   base *= (G.run?.dropMult || 1);
   return Math.random() < base;
