@@ -17,7 +17,23 @@ import { getNextLesson } from '../data/lessons.js';
 export const ALL_WEATHERS = ['clear', 'foggy', 'drizzle', 'raining', 'snowing', 'blizzard', 'fall', 'blossom'];
 
 export const WORLDS = [
-  // ── World 0: 경복궁, Seoul ─────────────────────────
+  // ── World 0: 태권도 도장 (Taekwondo Dojang) — fixed tutorial world ─
+  {
+    id: 'taekwondo_dojang',
+    name: '태권도 도장',
+    emoji: '🥋',           transport: '🏃',
+    bgTop: '#e8f0ff',      bgBot: '#fff8ee',
+    bossEmoji: '🥷',       // base ninja (no skin tone)
+    bossName: '사범',
+    biome: 'dojang',
+    forbiddenWeathers: ['foggy','drizzle','raining','snowing','blizzard','fall','blossom'],
+    floorColor:     '#a93226',  floorColorAlt: '#1a6ea8',  // red + blue dojang mat
+    wallColor:      '#c8bfb0',  altWallColor:  '#b5a898',  // warm grey walls
+    fixedLighting: '12:00',
+    isDojangTutorial: true,
+    noLearning: true,
+  },
+  // ── World 1: 경복궁, Seoul ─────────────────────────
   {
     id: 'palace',
     name: '경복궁',
@@ -204,12 +220,12 @@ export const WORLDS = [
   {
     id: 'yonggoong',
     name: '용궁',
-    emoji: '🐉',           transport: '🐢',  // 별주부전 - rabbit rides turtle to Dragon Palace
+    emoji: '🐉',           transport: '🐟',  // 별주부전 - rabbit rides turtle to Dragon Palace
     bgTop: '#001414',      bgBot: '#002020',
     bossEmoji: '🐉',       // 용왕 - Dragon King of the Sea
     bossName: '용왕',
     biome: 'ocean',
-    forbiddenWeathers: ['clear', 'raining', 'drizzle', 'snowing', 'blizzard'],
+    forbiddenWeathers: ['drizzle','raining','snowing','blizzard','fall','blossom'],
     floorColor:     '#003030',  floorColorAlt: '#002424',
     wallColor:      '#004040',  altWallColor:  '#007070',  // deep jade; door shimmers with jade luminescence
     fixedLighting: '02:00',
@@ -320,25 +336,39 @@ function ensureMinConnections(grid) {
 }
 
 /** Append more worlds to an existing sequence, using its tail as history. */
+const _DOJANG_DEF = () => WORLDS.find(w => w.isDojangTutorial);
+const _NON_DOJANG = () => WORLDS.filter(w => !w.isDojangTutorial);
+
 function extendWorldSequence(seq, n = 10) {
   const history = seq.slice(-10).map(w => w.id);
   for (let i = 0; i < n; i++) {
-    const avail = WORLDS.filter(w => !history.slice(-10).includes(w.id));
-    const pool = avail.length > 0 ? avail : WORLDS;
+    const avail = _NON_DOJANG().filter(w => !history.slice(-10).includes(w.id));
+    const pool = avail.length > 0 ? avail : _NON_DOJANG();
     const next = pool[Math.floor(Math.random() * pool.length)];
     seq.push(next);
     history.push(next.id);
   }
 }
 
-/** Generate the initial world sequence for a run (worlds 0..n-1). */
+/** Generate the initial world sequence for a run (worlds 0..n-1).
+ *  World 0: always Taekwondo Dojang.
+ *  Worlds 1-3: only fit-for-tutorial worlds.
+ *  World 4: 66% fit-for-tutorial, 34% any world.
+ *  World 5+: equal chances for all worlds. */
 export function generateWorldSequence(n = 14) {
-  const history = ['forest'];
-  const result = [];
-  for (let i = 0; i < n; i++) {
-    let avail = WORLDS.filter(w => !history.slice(-10).includes(w.id));
-    if (i === 0) avail = avail.filter(w => !w.unfitForTutorial);
-    if (!avail.length) avail = i === 0 ? WORLDS.filter(w => !w.unfitForTutorial) : WORLDS;
+  const dojang = _DOJANG_DEF();
+  const history = ['forest', dojang.id];
+  const result = [dojang]; // index 0 is always dojang
+  for (let i = 1; i < n; i++) {
+    let avail = _NON_DOJANG().filter(w => !history.slice(-10).includes(w.id));
+    if (i <= 3) {
+      const fit = avail.filter(w => !w.unfitForTutorial);
+      avail = fit.length ? fit : _NON_DOJANG().filter(w => !w.unfitForTutorial);
+    } else if (i === 4) {
+      const fit = avail.filter(w => !w.unfitForTutorial);
+      if (fit.length && Math.random() < 0.66) avail = fit;
+    }
+    if (!avail.length) avail = _NON_DOJANG();
     const next = avail[Math.floor(Math.random() * avail.length)];
     result.push(next);
     history.push(next.id);
@@ -375,10 +405,17 @@ export function pickWorldDef(worldIdx) {
     return seq[i];
   }
   // fallback (no active run state)
+  if (worldIdx === 0) return _DOJANG_DEF();
   const history = run?.worldHistory || [];
-  let avail = WORLDS.filter(w => !history.slice(-10).includes(w.id));
-  if (worldIdx === 0) avail = avail.filter(w => !w.unfitForTutorial);
-  if (!avail.length) avail = worldIdx === 0 ? WORLDS.filter(w => !w.unfitForTutorial) : WORLDS;
+  let avail = _NON_DOJANG().filter(w => !history.slice(-10).includes(w.id));
+  if (worldIdx <= 3) {
+    const fit = avail.filter(w => !w.unfitForTutorial);
+    avail = fit.length ? fit : _NON_DOJANG().filter(w => !w.unfitForTutorial);
+  } else if (worldIdx === 4) {
+    const fit = avail.filter(w => !w.unfitForTutorial);
+    if (fit.length && Math.random() < 0.66) avail = fit;
+  }
+  if (!avail.length) avail = _NON_DOJANG();
   return avail[Math.floor(Math.random() * avail.length)];
 }
 
@@ -421,7 +458,116 @@ export function peekNextWorldDef(worldIdx) {
   return seq[i] || null;
 }
 
+/* ================================================================
+   DOJANG DUNGEON — fixed-layout 8×6 tutorial map
+   Ring layout (number = difficulty level):
+     4 3 3 3 3 3 3 4
+     4 3 2 2 2 2 3 4
+     4 3 2 1 1 2 3 4
+     4 3 2 1 1 2 3 4
+     4 3 2 2 2 2 3 4
+     4 3 3 3 3 3 3 4
+   Level-4 corners house boss / shop / casino / modifier.
+   Spawn is one of the four level-1 centre cells.
+================================================================ */
+function _dojangLevel(col, row) {
+  if (col === 0 || col === COLS - 1) return 4;           // outer columns (incl. corners)
+  if (row === 0 || row === ROWS - 1) return 3;           // top/bottom rows (non-corner)
+  if (col === 1 || col === COLS - 2) return 3;           // second-from-edge columns
+  if (col === 2 || col === COLS - 3) return 2;           // col 2 and 5
+  if (row === 1 || row === ROWS - 2) return 2;           // rows 1 and 4, cols 3-4
+  return 1;                                              // centre 2×2
+}
+
+function generateDojangDungeon() {
+  const grid = [];
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      grid.push(emptyCell(c, r));
+
+  // Tag every cell with its dojang level and wave number
+  for (const cell of grid) {
+    cell.dojangLevel = _dojangLevel(cell.col, cell.row);
+    cell.waveNum     = cell.dojangLevel;
+    cell.scrollReward = null;
+  }
+
+  // Assign special rooms to the four corners: boss + shop + casino + modifier
+  const corners = [
+    grid[idx(0, 0)], grid[idx(COLS - 1, 0)],
+    grid[idx(0, ROWS - 1)], grid[idx(COLS - 1, ROWS - 1)],
+  ];
+  shuffle(corners);
+  corners[0].type = 'boss';  corners[0].waveNum = 5; corners[0].enemyCount = 1;
+  corners[1].type = 'shop';
+  corners[2].type = 'casino';
+  corners[3].type = 'modifier';
+  const bossCell = corners[0];
+
+  // Choose spawn randomly from the four centre level-1 cells
+  const level1Cells = [
+    grid[idx(3, 2)], grid[idx(4, 2)],
+    grid[idx(3, 3)], grid[idx(4, 3)],
+  ];
+  const startCell = level1Cells[Math.floor(Math.random() * level1Cells.length)];
+  const startCol = startCell.col;
+  const startRow = startCell.row;
+
+  // Build connections:
+  //  - Corners only connect N or S (no E/W)
+  //  - Spawn cell cannot exit toward level-2 cells
+  //  - Adjacent cells connect if |level difference| ≤ 1
+  function isCorner(c, r) {
+    return (c === 0 || c === COLS - 1) && (r === 0 || r === ROWS - 1);
+  }
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = grid[idx(c, r)];
+      const lv   = _dojangLevel(c, r);
+      for (const { dir, dc, dr, opp } of DIRS) {
+        const nc = c + dc, nr = r + dr;
+        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+        if (cell.connections.has(dir)) continue;
+        const nlv = _dojangLevel(nc, nr);
+        if (isCorner(c, r)  && (dir === 'E' || dir === 'W')) continue;
+        if (isCorner(nc, nr) && (dir === 'E' || dir === 'W')) continue;
+        // Spawn cell is isolated from higher-difficulty rings (no entry or exit)
+        if (c === startCol && r === startRow && nlv > lv) continue;
+        if (nc === startCol && nr === startRow && lv > nlv) continue;
+        if (Math.abs(lv - nlv) > 1) continue;
+        cell.connections.add(dir);
+        grid[idx(nc, nr)].connections.add(opp);
+      }
+    }
+  }
+
+  // BFS hop distances from spawn
+  bfsDist(grid, startCol, startRow);
+  const maxHops = Math.max(...grid.map(c => c.hopDist === -1 ? 0 : c.hopDist));
+
+  // Enemy counts for combat rooms scaled by level
+  for (const cell of grid) {
+    if (cell.type === 'normal') {
+      cell.enemyCount = 2 + cell.dojangLevel; // L1→3, L2→4, L3→5, L4→6
+    }
+  }
+
+  // Reset visited
+  for (const cell of grid) cell.visited = false;
+
+  return {
+    grid,
+    start:    { col: startCol, row: startRow },
+    bossRoom: { col: bossCell.col, row: bossCell.row },
+    worldDef: _DOJANG_DEF(),
+    maxHops,
+  };
+}
+
 export function generateDungeon(worldIdx) {
+  // World 0 is always the fixed dojang tutorial map
+  if (worldIdx === 0) return generateDojangDungeon();
+
   const grid = [];
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++)
@@ -478,8 +624,8 @@ export function generateDungeon(worldIdx) {
   for (let i = 0; i < Math.min(treasCount, treasCandidates.length); i++)
     treasCandidates[i].type = 'treasure';
 
-  // Pick 1 casino room: world 1 at 33% (secret), world 2+ at 66%
-  const casinoChance = worldIdx === 1 ? 0.33 : (worldIdx >= 2 ? 0.66 : 0);
+  // Pick 1 casino room: world 2 (old world 1) at 33% (secret), world 3+ at 66%
+  const casinoChance = worldIdx === 2 ? 0.33 : (worldIdx >= 3 ? 0.66 : 0);
   if (casinoChance > 0 && Math.random() < casinoChance) {
     const casinoCandidates = normal.filter(c => c.type === 'normal');
     if (casinoCandidates.length) {
@@ -492,9 +638,9 @@ export function generateDungeon(worldIdx) {
   }
 
   // Pick 1 teacher room.
-  // World 0: always adjacent to spawn (so tutorial is easy to find).
-  // World 1+: 60% chance, placed at high hop distance.
-  if (worldIdx === 0) {
+  // World 1 (Palace): always adjacent to spawn (so tutorial is easy to find).
+  // World 2+: 60% chance, placed at high hop distance.
+  if (worldIdx === 1) {
     // Find cells directly connected to the spawn cell
     const spawnCell = grid[idx(startCol, startRow)];
     const adjacentToSpawn = [...spawnCell.connections]
@@ -567,8 +713,8 @@ export function generateDungeon(worldIdx) {
     delete cell._mazeVisited;
   }
 
-  // In world 0, reveal the shop cell on the map from the start (but not teleportable)
-  if (worldIdx === 0) {
+  // In world 1 (Palace), reveal the shop cell on the map from the start (but not teleportable)
+  if (worldIdx === 1) {
     const shopCell = grid.find(c => c.type === 'shop');
     if (shopCell) shopCell.shopRevealed = true;
   }
@@ -913,16 +1059,16 @@ export function enterRoom(col, row) {
   if (typeof window !== 'undefined' && G.run?.tutorial) {
     const tut  = G.run.tutorial;
     const wIdx = G.run.worldIdx;
-    // Boss room (cleared) in world 0 → persistent "advance world" message (takes priority)
-    if (cell.type === 'boss' && cell.cleared && wIdx === 0) {
+    // Boss room (cleared) in worlds 0-1 → persistent "advance world" message (takes priority)
+    if (cell.type === 'boss' && cell.cleared && wIdx <= 1) {
       window._showTutorial?.('🐲', 'tutorial.typeToAdvance', null, { persist: true });
     } else {
       // Casino → luck hint (any world) - non-combat room, show immediately, auto-close 20s
       if (cell.type === 'casino' && !cell.casinoUsed) {
         window._showTutorial?.('🎰', 'tutorial.casinoLuck', null, { autoClose: 20 });
       }
-      // World 0 special rooms (first visit) → interact hints - non-combat, auto-close 25s
-      else if (wIdx === 0 && !cell.cleared) {
+      // Worlds 0-1 special rooms (first visit) → interact hints - non-combat, auto-close 25s
+      else if (wIdx <= 1 && !cell.cleared) {
         if      (cell.type === 'shop')     window._showTutorial?.('🏪', 'tutorial.typeToBuy',  { room: i18n('map.legendShop') },     { autoClose: 25 });
         else if (cell.type === 'teacher')  window._showTutorial?.('🧑‍🏫', 'tutorial.typeToTalk', { room: i18n('map.legendTeacher') },   { autoClose: 25 });
         else if (cell.type === 'treasure') window._showTutorial?.('💰', 'tutorial.typeToOpen', { room: i18n('map.legendTreasure') },  { autoClose: 25 });
@@ -934,6 +1080,7 @@ export function enterRoom(col, row) {
   // Update minimap + HUD room code
   if (typeof window !== 'undefined' && window._mapUpdate) window._mapUpdate();
   if (typeof window !== 'undefined' && window._hudUpdate) window._hudUpdate();
+  if (typeof window !== 'undefined' && window._onRoomEntered) window._onRoomEntered(cell.type);
 }
 
 /* ================================================================
@@ -990,7 +1137,7 @@ function onRoomCleared(cell) {
   if (typeof window !== 'undefined' && G.run?.tutorial) {
     const tut  = G.run.tutorial;
     const wIdx = G.run.worldIdx;
-    if (wIdx === 0) {
+    if (wIdx <= 1) {
       tut.world0CombatCleared = (tut.world0CombatCleared || 0) + 1;
       const n = tut.world0CombatCleared;
       if (n === 1 && !tut.firstRoomClearShown) {
@@ -1000,7 +1147,8 @@ function onRoomCleared(cell) {
         tut.mapHintShown = true;
         window._showTutorial?.('🗺️', 'tutorial.pressMap', null, { autoClose: 25 });
       } else if (n >= 5) {
-        window._showTutorial?.('🐲', 'tutorial.findBoss', null, { autoClose: 30 });
+        const _bossEmoji = G.dungeon?.worldDef?.bossEmoji || '🐲';
+        window._showTutorial?.(`🗺️${_bossEmoji}`, 'tutorial.findBoss', null, { autoClose: 30 });
       }
     } else {
       // World 1+: teacher hint after 5 combat rooms if teacher exists, no interaction, no cooldown
@@ -1063,8 +1211,8 @@ function onBossDefeated(cell) {
   // Spawn portal NPC - player types next world's Korean name to advance
   spawnNextWorldNpc();
 
-  // World 0: persistent "type to advance" tutorial
-  if (G.run?.worldIdx === 0 && typeof window !== 'undefined') {
+  // Worlds 0-1: persistent "type to advance" tutorial
+  if ((G.run?.worldIdx ?? 0) <= 1 && typeof window !== 'undefined') {
     window._showTutorial?.('🐲', 'tutorial.typeToAdvance', null, { persist: true });
   }
   // Flush any tip queued during boss fight
@@ -1392,7 +1540,7 @@ export function startNewWorld(worldIdx) {
 
   // Pick weather not forbidden by this world's biome
   const worldDef = G.dungeon.worldDef;
-  if (G.weatherEnabled) {
+  if (G.weatherEnabled > 0) {
     G.weather = pickWorldWeather(worldDef);
     G.wxParticles = [];
     if (G.worldTransition) {

@@ -10,7 +10,7 @@ import { get as i18n } from './i18n.js';
 import { play as sfx } from './sfx.js';
 
 const TYPE_ICONS = {
-  normal:   '⚔️',
+  normal:   '🗡️',
   shop:     '🏪',
   modifier: '✨',
   treasure: '💰',
@@ -87,6 +87,21 @@ export function updateMap() {
   const { col: curCol, row: curRow } = G.currentRoom || { col: -1, row: -1 };
   const bossRoom  = G.dungeon.bossRoom;
   const revealed  = G.run?.mapRevealed;
+
+  // Adjacent visited rooms: connected to current room AND already visited
+  const adjVisited = new Set();
+  if (curCol >= 0) {
+    const cur = getCell(curCol, curRow);
+    if (cur) {
+      const DMAP = { N:[0,-1], S:[0,1], E:[1,0], W:[-1,0] };
+      for (const [dir,[dc,dr]] of Object.entries(DMAP)) {
+        if (cur.connections.has(dir)) {
+          const nb = getCell(curCol+dc, curRow+dr);
+          if (nb?.visited) adjVisited.add(`${curCol+dc},${curRow+dr}`);
+        }
+      }
+    }
+  }
 
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -180,17 +195,28 @@ export function updateMap() {
         el.classList.add('guide-only'); // visible but not teleportable → cursor:default
       } else {
         el.classList.add('visited');
+        // Adjacent visited rooms are directly returnable (flee / revisit)
+        if (!isCurrent && adjVisited.has(`${c},${r}`)) {
+          el.classList.add('can-teleport');
+        }
       }
       if (cell.cleared) el.classList.add('cleared');
       if (isCurrent)    el.classList.add('current');
 
-      el.textContent = TYPE_ICONS[cell.type] || '⚔️';
+      el.textContent = (cell.cleared && cell.type === 'normal') ? '' : (TYPE_ICONS[cell.type] || '🗡️');
 
+      // Doors to visited rooms = open (none); doors to unvisited = faint hint; walls = solid
       const wc = 'rgba(255,255,255,0.22)';
-      el.style.borderTop    = cell.connections.has('N') ? 'none' : `2px solid ${wc}`;
-      el.style.borderBottom = cell.connections.has('S') ? 'none' : `2px solid ${wc}`;
-      el.style.borderRight  = cell.connections.has('E') ? 'none' : `2px solid ${wc}`;
-      el.style.borderLeft   = cell.connections.has('W') ? 'none' : `2px solid ${wc}`;
+      const uc = 'rgba(255,255,255,0.08)'; // unvisited connection — door exists but room is fog
+      const borderFor = (dir, dc, dr) => {
+        if (!cell.connections.has(dir)) return `2px solid ${wc}`;
+        const nb = getCell(c+dc, r+dr);
+        return (nb?.visited || revealed) ? 'none' : `1px solid ${uc}`;
+      };
+      el.style.borderTop    = borderFor('N',  0, -1);
+      el.style.borderBottom = borderFor('S',  0,  1);
+      el.style.borderRight  = borderFor('E',  1,  0);
+      el.style.borderLeft   = borderFor('W', -1,  0);
     }
   }
 

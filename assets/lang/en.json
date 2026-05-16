@@ -6,12 +6,12 @@
     "rotateDevice": "Rotate your device",
     "loreSpeechRate": 1,
     "unsupportedTitle": "Browser not supported",
-    "unsupportedDesc": "EZRA Taja does not run on Safari. Please open it in Chrome, Firefox, or Edge."
+    "unsupportedDesc": "EZRA does not run on Safari. Please open it in Chrome, Firefox, or Edge."
   },
   "title": {
     "playBtn": "▶ Start Game!",
     "slogan": "Practicing Korean by typing",
-    "subTitle": "EZRA 타자 - Type Korean to defeat monsters!",
+    "subTitle": "EZRA - Type Korean to defeat monsters!",
     "bestScore": "Best score"
   },
   "lore": {
@@ -22,6 +22,8 @@
     "skip": "Skip"
   },
   "options": {
+    "randomize": "Randomize",
+    "avaEdit": "Edit",
     "heroTitle": "Choose your hero",
     "weaponTitle": "Weapon style",
     "gameOptions": "⚙️ Game Options",
@@ -35,6 +37,12 @@
     "diffHardcore": "Hardcore",
     "varyFonts": "🔤 Varying Fonts",
     "weather": "🌤️ Weather",
+    "weatherHighlyDetailed": "🌪️ Highly Detailed",
+    "weatherDetailed": "⛈️ Detailed",
+    "weatherBalanced": "🌧️ Balanced",
+    "weatherPerformance": "🌦️ Performance",
+    "weatherMinimal": "☁️ Minimal",
+    "weatherOff": "☀️ Disabled",
     "speakWords": "🔊 Speak Words",
     "hanjaPowerups": "🀄 Hanja Powerups",
     "translations": "💬 Translations",
@@ -51,8 +59,9 @@
     "wg_ocean": "Ocean",
     "wg_elements": "Elements",
     "wg_animals": "Animals",
-    "sfxVolume": "🔉 Sound Effects",
-    "ambientMusic": "🎵 Ambient Music"
+    "sfxVolume": "Sound Effects",
+    "ambientMusic": "Ambient Music",
+    "title": "Options"
   },
   "dict": {
     "title": "Dictionary",
@@ -61,12 +70,13 @@
     "tabAll": "All",
     "tabNoun": "🍓 Nouns",
     "tabVerb": "✅ Verbs",
-    "tabAdj": "📌 Adj.",
-    "tabAdverb": "⏳ Adv.",
-    "tabParticle": "Part.",
-    "tabGrammar": "Grammar",
-    "tabHangul": "Hangul",
+    "tabAdj": "📌 Adjectives",
+    "tabAdverb": "⏳ Adverbs",
     "searchPlaceholder": "Search…",
+    "searchNoun": "Search nouns…",
+    "searchVerb": "Search verbs…",
+    "searchAdj": "Search adjectives…",
+    "searchAdverb": "Search adverbs…",
     "learnedWords": "Learned Words",
     "noWordsYet": "No words learned yet - defeat monsters!",
     "openBook": "Open Book",
@@ -75,6 +85,7 @@
     "myDictSub": "Words you've encountered on your runs",
     "myDictEmpty": "Keep playing to discover words!",
     "tabEmpty": "No words in this category yet - keep playing!",
+    "lessonsEmpty": "No content learned yet.",
     "listTooLarge": "List too large to display! Search for something specific or type '*' to show all.",
     "killed": "killed",
     "tensePresent": "Present",
@@ -82,6 +93,7 @@
     "tenseFuture": "Future",
     "untouchedTip": "No monsters of this type defeated yet",
     "tabStatistics": "📊 Stats",
+    "tabLessons": "📚 Lessons",
     "statsLessons": "Lessons Completed",
     "statsWords": "Words Unlocked",
     "statsMastered": "Mastered Words",
@@ -94,7 +106,8 @@
     "wikiPerms": "✨ Permanent Buffs",
     "wikiVisited": "Visited",
     "wikiAcquired": "Acquired",
-    "wikiPriceRange": "~원"
+    "wikiPriceRange": "~원",
+    "statsProgDisabled": "Dictionary progression is disabled. You can enable it in Settings to gradually discover new words as you play."
   },
   "pause": {
     "title": "Paused",
@@ -393,6 +406,10 @@
     }
   },
   "worlds": {
+    "taekwondo_dojang": {
+      "name": "Taekwondo Dojang",
+      "desc": "Martial arts training halls where you master Hangul typing through combat."
+    },
     "palace": {
       "name": "Gyeongbokgung Palace",
       "desc": "The royal palace of the Joseon dynasty, heart of Korean history in central Seoul."
@@ -654,7 +671,7 @@
     "findBoss": "Find the boss room to increase the challenge",
     "buyTent": "You could buy a tent at the shop to sleep through the night",
     "pickHangul": "Type the syllable on the coin to pick up an item",
-    "pickHanja": "Type the hanja syllable to pick up an item - or use a Dictionary to reveal it",
+    "pickHanja": "Type the hanja syllable to pick up an item — if you own and use a Dictionary item, the hanja will be revealed",
     "typeToAdvance": "Type the word to advance to the next world",
     "findTeacher": "Finding the teacher can teach you a lesson and increase the challenge",
     "casinoLuck": "Why not try your luck risking it all?"

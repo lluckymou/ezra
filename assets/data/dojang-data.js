@@ -88,7 +88,7 @@ const DC = 45; // compound (L-shape) stroke tolerance — slightly looser for th
 export const JAMO_STROKES = {
   // ── Basic consonants (SVG-verified stroke counts) ─────────────
   // Compound [firstDir, secondDir] strokes capture L-shaped single motions
-  'ㄱ': [{a:[0,90],  t:DC}],                                     // 1: →↓ (L-shape)
+  'ㄱ': [{a:[0,90],  t:55}],                                     // 1: →↓ (L-shape, wider for angled downstrokes)
   'ㄴ': [{a:[90,0],  t:DC}],                                     // 1: ↓→ (rev-L)
   'ㄷ': [{a:0,t:D},  {a:[90,0],t:DC}],                           // 2: →  then ↓→
   'ㄹ': [{a:[0,90],t:DC}, {a:0,t:D}, {a:[90,0],t:DC}],          // 3: →↓ → ↓→
@@ -100,14 +100,14 @@ export const JAMO_STROKES = {
   // SVG arrow-1 confirms: h274.67 then l-115.46 127.56 (right then down-left)
   'ㅈ': [{a:[0,135],t:DC}, {a:45,t:D,bsr:0}],                    // 2: →↙  ↘  (↘ must start below-right of →↙ start)
   'ㅊ': [{a:0,t:60},  {a:[0,135],t:DC}, {a:45,t:D,bsr:1}],      // 3: →   →↙  ↘  (↘ below-right of →↙ start)
-  'ㅋ': [{a:[0,90],t:70}, {a:0,t:D}],                            // 2: →↓  →  (wider tolerance for the bend)
+  'ㅋ': [{a:[0,90],t:55}, {a:0,t:50, stayLeftOf:{ref:0,margin:20}}], // 2: →↓  →bar (bar must not pass right edge of ㄱ)
   'ㅌ': [{a:0,t:D},  {a:0,t:D},  {a:[90,0],t:DC}],              // 3: →  →  ↓→
   'ㅍ': [{a:0,t:D},  {a:90,t:D}, {a:90,t:D}, {a:0,t:D}],       // 4: →  ↓  ↓  →
   // ㅎ: short → tick at top, long → bar, then ○
   'ㅎ': [{a:0,t:60}, {a:0,t:D},  {a:'circle'}],                  // 3: →  →  ○
 
   // ── Tense consonants ─────────────────────────────────────────
-  'ㄲ': [{a:[0,90],t:DC}, {a:[0,90],t:DC}],                     // 2: ㄱ×2
+  'ㄲ': [{a:[0,90],t:55}, {a:[0,90],t:55}],                     // 2: ㄱ×2
   'ㄸ': [{a:0,t:D},{a:[90,0],t:DC}, {a:0,t:D},{a:[90,0],t:DC}], // 4: ㄷ×2
   'ㅃ': [{a:90,t:D},{a:90,t:D},{a:0,t:D,betweenVerts:[0,1]},{a:0,t:D,betweenVerts:[0,1]},
           {a:90,t:D},{a:90,t:D},{a:0,t:D,betweenVerts:[4,5]},{a:0,t:D,betweenVerts:[4,5]}], // 8: ㅂ×2

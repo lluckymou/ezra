@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>EZRA Taja</title>
-<meta name="description" content="EZRA Taja (타자) is a typing-based roguelike dungeon crawler designed to help you learn Korean in a fun and engaging way. Explore procedurally generated dungeons, battle monsters, and collect loot - all by typing Korean words!">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>EZRA</title>
+<meta name="description" content="EZRA 타자 is a typing-based roguelike dungeon crawler designed to help you learn Korean in a fun and engaging way. Explore procedurally generated dungeons, battle monsters, and collect loot - all by typing Korean words!">
 <meta name="author" content="Lucas Nascimento">
-<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="assets/img/icon.svg">
+<link rel="icon" href="assets/img/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/img/favicon.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#030d1a">
 <link rel="stylesheet" href="assets/css/fonts.css">
@@ -37,109 +37,109 @@
 
 <!-- ── TITLE SCREEN ──────────────────────────────────────── -->
 <div id="scr-title" class="screen">
+
+  <div id="version-badge"></div>
+
+  <!-- Decorative art layers (behind menu) -->
+  <img id="menu-minhwa" draggable="false" src="assets/img/menu-img.png" alt="">
+  <img id="menu-minhwa-right" draggable="false" src="assets/img/menu-right.png" alt="">
+
 <div id="menu-wrap">
 
-  <!-- Logo + utility buttons -->
-  <div id="menu-header">
+  <!-- Single column: everything -->
+  <div id="menu-left">
     <div id="menu-logo-wrap">
       <img id="menu-logo-gif" draggable="false" src="assets/img/logo.gif" alt="logo">
+      <p id="menu-slogan" data-i18n="title.slogan"></p>
     </div>
-    <p id="menu-slogan" data-i18n="title.slogan"></p>
-  </div>
-
-  <!-- Character editor main area -->
-  <div id="menu-main">
-    <div class="ava-tabs" id="ava-tabs-left">
-      <button class="ava-tab" data-ava-tab="top">🦰</button>
-      <button class="ava-tab" data-ava-tab="beard">🧔</button>
-      <button class="ava-tab" data-ava-tab="acc">👓</button>
-      <button class="ava-tab" data-ava-tab="cloth">👕</button>
-    </div>
-    <div id="ava-center">
-      <div id="ava-preview-wrap">
-        <button id="ava-randomize" title="Randomize">🎲</button>
-        <button id="ava-edit" title="Edit">🧑‍🦰</button>
-        <div id="ava-preview"></div>
+    <div id="menu-left-btns">
+      <div class="btn-group">
+        <button id="btn-settings" class="menu-icon-btn">
+          <span class="mic-emoji">🛠️</span>
+          <span class="mic-label" data-i18n="options.title">Options</span>
+        </button>
+        <button id="btn-my-dict" class="menu-icon-btn">
+          <span class="mic-emoji">📒</span>
+          <span class="mic-label" data-i18n="dict.myDict">My Dictionary</span>
+        </button>
       </div>
-      <!-- Edit bar: shown when a tab is active -->
-      <div id="ava-edit-bar">
-        <div id="ava-edit-rows">
-          <div class="ava-edit-row" id="ava-edit-row1">
-            <button class="ava-edit-nav" id="ava-edit-prev1">‹</button>
-            <span id="ava-edit-label1"></span>
-            <button class="ava-edit-nav" id="ava-edit-next1">›</button>
+      <div id="menu-main">
+        <div id="ava-center">
+          <div class="ava-tabs" id="ava-tabs-top">
+            <button class="ava-tab" data-ava-tab="top">🪮</button>
+            <button class="ava-tab" data-ava-tab="beard">🧔</button>
+            <button class="ava-tab" data-ava-tab="acc">👓</button>
+            <button class="ava-tab" data-ava-tab="cloth">👕</button>
+            <button class="ava-tab" data-ava-tab="skin">🖐🏾</button>
+            <button class="ava-tab" data-ava-tab="face">😁</button>
+            <button class="ava-tab" data-ava-tab="eyes">👀</button>
+            <button class="ava-tab" data-ava-tab="weapon">⚔️</button>
           </div>
-          <div class="ava-edit-row" id="ava-edit-row2">
-            <button class="ava-edit-nav" id="ava-edit-prev2">‹</button>
-            <span id="ava-edit-label2"></span>
-            <button class="ava-edit-nav" id="ava-edit-next2">›</button>
+          <!-- Edit bar: shown when a tab is active -->
+          <div id="ava-edit-bar">
+            <div id="ava-edit-rows">
+              <div class="ava-edit-row" id="ava-edit-row1">
+                <button class="ava-edit-nav" id="ava-edit-prev1">‹</button>
+                <span id="ava-edit-label1"></span>
+                <button class="ava-edit-nav" id="ava-edit-next1">›</button>
+              </div>
+              <div class="ava-edit-row" id="ava-edit-row2">
+                <button class="ava-edit-nav" id="ava-edit-prev2">‹</button>
+                <span id="ava-edit-label2"></span>
+                <button class="ava-edit-nav" id="ava-edit-next2">›</button>
+              </div>
+              <div class="ava-edit-row" id="ava-edit-row3">
+                <button class="ava-edit-nav" id="ava-edit-prev3">‹</button>
+                <span id="ava-edit-label3"></span>
+                <button class="ava-edit-nav" id="ava-edit-next3">›</button>
+              </div>
+            </div>
+            <button id="ava-edit-close"><span class="icon-close"></span></button>
           </div>
-          <div class="ava-edit-row" id="ava-edit-row3">
-            <button class="ava-edit-nav" id="ava-edit-prev3">‹</button>
-            <span id="ava-edit-label3"></span>
-            <button class="ava-edit-nav" id="ava-edit-next3">›</button>
+          <div id="ava-preview-wrap">
+            <button id="ava-randomize" class="menu-icon-btn">
+              <span class="mic-emoji">🎲</span>
+              <span class="mic-label" data-i18n="options.randomize">Randomize</span>
+            </button>
+            <button id="ava-edit" class="menu-icon-btn">
+              <span class="mic-emoji">👕</span>
+              <span class="mic-label" data-i18n="options.avaEdit">Edit</span>
+            </button>
+            <div id="ava-preview"></div>
           </div>
-          <div id="ava-edit-weapon"><div class="wg-list" id="wg-pick"></div></div>
         </div>
-        <button id="ava-edit-close"><span class="icon-close"></span></button>
       </div>
+      <a id="menu-dojang-wrap" href="https://lluckymou.github.io" target="_blank" rel="noopener noreferrer">
+        <img id="menu-dojang" draggable="false" src="assets/img/dojang.png" alt="">
+        <img id="menu-dojang-lluc" draggable="false" src="assets/img/lluc.png" alt="">
+      </a>
     </div>
-    <div class="ava-tabs" id="ava-tabs-right">
-      <button class="ava-tab" data-ava-tab="skin">🖐🏾</button>
-      <button class="ava-tab" data-ava-tab="face">😁</button>
-      <button class="ava-tab" data-ava-tab="eyes">👀</button>
-      <button class="ava-tab" data-ava-tab="weapon">⚔️</button>
-    </div>
+    <!-- Character editor -->
+    <div id="menu-footer"><span id="title-hi"></span></div>
   </div>
-
-  <!-- Bottom row: CONTROLE | JOGAR | DIFICULDADE -->
-  <div id="menu-bottom">
-    <div class="menu-bot-wrap">
-      <button id="btn-my-dict" data-i18n="dict.myDictBtn">📒 My Dictionary</button>
-      <button id="mode-toggle-btn" class="menu-bot-btn">
-        <div class="bot-btn-inner">
-          <span id="mode-toggle-emoji">⌨️</span>
-          <div class="bot-btn-labels">
-            <span id="mode-toggle-label" data-i18n="options.keyboardControls">Keyboard Controls</span>
-          </div>
-        </div>
-      </button>
-    </div>
-    <button id="btn-play" data-i18n="title.playBtn">▶ Start Game!</button>
-    <div class="menu-bot-wrap">
-      <button id="btn-settings" data-i18n="options.gameOptions">⚙️ Game Options</button>
-      <button id="difficulty-toggle-btn" class="menu-bot-btn">
-        <div class="bot-btn-inner">
-          <span id="difficulty-toggle-emoji">⚔️</span>
-          <div class="bot-btn-labels">
-            <span id="difficulty-toggle-label">Normal</span>
-            <span id="difficulty-hearts-label">10 ❤️</span>
-          </div>
-        </div>
-      </button>
-    </div>
-  </div>
-
-  <div id="menu-footer"><span id="title-hi"></span></div>
 
 </div><!-- /menu-wrap -->
+
+<!-- Play button: fixed right-edge tab -->
+<button id="btn-play" data-i18n="title.playBtn">▶ Start Game!</button>
 </div>
 
 <!-- ── MY DICTIONARY FLOATING MODAL ──────────────────────── -->
 <div id="my-dict-modal" class="off">
   <div id="my-dict-modal-inner">
     <div id="my-dict-header">
-      <span>📒 <span data-i18n="dict.myDict">My Dictionary</span></span>
+      <span><span id="my-dict-cat-prefix">📒 </span><span data-i18n="dict.myDict">My Dictionary</span></span>
       <button id="my-dict-expand-btn" title="Expand"><span class="icon-fs-enter"></span><span class="icon-fs-exit"></span></button>
       <button id="my-dict-close" onclick="document.getElementById('my-dict-modal').classList.add('off')"><span class="icon-close"></span></button>
     </div>
     <div class="dict-panel-sub"><span data-i18n="dict.myDictSub">Words you've encountered on your runs</span></div>
     <div class="dict-tabs" id="title-dict-tabs">
-      <button class="dict-tab active" data-cat="stats" data-i18n="dict.tabStatistics">📊 Stats</button>
-      <button class="dict-tab" data-cat="noun" data-i18n="dict.tabNoun">Nouns</button>
-      <button class="dict-tab" data-cat="adverb" data-i18n="dict.tabAdverb">⏳ Adv.</button>
-      <button class="dict-tab" data-cat="verb" data-i18n="dict.tabVerb">Verbs</button>
-      <button class="dict-tab" data-cat="adjective" data-i18n="dict.tabAdj">Adj.</button>
+      <button class="dict-tab active" data-cat="stats"><span class="tab-full" data-i18n="dict.tabStatistics">📊 Stats</span><span class="tab-short">📊</span></button>
+      <button class="dict-tab" data-cat="noun"><span class="tab-full" data-i18n="dict.tabNoun">🍓 Nouns</span><span class="tab-short">🍓</span></button>
+      <button class="dict-tab" data-cat="adverb"><span class="tab-full" data-i18n="dict.tabAdverb">⏳ Adv.</span><span class="tab-short">⏳</span></button>
+      <button class="dict-tab" data-cat="verb"><span class="tab-full" data-i18n="dict.tabVerb">✅ Verbs</span><span class="tab-short">✅</span></button>
+      <button class="dict-tab" data-cat="adjective"><span class="tab-full" data-i18n="dict.tabAdj">📌 Adj.</span><span class="tab-short">📌</span></button>
+      <button class="dict-tab" data-cat="lessons"><span class="tab-full" data-i18n="dict.tabLessons">📚 Lessons</span><span class="tab-short">📚</span></button>
     </div>
     <div class="dict-search-wrap" id="title-dict-search-wrap">
       <input id="dict-search" type="text" placeholder="Search…" data-i18n-placeholder="dict.searchPlaceholder" autocomplete="off">
@@ -175,16 +175,20 @@
           </select>
         </div>
         <div class="gopt-card">
+          <div class="gopt-label" data-i18n="options.weather">🌤️ Weather</div>
+          <select id="sel-weather" class="gopt-select">
+            <option value="1"    data-i18n-opt="options.weatherHighlyDetailed">Highly Detailed</option>
+            <option value="0.75" data-i18n-opt="options.weatherDetailed">Detailed</option>
+            <option value="0.5"  data-i18n-opt="options.weatherBalanced">Balanced</option>
+            <option value="0.25" data-i18n-opt="options.weatherPerformance">Performance</option>
+            <option value="0.1"  data-i18n-opt="options.weatherMinimal">Minimal</option>
+            <option value="0"    data-i18n-opt="options.weatherOff">Disabled</option>
+          </select>
+        </div>
+        <div class="gopt-card">
           <div class="gopt-label" data-i18n="options.varyFonts">🔤 Varying Fonts</div>
           <label class="gopt-toggle">
             <input type="checkbox" id="chk-fonts" checked>
-            <span class="gopt-track"><span class="gopt-thumb"></span></span>
-          </label>
-        </div>
-        <div class="gopt-card">
-          <div class="gopt-label" data-i18n="options.weather">🌤️ Weather</div>
-          <label class="gopt-toggle">
-            <input type="checkbox" id="chk-weather" checked>
             <span class="gopt-track"><span class="gopt-thumb"></span></span>
           </label>
         </div>
@@ -238,16 +242,16 @@
           </label>
         </div>
         <div class="gopt-card" style="grid-column:1/-1">
-          <div class="gopt-label" data-i18n="options.sfxVolume">🔉 Sound Effects</div>
+          <div class="gopt-label"><span id="sfx-vol-emoji">🔉</span> <span data-i18n="options.sfxVolume">Sound Effects</span></div>
           <input type="range" id="sfx-vol-slider" min="0" max="100" value="50" style="width:30%;accent-color:#4a9eff">
         </div>
         <div class="gopt-card" style="grid-column:1/-1">
-          <div class="gopt-label" data-i18n="options.ambientMusic">🎵 Ambient Music</div>
+          <div class="gopt-label"><span id="music-vol-emoji">🎵</span> <span data-i18n="options.ambientMusic">Ambient Music</span></div>
           <input type="range" id="music-vol-slider" min="0" max="100" value="35" style="width:30%;accent-color:#4a9eff">
         </div>
       </div>
       <div id="settings-credits">
-        <div class="credits-by" data-i18n="credits.byLine">🫰 By Lucas Nascimento</div>
+        <div class="credits-by"><span class="version-inline"></span> <span data-i18n="credits.byLine">🫰 By Lucas Nascimento</span></div>
         <div class="credits-thanks" data-i18n="credits.thanks">Special thanks to Roh HaYoung and KIT for showing me Korean culture and language, I'm eternally grateful to all of you. You have changed my life forever. I hope this project inspires more people to study your language and connect to your beautiful and inspiring culture.</div>
       </div>
       <div style="text-align:center; margin-top: auto; padding-top: 12px;font-size:.7rem;color:rgba(255,255,255,.35);">
@@ -300,16 +304,23 @@
       </div>
       <div id="pause-mid-opts">
         <div class="pause-opt-row">
-          <span class="pause-opt-label">🔉 SFX</span>
+          <span class="pause-opt-label"><span id="pause-sfx-emoji">🔉</span> SFX</span>
           <input type="range" id="pause-sfx-vol" min="0" max="100" value="50" style="width:90px;accent-color:#4a9eff">
         </div>
         <div class="pause-opt-row">
-          <span class="pause-opt-label" data-i18n="options.ambientMusic">🎵 Ambient Music</span>
+          <span class="pause-opt-label"><span id="pause-music-emoji">🎵</span> <span data-i18n="options.ambientMusic">Ambient Music</span></span>
           <input type="range" id="pause-music-vol" min="0" max="100" value="35" style="width:90px;accent-color:#4a9eff">
         </div>
         <div class="pause-opt-row">
           <span class="pause-opt-label" data-i18n="options.weather">🌤️ Weather</span>
-          <label class="gopt-toggle"><input type="checkbox" id="pause-chk-weather" checked><span class="gopt-track"><span class="gopt-thumb"></span></span></label>
+          <select id="pause-sel-weather" class="gopt-select" style="width:auto">
+            <option value="1"    data-i18n-opt="options.weatherHighlyDetailed">Highly Detailed</option>
+            <option value="0.75" data-i18n-opt="options.weatherDetailed">Detailed</option>
+            <option value="0.5"  data-i18n-opt="options.weatherBalanced">Balanced</option>
+            <option value="0.25" data-i18n-opt="options.weatherPerformance">Performance</option>
+            <option value="0.1"  data-i18n-opt="options.weatherMinimal">Minimal</option>
+            <option value="0"    data-i18n-opt="options.weatherOff">Disabled</option>
+          </select>
         </div>
         <div class="pause-opt-row">
           <span class="pause-opt-label" data-i18n="options.speakWords">🔊 Speak Words</span>
@@ -456,7 +467,7 @@
 
   <!-- Wallet / pause -->
   <div class="hcard" id="hcard-score">
-    <div class="hlbl">💰 원</div>
+    <div class="hlbl">💰 돈</div>
     <div class="score-body">
       <div class="score-vals">
         <div id="hs-val">0</div>
@@ -496,11 +507,12 @@
 <!-- ── DICTIONARY PANEL ───────────────────────────────────── -->
 <div id="book-panel" class="off">
   <div class="dict-tabs">
-    <button class="dict-tab active" data-cat="stats" data-i18n="dict.tabStatistics">📊</button>
-    <button class="dict-tab" data-cat="noun" data-i18n="dict.tabNoun">🍓 Noun</button>
-    <button class="dict-tab" data-cat="adverb" data-i18n="dict.tabAdverb">⏳ Adv.</button>
-    <button class="dict-tab" data-cat="verb" data-i18n="dict.tabVerb">✅ Verb</button>
-    <button class="dict-tab" data-cat="adjective" data-i18n="dict.tabAdj">📌 Adj.</button>
+    <button class="dict-tab active" data-cat="stats"><span class="tab-full" data-i18n="dict.tabStatistics">📊 Stats</span><span class="tab-short">📊</span></button>
+    <button class="dict-tab" data-cat="noun"><span class="tab-full" data-i18n="dict.tabNoun">🍓 Noun</span><span class="tab-short">🍓</span></button>
+    <button class="dict-tab" data-cat="adverb"><span class="tab-full" data-i18n="dict.tabAdverb">⏳ Adv.</span><span class="tab-short">⏳</span></button>
+    <button class="dict-tab" data-cat="verb"><span class="tab-full" data-i18n="dict.tabVerb">✅ Verb</span><span class="tab-short">✅</span></button>
+    <button class="dict-tab" data-cat="adjective"><span class="tab-full" data-i18n="dict.tabAdj">📌 Adj.</span><span class="tab-short">📌</span></button>
+    <button class="dict-tab" data-cat="lessons"><span class="tab-full" data-i18n="dict.tabLessons">📚 Lessons</span><span class="tab-short">📚</span></button>
   </div>
   <div id="book-panel-header">
     <button class="map-esc-btn no-touch" id="book-expand-btn" title="Expand"><span class="icon-fs-enter"></span><span class="icon-fs-exit"></span></button>
@@ -552,6 +564,9 @@
 
 <!-- ── ANNOUNCE / FX (identical to original) ─────────────── -->
 <div id="announce"><div id="announce-txt"></div></div>
+
+<!-- ── DICT UNLOCK NOTIFICATION ──────────────────────────── -->
+<div id="dict-unlock-notif" class="off"></div>
 
 <!-- ── WEATHER CANVAS ─────────────────────────────────────── -->
 <canvas id="wx-canvas"></canvas>
@@ -725,7 +740,7 @@
     <div id="dojang-pause-panel">
       <h2 data-i18n="dojang.paused">Paused</h2>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:22px;padding: 0 12px;font-size:.85rem;opacity:.75">
-        <span>🔉</span><input type="range" id="dojang-sfx-vol" min="0" max="100" value="50" style="flex:1;accent-color:#4a9eff">
+        <span id="dojang-sfx-emoji">🔉</span><input type="range" id="dojang-sfx-vol" min="0" max="100" value="50" style="flex:1;accent-color:#4a9eff">
       </div>
       <button class="dj-pause-btn dj-pause-primary" id="dojang-btn-resume" data-i18n="dojang.resume">▶ Resume</button>
       <button class="dj-pause-btn" id="dojang-btn-menu" data-i18n="dojang.backMenu">Main Menu</button>
@@ -937,8 +952,9 @@
 <!-- ── MOBILE TITLE BAR ────────────────────────────────────── -->
 <div id="mobile-titlebar">
   <div class="mtb-left">
-    <img src="assets/img/icon.svg" alt="EZRA" width="13" height="13">
+    <img src="assets/img/favicon.png" alt="EZRA" width="13" height="13">
     <span>EZRA 타자</span>
+    <span class="version-inline mtb-version"></span>
   </div>
   <button id="mtb-exit-fs" title="Exit fullscreen"><span class="icon-fs-exit"></span></button>
 </div>
@@ -953,7 +969,7 @@
 <div id="unsupported-overlay">
   <div class="unsup-icon">🚫</div>
   <h2 id="unsup-title">Browser not supported</h2>
-  <p id="unsup-desc">EZRA Taja does not run on Safari. Please open it in Chrome, Firefox, or Edge.</p>
+  <p id="unsup-desc">EZRA does not run on Safari. Please open it in Chrome, Firefox, or Edge.</p>
   <div class="unsup-browsers">
     <span>Chrome ✓</span>
     <span>Firefox ✓</span>
@@ -982,7 +998,9 @@
       _fired = false;
       _t = setTimeout(() => {
         _fired = true;
-        document.getElementById('donate-modal')?.classList.remove('off');
+        const _dm = document.getElementById('donate-modal');
+        _dm?.classList.remove('off');
+        document.getElementById('donate-close')?.addEventListener('click', () => { _dm?.classList.add('off'); }, { once: true });
       }, 2000);
     });
     btn.addEventListener('pointerup',    () => clearTimeout(_t));

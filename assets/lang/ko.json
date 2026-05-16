@@ -6,7 +6,7 @@
     "rotateDevice": "기기를 회전하세요",
     "loreSpeechRate": 0.8,
     "unsupportedTitle": "지원하지 않는 브라우저",
-    "unsupportedDesc": "EZRA Taja는 Safari에서 실행되지 않습니다. Chrome, Firefox 또는 Edge에서 열어주세요."
+    "unsupportedDesc": "EZRA 타자는 Safari에서 실행되지 않습니다. Chrome, Firefox 또는 Edge에서 열어주세요."
   },
   "title": {
     "playBtn": "▶ 시작!",
@@ -22,6 +22,8 @@
     "skip": "건너뛰기"
   },
   "options": {
+    "randomize": "랜덤",
+    "avaEdit": "편집",
     "heroTitle": "영웅 선택",
     "weaponTitle": "무기 스타일",
     "gameOptions": "⚙️ 게임 옵션",
@@ -35,6 +37,12 @@
     "diffHardcore": "하드코어",
     "varyFonts": "🔤 폰트 변형",
     "weather": "🌤️ 날씨",
+    "weatherHighlyDetailed": "🌪️ 최고 품질",
+    "weatherDetailed": "⛈️ 고품질",
+    "weatherBalanced": "🌧️ 균형",
+    "weatherPerformance": "🌦️ 성능 우선",
+    "weatherMinimal": "☁️ 최소",
+    "weatherOff": "☀️ 비활성화",
     "speakWords": "🔊 단어 읽기",
     "hanjaPowerups": "🀄 한자 파워업",
     "translations": "💬 번역 표시",
@@ -51,8 +59,9 @@
     "wg_ocean": "바다",
     "wg_elements": "원소",
     "wg_animals": "동물",
-    "sfxVolume": "🔉 효과음",
-    "ambientMusic": "🎵 배경 음악"
+    "sfxVolume": "효과음",
+    "ambientMusic": "배경 음악",
+    "title": "설정"
   },
   "dict": {
     "title": "사전",
@@ -63,10 +72,11 @@
     "tabVerb": "✅ 동사",
     "tabAdj": "📌 형용사",
     "tabAdverb": "⏳ 부사",
-    "tabParticle": "조사",
-    "tabGrammar": "문법",
-    "tabHangul": "한글",
     "searchPlaceholder": "검색…",
+    "searchNoun": "명사 검색…",
+    "searchVerb": "동사 검색…",
+    "searchAdj": "형용사 검색…",
+    "searchAdverb": "부사 검색…",
     "learnedWords": "배운 단어",
     "noWordsYet": "아직 배운 단어 없음 - 몬스터를 물리쳐라!",
     "openBook": "단어장 열기",
@@ -75,6 +85,7 @@
     "myDictSub": "플레이하면서 만난 단어들",
     "myDictEmpty": "계속 플레이하면 단어가 쌓여요!",
     "tabEmpty": "이 카테고리에 아직 단어가 없어요 - 계속 플레이하세요!",
+    "lessonsEmpty": "아직 배운 내용이 없어요.",
     "listTooLarge": "표시할 항목이 너무 많아요! 특정 단어를 검색하거나 '*'를 입력해서 모든 항목을 보세요.",
     "killed": "처치",
     "tensePresent": "현재",
@@ -82,6 +93,7 @@
     "tenseFuture": "미래",
     "untouchedTip": "아직 이 유형의 몬스터를 처치하지 않았습니다",
     "tabStatistics": "📊 통계",
+    "tabLessons": "📚 수업",
     "statsLessons": "완료한 수업",
     "statsWords": "해금된 단어",
     "statsMastered": "마스터한 단어",
@@ -94,7 +106,8 @@
     "wikiPerms": "✨ 영구 버프",
     "wikiVisited": "방문함",
     "wikiAcquired": "획득함",
-    "wikiPriceRange": "~원"
+    "wikiPriceRange": "~원",
+    "statsProgDisabled": "사전 진행이 비활성화되어 있습니다. 설정에서 활성화하면 플레이하면서 새로운 단어를 조금씩 발견할 수 있어요."
   },
   "pause": {
     "title": "일시정지",
@@ -265,7 +278,7 @@
     "findBoss": "보스 방을 찾아 도전 난이도를 높여보세요",
     "buyTent": "상점에서 텐트를 사면 이 밤을 넘길 수 있어요",
     "pickHangul": "동전의 음절을 입력해서 아이템을 집으세요",
-    "pickHanja": "한자의 음절을 입력해서 아이템을 집거나, 사전 아이템으로 읽기를 해제하세요",
+    "pickHanja": "한자의 음절을 입력해서 아이템을 집으세요 — 사전 아이템을 보유하고 사용하면 한자가 공개돼요",
     "typeToAdvance": "단어를 입력해서 다음 세계로 넘어가세요",
     "findTeacher": "선생님을 찾으면 수업을 들을 수 있고 도전 난이도가 높아져요",
     "casinoLuck": "모든 것을 걸고 운을 시험해 보는 건 어떨까요?"
@@ -448,6 +461,10 @@
     }
   },
   "worlds": {
+    "taekwondo_dojang": {
+      "name": "태권도 도장",
+      "desc": "전투를 통해 한글 타이핑을 익히는 무술 훈련장들."
+    },
     "palace": {
       "name": "경복궁",
       "desc": "조선왕조의 궁궐, 서울 중심부에 자리한 한국 역사의 심장."

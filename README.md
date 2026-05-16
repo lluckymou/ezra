@@ -4,7 +4,7 @@
   </a>
   <br><br>
 
-  _Practicing Korean by typing_ | _타이핑으로 한국어 배우기_
+  _Practicing Korean by typing_ | _타이핑으로 한국어 연습하기_
 
   <a href="https://github.com/sponsors/lluckymou?frequency=one-time">
     <img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=github-sponsors&style=flat-square" alt="Sponsor">
@@ -13,7 +13,7 @@
 
 ---
 
-**EZRA Taja** is a Korean language practice platform built around typing. It started as a roguelite dungeon crawler where you defeat monsters by typing Korean words, and grew into a broader set of tools for practicing the language - vocabulary through gameplay, Hangul stroke order through drawing, and more.
+**EZRA 타자** is a Korean language practice platform built around typing. It started as a roguelite dungeon crawler where you defeat monsters by typing Korean words, and grew into a broader set of tools for practicing the language - vocabulary through gameplay, Hangul stroke order through drawing, and more.
 
 It was born out of a frustration: my Korean teacher showed me [Hancom Taja](https://taja.hancom.com), a classic Korean typing trainer, but I couldn't use it because my system locale wasn't set to Korean. So I built my own version - and then kept going.
 

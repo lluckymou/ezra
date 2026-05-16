@@ -1,5 +1,5 @@
 {
-  "name": "EZRA Taja",
+  "name": "타자",
   "short_name": "EZRA",
   "description": "Practicing Korean by typing",
   "start_url": "./",
@@ -9,9 +9,9 @@
   "theme_color": "#030d1a",
   "icons": [
     {
-      "src": "assets/img/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "assets/img/favicon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

@@ -53,7 +53,29 @@ import {
   getHostPersistentSnapshot, applyHostPersistentState, storeMpTemplates,
 } from './multiplayer.js';
 import { computeHangulStage, PHASE1_JAMOS, DOJANG_BOOK_ORDER, MAX_JAMO_COUNT, JAMO_INFO, JAMO_STROKES, JAMO_HAS_BATCHIM, BATCHIM_UNLOCK_COUNT } from '../data/dojang-data.js';
-import { play as sfx, preloadSFX, getVolume, setVolume, getMusicVolume, setMusicVolume } from './sfx.js';
+import { play as sfx, preloadSFX, getVolume, setVolume, getMusicVolume, setMusicVolume, playMusic, stopMusic } from './sfx.js';
+
+// ── App version (read from sw.js — single source of truth) ──────────────────
+let APP_VERSION = '';
+const _KR_NUMS = ['공','일','이','삼','사','오','육','칠','팔','구'];
+function _versionBadgeHTML(v) {
+  const ch = (n, h, cls) =>
+    `<span class="vb-char${cls ? ' '+cls : ''}"><span class="vb-n">${n}</span><span class="vb-h">${h}</span></span>`;
+  let html = ch('버전', 'Version', 'vb-label');
+  for (const c of v) {
+    if (/\d/.test(c)) html += ch(_KR_NUMS[+c], c);
+    else if (c === '.') html += ch('점', '·');
+    else if (c === '-') html += ch('ㅡ', '-');
+  }
+  return html;
+}
+fetch('sw.js').then(r => r.text()).then(t => {
+  const m = t.match(/const CACHE\s*=\s*['"]([^'"]+)['"]/);
+  APP_VERSION = m ? m[1] : '';
+  const badge = document.getElementById('version-badge');
+  if (badge) badge.innerHTML = _versionBadgeHTML(APP_VERSION);
+  document.querySelectorAll('.version-inline').forEach(el => el.textContent = 'v' + APP_VERSION);
+}).catch(() => {});
 
 // Parse lesson word string, handling disambiguation like 'text:emoji'
 function parseLessonWord(str) {
@@ -203,7 +225,7 @@ const _AVA_TABS = [
   { id:'skin',   row1:'skin',        row2: null },
   { id:'face',   row1:'mouth',       row2: null },
   { id:'eyes',   row1:'eyes',        row2: 'eyebrows' },
-  { id:'weapon', row1: null,         row2: null, special: 'weapon' },
+  { id:'weapon', row1: 'weapon',      row2: null },
 ];
 
 function _makeAvatarSvg(opts) {
@@ -263,11 +285,17 @@ function _refreshAvaEditBar() {
   const lbl2   = document.getElementById('ava-edit-label2');
   const lbl3   = document.getElementById('ava-edit-label3');
   const bar    = document.getElementById('ava-edit-bar');
-  if (tab.special === 'weapon') {
-    bar?.classList.add('weapon-mode');
+  if (tab.row1 === 'weapon') {
+    if (row2El) row2El.classList.add('hidden');
+    if (row3El) row3El.classList.add('hidden');
+    if (row1El) row1El.classList.remove('hidden');
+    const wgId = localStorage.getItem('krr_wg') || 'weapons';
+    const def = WEAPONS[wgId];
+    const emojis = def ? def.e.slice(0, 3).join('') : '';
+    const name = i18n('options.wg_' + wgId) || def?.label || wgId;
+    if (lbl1) lbl1.textContent = emojis + ' ' + name;
     return;
   }
-  bar?.classList.remove('weapon-mode');
   if (row1El) row1El.classList.remove('hidden');
   const val1 = _avaOpts[tab.row1] || _getAvaCatValues(tab.row1)[0];
   if (lbl1) lbl1.textContent = _avaLabel(val1);
@@ -338,6 +366,15 @@ function _avaStepEditRow(delta, rowN) {
   if (!tab) return;
   const catKey = rowN === 1 ? tab.row1 : rowN === 2 ? _getAvaTabRow2Key() : _getAvaTabRow3Key();
   if (!catKey) return;
+  if (catKey === 'weapon') {
+    const wgKeys = Object.keys(WEAPONS);
+    const cur = localStorage.getItem('krr_wg') || 'weapons';
+    const next = wgKeys[(wgKeys.indexOf(cur) + delta + wgKeys.length) % wgKeys.length];
+    setWeaponGroup(next);
+    localStorage.setItem('krr_wg', next);
+    _refreshAvaEditBar();
+    return;
+  }
   const values = _getAvaCatValues(catKey);
   const cur = _avaOpts[catKey] || values[0];
   const idx = values.indexOf(cur);
@@ -538,6 +575,14 @@ function _avaRandomize() {
   _refreshAvaEditBar();
   _refreshAvaPreview();
   _saveAvatarOpts();
+
+  if (WEAPONS) {
+    const wgKeys = Object.keys(WEAPONS);
+    const wg = wgKeys[Math.floor(Math.random() * wgKeys.length)];
+    setWeaponGroup(wg);
+    localStorage.setItem('krr_wg', wg);
+    if (_avaActiveTab === 'weapon') _refreshAvaEditBar();
+  }
 }
 
 /* ================================================================
@@ -556,9 +601,10 @@ let _fsPromptTimer      = null;
 let _startFsPromptCycle = () => {};
 let _stopFsPromptCycle  = () => {};
 
-// True when running as an installed PWA (standalone display mode)
+// True when running as an installed PWA (manifest display: fullscreen or standalone)
 // Evaluated once at load time so _syncMobileFs can use it without rechecking
-const _isPWA = window.matchMedia?.('(display-mode: standalone)').matches === true
+const _isPWA = window.matchMedia?.('(display-mode: fullscreen)').matches === true
+            || window.matchMedia?.('(display-mode: standalone)').matches === true
             || navigator.standalone === true;
 
 
@@ -875,11 +921,11 @@ export function init() {
   initMap(mapEl);
 
   // Wire world.js renderers
-  setShopRenderer(cell => renderShopScreen(cell));
-  setModifierRenderer(cell => renderModifierScreen(cell));
-  setTreasureRenderer(cell => renderTreasureScreen(cell));
-  setCasinoRenderer(cell => renderCasinoScreen(cell));
-  setTeacherRenderer(cell => renderTeacherScreen(cell));
+  setShopRenderer(cell => { playMusic('gift', 0); renderShopScreen(cell); });
+  setModifierRenderer(cell => { playMusic('modifier', 0); renderModifierScreen(cell); });
+  setTreasureRenderer(cell => { playMusic('gift', 0);     renderTreasureScreen(cell); });
+  setCasinoRenderer(cell =>   { playMusic('casino', 0);   renderCasinoScreen(cell); });
+  setTeacherRenderer(cell =>  { playMusic('study', 0); renderTeacherScreen(cell); });
   setCombatRef({ addToInventory, killAllEnemies });
 
   // ── Tutorial box ─────────────────────────────────────────────
@@ -964,6 +1010,13 @@ export function init() {
   window._hudUpdate    = updateHudAll;
   window._worldRef     = { enterRoom };
   window._onGameOver   = (victory) => showGameOver(victory);
+  // Music hook: called by world.js enterRoom after cell type is determined
+  window._onRoomEntered = (cellType) => {
+    if (G.worldTransition) return; // music deferred to onComplete; don't interrupt animation
+    if (cellType === 'boss')   playMusic('boss', 0);
+    else if (cellType === 'tent' || cellType === 'camp') playMusic('camp', 0);
+    else if (G.dungeon?.worldDef?.id)  playMusic(G.dungeon.worldDef.id, 0);
+  };
   window._initWeather  = initWeather;
   window._syncClock    = syncClockToGame;
   window._worldSkip    = () => {
@@ -1170,6 +1223,7 @@ function loop(ts) {
     const { worldDef, openDirs, patIdx } = G.menuPreview;
     drawMenuBackground(worldDef, openDirs, patIdx);
     drawWeather();
+    drawDayNight(); // always clear/redraw night overlay so stale darkness from a run never bleeds into menu
     // World-entry cinematic triggered from Play button
     if (G.worldTransition) {
       drawWorldTransition();
@@ -1179,8 +1233,8 @@ function loop(ts) {
     _weatherCycleTimer += dt;
     if (_weatherCycleTimer >= 120) {
       _weatherCycleTimer = 0;
-      if (G.weatherEnabled) {
-        const forbidden = new Set([...(worldDef.forbiddenWeathers || []), G.weather, 'clear', 'foggy', 'raining', 'blizzard']);
+      if (G.weatherEnabled > 0) {
+        const forbidden = new Set([...(worldDef.forbiddenWeathers || []), G.weather, 'clear', 'foggy', 'drizzle', 'raining', 'blizzard']);
         const allowed = ALL_WEATHERS.filter(w => !forbidden.has(w));
         if (allowed.length && Math.random() < 0.33) {
           startWeatherFade(allowed[Math.floor(Math.random() * allowed.length)]);
@@ -1188,7 +1242,6 @@ function loop(ts) {
       }
     }
     tickWeather(dt);
-    G.gameTime += dt;
   }
 
   if (G.phase === 'run') {
@@ -1258,7 +1311,7 @@ function loop(ts) {
     // In MP, only host drives weather changes; guest receives them via time_sync
     if (_weatherCycleTimer >= 120 && (!G.mp?.active || G.mp.isHost)) {
       _weatherCycleTimer = 0;
-      if (Math.random() < 0.5 && G.weatherEnabled && G.dungeon) {
+      if (G.weatherEnabled > 0 && Math.random() < 0.5 * G.weatherEnabled && G.dungeon) {
         const worldDef = G.dungeon.worldDef;
         const forbidden = new Set([...(worldDef.forbiddenWeathers || []), G.weather]);
         const allowed = ALL_WEATHERS.filter(w => !forbidden.has(w));
@@ -1334,6 +1387,7 @@ function tickTransition(dt) {
 function triggerWorldTransition(worldIdx, guestEmoji) {
   if (G.worldTransition || G.phase !== 'run') return;
   sfx('worldClear');
+  stopMusic(0); // let fanfare play alone; world music resumes after animation
   // Clear current room so player takes no damage during animation
   G.room.monsters = [];
   G.room.projs    = [];
@@ -2030,6 +2084,9 @@ function triggerMenuPlayTransition() {
     { sx: G.W+pad, sy: G.vH/2,    ex: -pad,     ey: G.vH/2   },
   ];
   const d = dirs[dir];
+  // Fanfare + silence before animation — same treatment as mid-run world transitions
+  sfx('worldClear');
+  stopMusic(0);
   // Hide weather+daynight during animation (same as in-run world transition)
   wxCanvas.style.transition = 'opacity 0.4s'; wxCanvas.style.opacity = '0';
   dnCanvas.style.transition = 'opacity 0.4s'; dnCanvas.style.opacity = '0';
@@ -2056,6 +2113,7 @@ function triggerSleepAnimation(partnerSide = false) {
   // Block sleep if either player is in active combat
   if (!partnerSide) {
     if (G.mode === 'combat') return;
+    playMusic('camp', 0);
     if (G.mp?.active && G.mp.p2?.inCombat) {
       flashAnnounce(i18n('announce.partnerInCombat') || '⚔️ Partner in combat!', '#ff8866');
       return;
@@ -2093,7 +2151,7 @@ function triggerSleepAnimation(partnerSide = false) {
       // Reset time to 8am; weather + HP restore only on the player who actually slept
       G.gameTime = 140; // 8/24 * 420 = 140s
       if (!partnerSide) {
-        if (G.weatherEnabled && G.dungeon) {
+        if (G.weatherEnabled > 0 && G.dungeon) {
           const worldDef = G.dungeon.worldDef;
           const forbidden = new Set([...(worldDef.forbiddenWeathers || [])]);
           const available = ['clear','drizzle','raining','snowing','blizzard','fall','blossom'].filter(w => !forbidden.has(w));
@@ -2122,7 +2180,11 @@ function tickWorldTransition(dt) {
     if (wt.wipeProgress >= 1) {
       // Screen fully black - run the "at black" action
       if (wt.onBlack) wt.onBlack();
-      else startNewWorld(wt.pendingWorldIdx);
+      else {
+        startNewWorld(wt.pendingWorldIdx);
+        // Defer world music to after animation so fanfare plays alone
+        wt.onComplete = () => { playMusic(G.dungeon?.worldDef?.id || 'palace', 0); };
+      }
       wt.phase = 'emoji';
       wt.t     = 0;
     }
@@ -2168,6 +2230,22 @@ function tickWorldTransition(dt) {
 /* ================================================================
    TITLE SCREEN
 ================================================================ */
+function _benchmarkWeatherQuality() {
+  // Run a 30ms JS compute benchmark using particle-like math (sin/cos/random).
+  // Returns the recommended weatherEnabled value (0.1–1.0, never 0).
+  const t0 = performance.now();
+  let count = 0;
+  while (performance.now() - t0 < 30) {
+    Math.sin(count * 0.1); Math.cos(count * 0.15); Math.random();
+    count++;
+  }
+  if (count > 400000) return 1;      // desktop / flagship
+  if (count > 120000) return 0.75;   // good mid-range
+  if (count > 50000)  return 0.5;    // average mid-range
+  if (count > 20000)  return 0.25;   // budget / older device
+  return 0.1;                         // minimal — very slow device
+}
+
 function buildTitleScreen() {
   // ── Avatar creator ───────────────────────────────────────────
   // Restore saved avatar or use defaults
@@ -2208,25 +2286,7 @@ function buildTitleScreen() {
     });
   });
 
-  // ── Weapon picker (in edit bar) ───────────────────────────────
-  const wgPick = document.getElementById('wg-pick');
-  const defaultWg = localStorage.getItem('krr_wg') || 'weapons';
-
-  if (wgPick && WEAPONS) {
-    Object.entries(WEAPONS).forEach(([id, def]) => {
-      const btn = document.createElement('button');
-      btn.className = 'wgbtn' + (id === defaultWg ? ' sel' : '');
-      btn.innerHTML = `${def.e.slice(0,3).join('')} <span class="wg-lbl" data-i18n="options.wg_${id}">${def.label || id}</span>`;
-      btn.onclick = () => {
-        setWeaponGroup(id);
-        localStorage.setItem('krr_wg', id);
-        wgPick.querySelectorAll('.wgbtn').forEach(b => b.classList.remove('sel'));
-        btn.classList.add('sel');
-      };
-      wgPick.appendChild(btn);
-    });
-    setWeaponGroup(defaultWg);
-  }
+  setWeaponGroup(localStorage.getItem('krr_wg') || 'weapons');
 
   // Settings wiring
   document.getElementById('sel-lang')?.addEventListener('change', e => {
@@ -2235,13 +2295,17 @@ function buildTitleScreen() {
     applyLanguage();
   });
   document.getElementById('chk-fonts')?.addEventListener('change', e => { G.varyFonts = e.target.checked; });
-  document.getElementById('chk-weather')?.addEventListener('change', e => { G.weatherEnabled = e.target.checked; });
+  document.getElementById('sel-weather')?.addEventListener('change', e => {
+    G.weatherEnabled = parseFloat(e.target.value);
+    localStorage.setItem('krr_weather', e.target.value);
+  });
   document.getElementById('chk-tts')?.addEventListener('change', e => { G.ttsEnabled = e.target.checked; });
   // Pause-screen toggles (mirror main settings)
-  document.getElementById('pause-chk-weather')?.addEventListener('change', e => {
-    G.weatherEnabled = e.target.checked;
-    const main = document.getElementById('chk-weather');
-    if (main) main.checked = e.target.checked;
+  document.getElementById('pause-sel-weather')?.addEventListener('change', e => {
+    G.weatherEnabled = parseFloat(e.target.value);
+    localStorage.setItem('krr_weather', e.target.value);
+    const main = document.getElementById('sel-weather');
+    if (main) main.value = e.target.value;
   });
   document.getElementById('pause-chk-tts')?.addEventListener('change', e => {
     G.ttsEnabled = e.target.checked;
@@ -2263,9 +2327,14 @@ function buildTitleScreen() {
   // SFX volume sliders (settings, pause, dojang-pause) - all in sync
   function _syncSfxSliders(v) {
     const pct = Math.round(v * 100);
+    const emoji = v <= 0 ? '🔇' : '🔉';
     ['sfx-vol-slider','pause-sfx-vol','dojang-sfx-vol'].forEach(id => {
       const el = document.getElementById(id);
       if (el && el.value !== String(pct)) el.value = String(pct);
+    });
+    ['sfx-vol-emoji','pause-sfx-emoji','dojang-sfx-emoji'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = emoji;
     });
   }
   function _onSfxSlider(e) { setVolume(e.target.value / 100); _syncSfxSliders(getVolume()); }
@@ -2278,9 +2347,14 @@ function buildTitleScreen() {
   // Music volume sliders (settings + pause)
   function _syncMusicSliders(v) {
     const pct = Math.round(v * 100);
+    const emoji = v <= 0 ? '🔇' : '🎵';
     ['music-vol-slider','pause-music-vol'].forEach(id => {
       const el = document.getElementById(id);
       if (el && el.value !== String(pct)) el.value = String(pct);
+    });
+    ['music-vol-emoji','pause-music-emoji'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = emoji;
     });
   }
   function _onMusicSlider(e) { setMusicVolume(e.target.value / 100); _syncMusicSliders(getMusicVolume()); }
@@ -2317,6 +2391,16 @@ function buildTitleScreen() {
   const elHanjaMon = document.getElementById('chk-hanja-monsters');
   if (elHanjaMon) elHanjaMon.checked = G.showHanjaOnMonsters;
 
+  // Restore or auto-detect weather quality
+  const savedWeather = localStorage.getItem('krr_weather');
+  const weatherVal = savedWeather !== null
+    ? parseFloat(savedWeather)
+    : _benchmarkWeatherQuality(); // first launch: auto-detect from device benchmark
+  if (savedWeather === null) localStorage.setItem('krr_weather', String(weatherVal));
+  G.weatherEnabled = weatherVal;
+  const elWeather = document.getElementById('sel-weather');
+  if (elWeather) elWeather.value = String(weatherVal);
+
   const savedDictProg = localStorage.getItem('krr_dict_prog');
   G.dictProgressionDisabled = savedDictProg === '1';
   const elDictProg = document.getElementById('chk-dict-prog');
@@ -2339,6 +2423,7 @@ function buildTitleScreen() {
   document.getElementById('dojang-entry-go')?.addEventListener('click', _enterDojang);
   document.getElementById('dojang-entry-skip')?.addEventListener('click', () => {
     _hideDojangEntryModal();
+    playMusic('boss', 0);
     runLoreAnimation(() => triggerMenuPlayTransition());
   });
   document.getElementById('dojang-entry-coop')?.addEventListener('click', () => {
@@ -2365,7 +2450,7 @@ function buildTitleScreen() {
     let _cooldown = false;
     logoWrap.addEventListener('click', () => {
       if (G.phase !== 'title' || !G.menuPreview || _cooldown) return;
-      const allowed = ALL_WEATHERS.filter(w => w !== 'clear' && w !== 'foggy' && w !== 'raining' && w !== 'blizzard' && w !== G.weather);
+      const allowed = ALL_WEATHERS.filter(w => w !== 'clear' && w !== 'foggy' && w !== 'drizzle' && w !== 'raining' && w !== 'blizzard' && w !== G.weather);
       if (!allowed.length) return;
       startWeatherFade(allowed[Math.floor(Math.random() * allowed.length)]);
       _cooldown = true;
@@ -2404,31 +2489,7 @@ function buildTitleScreen() {
     };
   });
 
-  // Mode toggle button (touch/keyboard)
-  const modeBtn = document.getElementById('mode-toggle-btn');
-  const modeEmoji = document.getElementById('mode-toggle-emoji');
-  const modeLabel = document.getElementById('mode-toggle-label');
-  function _updateModeBtn() {
-    const active = G.touchMode;
-    if (modeEmoji) modeEmoji.textContent = active ? '📱' : '⌨️';
-    if (modeLabel) modeLabel.setAttribute('data-i18n', active ? 'options.touchControlsBtn' : 'options.keyboardControls');
-    if (modeLabel) modeLabel.textContent = i18n(active ? 'options.touchControlsBtn' : 'options.keyboardControls');
-    modeBtn?.classList.toggle('active', active);
-    const chkTouch = document.getElementById('chk-touch');
-    if (chkTouch) chkTouch.checked = active;
-  }
-
-  const diffBtn = document.getElementById('difficulty-toggle-btn');
-  const diffEmoji = document.getElementById('difficulty-toggle-emoji');
-  const diffLabel = document.getElementById('difficulty-toggle-label');
   const DIFFICULTY_ORDER = ['baby', 'easy', 'normal', 'hard', 'hardcore'];
-  const DIFFICULTY_META = {
-    baby: { emoji: '🍼' },
-    easy: { emoji: '😊' },
-    normal: { emoji: '⚔️' },
-    hard: { emoji: '😵' },
-    hardcore: { emoji: '💀' },
-  };
   const DIFFICULTY_HEARTS = { baby: 50, easy: 20, normal: 10, hard: 5, hardcore: 1 };
   function _getDifficulty() {
     return localStorage.getItem('krr_difficulty') || (G.difficulty || 'normal');
@@ -2436,46 +2497,13 @@ function buildTitleScreen() {
   function _setDifficulty(value) {
     G.difficulty = value;
     localStorage.setItem('krr_difficulty', value);
-    const meta = DIFFICULTY_META[value] || DIFFICULTY_META.normal;
-    if (diffEmoji) diffEmoji.textContent = meta.emoji;
-    const key = 'options.diff' + value.charAt(0).toUpperCase() + value.slice(1);
-    if (diffLabel) diffLabel.textContent = i18n(key);
-    const heartsEl = document.getElementById('difficulty-hearts-label');
-    if (heartsEl) heartsEl.textContent = `${DIFFICULTY_HEARTS[value] ?? 10} ❤️`;
     const selDiff = document.getElementById('sel-difficulty');
     if (selDiff) selDiff.value = value;
   }
-  function _cycleDifficulty() {
-    const current = _getDifficulty();
-    const idx = DIFFICULTY_ORDER.indexOf(current);
-    const next = DIFFICULTY_ORDER[(idx + 1) % DIFFICULTY_ORDER.length];
-    _setDifficulty(next);
-  }
   _setDifficulty(_getDifficulty());
-
-  function _updateModeAndDiff() {
-    _updateModeBtn();
-    _setDifficulty(_getDifficulty());
-  }
-
-  _updateModeAndDiff();
-
-  modeBtn?.addEventListener('click', () => {
-    G.touchMode = !G.touchMode;
-    const chk = document.getElementById('chk-touch');
-    if (chk) chk.checked = G.touchMode;
-    _updateModeAndDiff();
-    localStorage.setItem('krr_touchMode', G.touchMode ? '1' : '0');
-    if (G.phase === 'run') applyTouchMode();
-  });
-
-  diffBtn?.addEventListener('click', () => {
-    _cycleDifficulty();
-  });
 
   document.getElementById('chk-touch')?.addEventListener('change', e => {
     G.touchMode = e.target.checked;
-    _updateModeBtn();
     localStorage.setItem('krr_touchMode', G.touchMode ? '1' : '0');
     if (G.phase === 'run') applyTouchMode();
   });
@@ -2641,8 +2669,6 @@ function buildTitleScreen() {
     }, { passive: false });
   }
   _horizWheel(document.getElementById('wg-pick'));
-  _horizWheel(document.getElementById('title-dict-tabs'));
-  _horizWheel(document.querySelector('#book-panel .dict-tabs'));
 
   // ── Custom cursor tooltip (replaces native title on data-tooltip) ─
   if (!document.getElementById('custom-tooltip')) {
@@ -2683,7 +2709,7 @@ function buildTitleScreen() {
 
 function _initMenuPreview() {
   // Pick a random world (never the first one) and random open doors for menu background
-  const candidates = WORLDS.filter(w => w.id !== 'tutorial');
+  const candidates = WORLDS.filter(w => w.id !== 'tutorial' && !w.isDojangTutorial);
   const worldDef = candidates[Math.floor(Math.random() * candidates.length)];
   const allDirs = ['N', 'S', 'E', 'W'];
   const numDoors = 1 + Math.floor(Math.random() * 3); // 1–3 doors
@@ -2692,8 +2718,8 @@ function _initMenuPreview() {
   const patIdx = Math.floor(Math.random() * 6);
   G.menuPreview = { worldDef, openDirs, patIdx };
   // Start menu weather
-  if (G.weatherEnabled) {
-    const allowed = ALL_WEATHERS.filter(w => w !== 'clear' && w !== 'foggy' && w !== 'raining' && w !== 'blizzard');
+  if (G.weatherEnabled > 0) {
+    const allowed = ALL_WEATHERS.filter(w => w !== 'clear' && w !== 'foggy' && w !== 'drizzle' && w !== 'raining' && w !== 'blizzard');
     if (allowed.length) {
       const wx = allowed[Math.floor(Math.random() * allowed.length)];
       initWeather(wx);
@@ -2718,7 +2744,9 @@ function showTitleScreen() {
   G.phase = 'title';
   document.body.classList.add('phase-title');
   G.gameTime = 210; // reset to midday so menu is always bright
+  drawDayNight();   // immediately clear the night overlay canvas (was left dark if returning from a night run)
   _applyDayNightEmoji(); // immediately clear any night-time brightness filter
+  playMusic('menu', 0);
   // Mobile (height < 500px): always enable touch mode and clickable doors
   if (window.innerHeight < 500) {
     G.touchMode = true;
@@ -2744,14 +2772,7 @@ function applyLanguage() {
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     el.placeholder = i18n(el.dataset.i18nPlaceholder);
   });
-  // Rebuild dynamically-created weapon picker labels (not in HTML, won't be covered above)
-  const wgPick = document.getElementById('wg-pick');
-  if (wgPick) {
-    wgPick.querySelectorAll('.wgbtn .wg-lbl').forEach(lbl => {
-      const key = lbl.dataset.i18n;
-      if (key) lbl.textContent = i18n(key);
-    });
-  }
+  if (_avaActiveTab === 'weapon') _refreshAvaEditBar();
   // Rebuild weapon picker option labels in select elements (if any)
   document.querySelectorAll('[data-i18n-opt]').forEach(opt => {
     opt.textContent = i18n(opt.dataset.i18nOpt);
@@ -2785,6 +2806,9 @@ let _titleDictCat = 'stats';
 function _syncDictTitles() {
   const text = G.dictProgressionDisabled ? i18n('dict.title') : i18n('dict.myDict');
   document.querySelectorAll('[data-i18n="dict.myDict"]').forEach(el => { el.textContent = text; });
+  document.querySelectorAll('.dict-tab[data-cat="stats"]').forEach(el => {
+    el.style.display = '';
+  });
 }
 
 // ── Stats tab content (shared by book panel and my-dict modal) ──────────────────
@@ -2864,16 +2888,17 @@ function _renderStatsContent() {
 
   // ── World wiki rows ───────────────────────────────────────────────
   const worldRows = WORLDS.map(w => {
-    const visited   = dictProgDisabled || seenWorlds.includes(w.id);
+    const visited   = seenWorlds.includes(w.id);
+    const revealed  = dictProgDisabled || visited;
     const timeTip   = w.fixedLighting ? `${w.fixedLighting} 🌙` : null;
     const weatherTip= worldWeatherIcons(w);
     const tipContent= [timeTip, weatherTip].filter(Boolean).join('\n');
     const tooltip   = tipContent ? ` data-tooltip="${tipContent}"` : '';
     const visitedBadge = visited
       ? `<span class="wiki-badge wiki-badge-visited">${i18n('dict.wikiVisited')}</span>` : '';
-    const unknownCls = visited ? '' : ' wiki-card-unknown';
-    const title = visited ? (i18n('worlds.'+w.id+'.name') || w.name) : '???????';
-    const sub   = visited ? `${w.bossEmoji} · ${i18n('worlds.'+w.id+'.desc') || ''}` : '???????';
+    const unknownCls = revealed ? '' : ' wiki-card-unknown';
+    const title = revealed ? (i18n('worlds.'+w.id+'.name') || w.name) : '???????';
+    const sub   = revealed ? `${w.bossEmoji} · ${i18n('worlds.'+w.id+'.desc') || ''}` : '???????';
     return `<div class="wiki-card${visited ? ' wiki-card-seen' : ''}${unknownCls}">
       <div class="wiki-card-icon"${tooltip}>${w.emoji}</div>
       <div class="wiki-card-body">
@@ -2935,8 +2960,8 @@ function _renderStatsContent() {
         <span class="dj-book-jamo">${j}</span>
         <span class="dj-book-name">${info?.name || ''}</span>
         <span class="dj-book-rom">${info?.rom || ''}</span>
-        <div class="dj-book-bar-wrap"><div class="dj-book-bar" style="width:${bar}%"></div></div>
-        <span class="dj-book-count">${count}</span>
+        <div class="dj-book-bar-wrap"${G.dictProgressionDisabled ? ' style="display:none"' : ''}><div class="dj-book-bar" style="width:${bar}%"></div></div>
+        <span class="dj-book-count"${G.dictProgressionDisabled ? ' style="display:none"' : ''}>${count}</span>
         <span class="dj-book-strokes">${strokes}획</span>
         ${hasDesc ? '<button class="dj-book-expand-btn">▼</button>' : '<span></span>'}
       </div>
@@ -2954,8 +2979,9 @@ function _renderStatsContent() {
     </div>`;
   }
 
-  return `
-    <div class="dict-stats">
+  const ringsHtml = G.dictProgressionDisabled
+    ? `<p class="dict-prog-disabled-msg">${i18n('dict.statsProgDisabled')}</p>`
+    : `<div class="dict-stats">
       <div class="dict-stats-group">
         ${ring(doneLessons/totalLessons,    '#27ae60', 'dict.statsLessons',  Math.round(doneLessons/totalLessons*100)+'%',   doneLessons+'/'+totalLessons)}
         ${ring(unlockedWords/totalWords,    '#3498db', 'dict.statsWords',    Math.round(unlockedWords/totalWords*100)+'%',   unlockedWords+'/'+totalWords)}
@@ -2966,7 +2992,9 @@ function _renderStatsContent() {
         ${ring(itemsAcq/totalAllItems,         '#e74c3c', 'dict.statsItems',   Math.round(itemsAcq/totalAllItems*100)+'%', itemsAcq+'/'+totalAllItems)}
         ${ring(seenWorlds.length/totalWorlds,  '#1abc9c', 'dict.statsWorlds',  Math.round(seenWorlds.length/totalWorlds*100)+'%', seenWorlds.length+'/'+totalWorlds)}
       </div>
-    </div>
+    </div>`;
+
+  return `${ringsHtml}
     <div class="wiki-accordion">
       ${accordion('dojang','dict.wikiDojang', `<div class="dj-book-body-inner">${dojangRows}</div>`)}
       ${accordion('worlds','dict.wikiWorlds', worldRows)}
@@ -2989,9 +3017,55 @@ function _wireStatsInteractions(root) {
   });
 }
 
-function _checkTabsOverflow(el) {
-  if (!el) return;
-  el.classList.toggle('tabs-overflowing', el.scrollWidth > el.clientWidth);
+function _updateMyDictHeader() {
+  const prefixEl = document.getElementById('my-dict-cat-prefix');
+  if (!prefixEl) return;
+  const activeTab = document.querySelector('#title-dict-tabs .dict-tab.active .tab-full');
+  const tabText = activeTab?.textContent?.trim() || '';
+  prefixEl.textContent = tabText ? `📒 ${tabText} — ` : '📒 ';
+}
+
+function _renderLessonsContent() {
+  const completed = G.dictProgressionDisabled ? LESSONS_BASE.map(l => l.id) : (G.completedLessons || []);
+  const lessons = LESSONS_BASE.filter(l => completed.includes(l.id));
+
+  const jp = (G.dojangStats || loadDojangStats() || {}).jamoProgress || {};
+  const unlockedJamos = DOJANG_BOOK_ORDER.filter(j =>
+    G.dictProgressionDisabled || (jp[j]?.count || 0) >= 1
+  );
+
+  if (!lessons.length && !unlockedJamos.length) {
+    return `<div style="padding:24px 12px;text-align:center;color:rgb(0 0 0 / 40%);font-size:.85rem;">${i18n('dict.lessonsEmpty')}</div>`;
+  }
+
+  const lessonHtml = lessons.map(lesson => {
+    const contentKey = lesson.title_key.replace('.title', '') + '.content';
+    const content = parseLessonMarkdown(i18n(contentKey));
+    return `<div class="wiki-section">
+      <button class="wiki-header" onclick="this.parentElement.classList.toggle('open')">
+        <span>${lesson.emoji} ${i18n(lesson.title_key)}</span><span class="wiki-chevron">▼</span>
+      </button>
+      <div class="wiki-body"><div class="lesson-viewer-inner">${content}</div></div>
+    </div>`;
+  }).join('');
+
+  const jamoHtml = unlockedJamos.map(j => {
+    const info  = JAMO_INFO[j];
+    const count = jp[j]?.count || 0;
+    const baseText = i18n(`jamo_desc.${j}.base`);
+    if (!baseText || baseText.startsWith('jamo_desc.')) return '';
+    const showBatchim = (G.dictProgressionDisabled || count >= BATCHIM_UNLOCK_COUNT) && JAMO_HAS_BATCHIM.has(j);
+    const batchimText = showBatchim ? i18n(`jamo_desc.${j}.batchim`) : '';
+    const fullMd = baseText + (batchimText ? `\n\n**받침:** ${batchimText}` : '');
+    return `<div class="wiki-section">
+      <button class="wiki-header" onclick="this.parentElement.classList.toggle('open')">
+        <span>${j} <span style="font-size:.85em;opacity:.75">${info?.name || ''} · ${info?.rom || ''}</span></span><span class="wiki-chevron">▼</span>
+      </button>
+      <div class="wiki-body"><div class="lesson-viewer-inner">${parseLessonMarkdown(fullMd)}</div></div>
+    </div>`;
+  }).join('');
+
+  return lessonHtml + jamoHtml;
 }
 
 function buildTitleDict(filter) {
@@ -3003,48 +3077,12 @@ function buildTitleDict(filter) {
   const subEl = document.querySelector('.dict-panel-sub');
   if (subEl) subEl.style.display = G.dictProgressionDisabled ? 'none' : '';
   _syncDictTitles();
+  _updateMyDictHeader();
 
-  // ── Add lesson tabs dynamically for all lessons (visual) ─────────
-  const titleTabContainer = document.getElementById('title-dict-tabs');
-  if (titleTabContainer) {
-    const existingLessonTabs = new Set(
-      [...titleTabContainer.querySelectorAll('[data-cat]')]
-        .filter(b => /^\d/.test(b.dataset.cat))
-        .map(b => b.dataset.cat)
-    );
-    (G.dictProgressionDisabled ? LESSONS_BASE.map(l => l.id) : (G.completedLessons || [])).forEach(id => {      if (existingLessonTabs.has(id)) return;
-      const lesson = LESSONS_BASE.find(l => l.id === id);
-      if (!lesson) return;
-      const btn = document.createElement('button');
-      btn.className = 'dict-tab';
-      btn.dataset.cat = id;
-      btn.textContent = `${lesson.emoji} ${i18n(lesson.title_key)}`;
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('#title-dict-tabs .dict-tab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        _titleDictCat = id;
-        buildTitleDict(document.getElementById('dict-search')?.value || '');
-      });
-      titleTabContainer.appendChild(btn);
-    });
-
-    // Remove tabs that shouldn't be there
-    const allowedIds = new Set(G.dictProgressionDisabled ? LESSONS_BASE.map(l => l.id) : (G.completedLessons || []));
-    [...titleTabContainer.querySelectorAll('[data-cat]')].filter(b => /^\d/.test(b.dataset.cat) && !allowedIds.has(b.dataset.cat)).forEach(b => b.remove());
-    _checkTabsOverflow(titleTabContainer);
-  }
-
-  // ── Lesson tab: show markdown content ─────────────────────────
-  if (/^\d/.test(_titleDictCat)) {
+  // ── Lessons tab: all completed lessons as wiki-header accordion ──
+  if (_titleDictCat === 'lessons') {
     if (searchWrap) searchWrap.style.display = 'none';
-    const lesson = LESSONS_BASE.find(l => l.id === _titleDictCat);
-    if (lesson) {
-      const contentKey = lesson.title_key.replace('.title', '') + '.content';
-      const md = i18n(contentKey);
-      container.innerHTML = `<div class="lesson-viewer"><div class="lesson-viewer-inner">${parseLessonMarkdown(md)}</div></div>`;
-    } else {
-      container.innerHTML = '';
-    }
+    container.innerHTML = _renderLessonsContent();
     return;
   }
 
@@ -3062,11 +3100,16 @@ function buildTitleDict(filter) {
   }
 
   if (searchWrap) searchWrap.style.display = '';
+  const _dictSearchEl = document.getElementById('dict-search');
+  if (_dictSearchEl) {
+    const _searchKeys = { noun: 'dict.searchNoun', verb: 'dict.searchVerb', adjective: 'dict.searchAdj', adverb: 'dict.searchAdverb' };
+    _dictSearchEl.placeholder = i18n(_searchKeys[_titleDictCat] || 'dict.searchPlaceholder');
+  }
 
   // Show placeholder if fewer than 3 learned words
   const learned = G.learnedWords || [];
   if (!G.dictProgressionDisabled && learned.length < 3) {
-    container.innerHTML = `<div style="padding:24px 12px;text-align:center;color:rgba(255,255,255,.4);font-size:.85rem;">${i18n('dict.myDictEmpty')}</div>`;
+    container.innerHTML = `<div style="padding:24px 12px;text-align:center;color:rgb(0 0 0 / 40%);font-size:.85rem;">${i18n('dict.myDictEmpty')}</div>`;
     return;
   }
 
@@ -3088,7 +3131,7 @@ function buildTitleDict(filter) {
   }
 
   if (words.length === 0) {
-    container.innerHTML = `<div style="padding:24px 12px;text-align:center;color:rgba(255,255,255,.4);font-size:.85rem;">${i18n('dict.tabEmpty')}</div>`;
+    container.innerHTML = `<div style="padding:24px 12px;text-align:center;color:rgb(0 0 0 / 40%);font-size:.85rem;">${i18n('dict.tabEmpty')}</div>`;
     return;
   }
 
@@ -3108,7 +3151,7 @@ function buildTitleDict(filter) {
     truncated = true;
   }
 
-  container.innerHTML = words.map(w => renderDictEntry(w)).join('') + (truncated ? `<div style="padding:24px 12px;text-align:center;color:rgba(255,255,255,.4);font-size:.85rem;">${i18n('dict.listTooLarge')}</div>` : '');
+  container.innerHTML = words.map(w => renderDictEntry(w)).join('') + (truncated ? `<div style="padding:24px 12px;text-align:center;color:rgb(0 0 0 / 40%);font-size:.85rem;">${i18n('dict.listTooLarge')}</div>` : '');
 }
 
 /* ================================================================
@@ -3250,7 +3293,7 @@ function _showDojangEntryModal() {
   if (goBtn) {
     const stats = loadDojangStats();
     const stage = stats ? computeHangulStage(stats) : 0;
-    goBtn.classList.toggle('dj-btn-primary', stage < 1);
+    goBtn.classList.toggle('dj-btn-primary', stage < 1 && !G.dictProgressionDisabled);
   }
   // Close on outside click (delegated, runs once per open)
   const onOutside = (e) => {
@@ -3277,6 +3320,7 @@ function _enterDojang() {
   G.phase = 'dojang';
   document.body.classList.remove('phase-title');
   document.body.classList.add('phase-dojang');
+  stopMusic();
 
   // Show dojang screen, hide title
   screenOff('scr-title');
@@ -3341,6 +3385,7 @@ function _dojangExitToMenu() {
   const dojangCanvas = document.getElementById('dojang-canvas');
   if (dojangCanvas) dojangCanvas.style.display = 'none';
   screenOn('scr-title');
+  playMusic('menu', 0);
 }
 
 function _dojangStartAdventure() {
@@ -3357,6 +3402,7 @@ function _dojangStartAdventure() {
   if (scrDojang) scrDojang.classList.add('off');
   const dojangCanvas = document.getElementById('dojang-canvas');
   if (dojangCanvas) dojangCanvas.style.display = 'none';
+  playMusic('boss', 0);
   runLoreAnimation(() => triggerMenuPlayTransition());
 }
 
@@ -3369,7 +3415,7 @@ function startNewRun() {
   G.run.coinMult = diff.coinMult;
   G.hangulSize = window.innerWidth < 768 ? 29 : window.innerWidth >= 1600 ? 42 : 32;
   G.varyFonts = document.getElementById('chk-fonts')?.checked ?? true;
-  G.weatherEnabled = document.getElementById('chk-weather')?.checked ?? true;
+  G.weatherEnabled = parseFloat(document.getElementById('sel-weather')?.value ?? '1');
   G.ttsEnabled = document.getElementById('chk-tts')?.checked ?? true;
   G.clickableDoors = document.getElementById('chk-clickable-doors')?.checked ?? false;
   G.touchMode = G.touchMode || (document.getElementById('chk-touch')?.checked ?? false);
@@ -3401,18 +3447,21 @@ function startNewRun() {
     G.worldTransition.emoji = G.dungeon.worldDef.transport;
   }
   // If this was triggered from the Play button (transition in progress),
-  // keep paEl hidden until animation completes
+  // keep paEl hidden and delay world music until animation completes
   if (G.worldTransition) {
     if (paEl) { paEl.style.transition = ''; paEl.style.opacity = '0'; }
     const prevOnComplete = G.worldTransition.onComplete;
     G.worldTransition.onComplete = () => {
       if (paEl) { paEl.style.display = 'flex'; paEl.style.opacity = '1'; }
+      playMusic(G.dungeon?.worldDef?.id || 'palace', 0);
       typingEl?.focus();
       _applyTouchZoom();
       setTimeout(_applyTouchZoom, 80);
       setTimeout(_applyTouchZoom, 250);
       if (prevOnComplete) prevOnComplete();
     };
+  } else {
+    playMusic(G.dungeon?.worldDef?.id || 'palace', 0);
   }
   initWeather(G.weather); // Initialize particles for the starting weather
   syncClockToGame();
@@ -3568,11 +3617,11 @@ function _renderPauseStats() {
 }
 
 function _syncPauseToggles() {
-  const pw = document.getElementById('pause-chk-weather');
+  const pw = document.getElementById('pause-sel-weather');
   const pt = document.getElementById('pause-chk-tts');
   const ptr = document.getElementById('pause-chk-translation');
   const ph = document.getElementById('pause-chk-hanja-monsters');
-  if (pw) pw.checked = G.weatherEnabled;
+  if (pw) pw.value = String(G.weatherEnabled ?? 1);
   if (pt) {
     pt.checked = G.ttsEnabled;
     const ttsUnsupported = !!document.getElementById('chk-tts')?.disabled;
@@ -3625,6 +3674,10 @@ function goToMenu() {
     _hideMpDisconnectOverlay();
   }
   G.phase = 'title';
+  // Clear inventory so stale items from last run don't bleed into next run's intro
+  G.inventory = { stacks: [], sel: 0 };
+  refreshInventoryUI();
+  if (G.ctrlPanelOpen) closeCtrlPanel();
   // Reset IME to off (normal title screen state), then clean up DOM
   if (_imeEnabled) _imeToggle();
   // Always clear typing field so old characters don't bleed into the next run
@@ -3989,57 +4042,34 @@ function updateBook() {
   const listEl = document.getElementById('book-dict-list');
   if (!listEl || !panel) return;
 
-  // ── Sync lesson tabs: only show completed lessons ─────────────
+  // ── Wire static tabs once ────────────────────────────────────
   const tabContainer = panel.querySelector('.dict-tabs');
-  if (tabContainer) {
-    const existingLessonTabs = new Set(
-      [...tabContainer.querySelectorAll('[data-cat]')]
-        .filter(b => /^\d/.test(b.dataset.cat))
-        .map(b => b.dataset.cat)
-    );
-    (G.dictProgressionDisabled ? LESSONS_BASE.map(l => l.id) : (G.completedLessons || [])).forEach(id => {
-      if (existingLessonTabs.has(id)) return;
-      const lesson = LESSONS_BASE.find(l => l.id === id);
-      if (!lesson) return;
-      const btn = document.createElement('button');
-      btn.className = 'dict-tab';
-      btn.dataset.cat = id;
-      btn.textContent = `${lesson.emoji} ${i18n(lesson.title_key)}`;
-      btn.addEventListener('click', () => {
+  if (tabContainer && !tabContainer.dataset.wired) {
+    tabContainer.dataset.wired = '1';
+    tabContainer.querySelectorAll('.dict-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        sfx('bookTabFlip', 0.6);
         panel.querySelectorAll('.dict-tab').forEach(t => t.classList.remove('active'));
-        btn.classList.add('active');
+        tab.classList.add('active');
         updateBook();
       });
-      tabContainer.appendChild(btn);
     });
-    // Remove tabs that shouldn't be there
-    const allowedIds = new Set(G.dictProgressionDisabled ? LESSONS_BASE.map(l => l.id) : (G.completedLessons || []));
-    [...tabContainer.querySelectorAll('[data-cat]')].filter(b => /^\d/.test(b.dataset.cat) && !allowedIds.has(b.dataset.cat)).forEach(b => b.remove());
-    _checkTabsOverflow(tabContainer);
-
-    // Wire static tabs once
-    if (!tabContainer.dataset.wired) {
-      tabContainer.dataset.wired = '1';
-      tabContainer.querySelectorAll('.dict-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          sfx('bookTabFlip', 0.6);
-          panel.querySelectorAll('.dict-tab').forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          updateBook();
-        });
-      });
-      const searchEl = document.getElementById('book-dict-search');
-      if (searchEl) searchEl.addEventListener('input', updateBook);
-    }
+    const searchEl = document.getElementById('book-dict-search');
+    if (searchEl) searchEl.addEventListener('input', updateBook);
   }
 
   // ── Determine active tab ──────────────────────────────────────
   const activeTab = panel.querySelector('.dict-tab.active');
   const category = activeTab?.dataset.cat || 'noun';
 
-  // ── Hide/show search bar based on tab type ───────────────────
+  // ── Hide/show search bar + update placeholder per tab ────────
   const searchWrap = document.getElementById('book-dict-search-wrap');
-  if (searchWrap) searchWrap.style.display = (category === 'stats' || /^\d/.test(category)) ? 'none' : '';
+  if (searchWrap) searchWrap.style.display = (category === 'stats' || category === 'lessons') ? 'none' : '';
+  const searchEl = document.getElementById('book-dict-search');
+  if (searchEl) {
+    const _searchKeys = { noun: 'dict.searchNoun', verb: 'dict.searchVerb', adjective: 'dict.searchAdj', adverb: 'dict.searchAdverb' };
+    searchEl.placeholder = i18n(_searchKeys[category] || 'dict.searchPlaceholder');
+  }
 
   // ── Stats tab ─────────────────────────────────────────────────
   if (category === 'stats') {
@@ -4048,21 +4078,13 @@ function updateBook() {
     return;
   }
 
-  // ── Lesson tab: show markdown content ────────────────────────
-  if (/^\d/.test(category)) {
-    const lesson = LESSONS_BASE.find(l => l.id === category);
-    if (lesson) {
-      const contentKey = lesson.title_key.replace('.title', '') + '.content';
-      const md = i18n(contentKey);
-      listEl.innerHTML = `<div class="lesson-viewer"><div class="lesson-viewer-inner">${parseLessonMarkdown(md)}</div></div>`;
-    } else {
-      listEl.innerHTML = '';
-    }
+  // ── Lessons tab: all completed lessons as wiki-header accordion ─
+  if (category === 'lessons') {
+    listEl.innerHTML = _renderLessonsContent();
     return;
   }
 
   // ── Word category tab ─────────────────────────────────────────
-  const searchEl = document.getElementById('book-dict-search');
   const q = (searchEl?.value || '').toLowerCase().trim();
 
   const learned = G.dictProgressionDisabled ? WORD_DICT : (G.learnedWords || []);
@@ -4090,7 +4112,11 @@ function updateBook() {
     truncated = true;
   }
 
-  listEl.innerHTML = words.map(w => renderDictEntry(w)).join('') + (truncated ? `<div style="padding:24px 12px;text-align:center;color:rgba(255,255,255,.4);font-size:.85rem;">${i18n('dict.listTooLarge')}</div>` : '');
+  if (!words.length) {
+    listEl.innerHTML = `<div style="padding:24px 12px;text-align:center;color:rgb(0 0 0 / 40%);font-size:.85rem;">${i18n('dict.tabEmpty')}</div>`;
+    return;
+  }
+  listEl.innerHTML = words.map(w => renderDictEntry(w)).join('') + (truncated ? `<div style="padding:24px 12px;text-align:center;color:rgb(0 0 0 / 40%);font-size:.85rem;">${i18n('dict.listTooLarge')}</div>` : '');
 }
 
 /* ================================================================
@@ -4766,6 +4792,23 @@ document.addEventListener('click', e => {
   if (!e.target.closest('#casino-stop-btn, #ava-randomize, .dict-tab') &&
       e.target.closest('button, .dict-tab, .dj-pause-btn, .dj-entry-btn, .pause-btn, .item-choice-card, .gopt-toggle')) {
     sfx('uiClick', 0.35);
+  }
+});
+
+// Mobile dojang two-tap: first tap reveals lluc, second tap follows link
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('menu-dojang-wrap');
+  if (!wrap) return;
+  const isMobileLandscape = window.innerHeight <= 500;
+  if (!isMobileLandscape) return;
+  if (e.target.closest('#menu-dojang-wrap')) {
+    if (!wrap.classList.contains('dojang-revealed')) {
+      e.preventDefault();
+      wrap.classList.add('dojang-revealed');
+    }
+    // second tap: do nothing — let the <a> navigate naturally
+  } else {
+    wrap.classList.remove('dojang-revealed');
   }
 });
 
@@ -5593,7 +5636,7 @@ function screenOff(id) {
         const lang = langs[_unsupIndex % langs.length];
         const meta = getLangMeta(lang.code);
         titleEl.textContent = meta.unsupportedTitle || 'Browser not supported';
-        descEl.textContent  = meta.unsupportedDesc  || 'EZRA Taja does not run on Safari. Please open it in Chrome, Firefox, or Edge.';
+        descEl.textContent  = meta.unsupportedDesc  || 'EZRA does not run on Safari. Please open it in Chrome, Firefox, or Edge.';
         _unsupIndex++;
       }
       showNext();
@@ -5930,6 +5973,7 @@ function _mpHandleMessage(msg) {
       if (msg.dictProgressionDisabled !== undefined) G.dictProgressionDisabled = msg.dictProgressionDisabled;
       if (msg.dungeonBlueprint) MP._blueprintPending = msg.dungeonBlueprint;
       _hideMultiplayerModal();
+      playMusic('boss', 0);
       runLoreAnimation(() => triggerMenuPlayTransition());
       break;
     }
@@ -6597,6 +6641,7 @@ function _mpStartGame() {
   });
 
   _hideMultiplayerModal();
+  playMusic('boss', 0);
   runLoreAnimation(() => triggerMenuPlayTransition());
 }
 

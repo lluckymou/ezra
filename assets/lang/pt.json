@@ -6,12 +6,12 @@
     "rotateDevice": "Gire seu dispositivo",
     "loreSpeechRate": 1,
     "unsupportedTitle": "Navegador não suportado",
-    "unsupportedDesc": "EZRA Taja não funciona no Safari. Por favor, abra no Chrome, Firefox ou Edge."
+    "unsupportedDesc": "EZRA não funciona no Safari. Por favor, abra no Chrome, Firefox ou Edge."
   },
   "title": {
     "playBtn": "▶ Jogar!",
     "slogan": "Praticando coreano digitando",
-    "subTitle": "EZRA 타자 - Digite coreano para derrotar monstros!",
+    "subTitle": "EZRA - Digite coreano para derrotar monstros!",
     "bestScore": "Melhor pontuação"
   },
   "lore": {
@@ -22,6 +22,8 @@
     "skip": "Pular"
   },
   "options": {
+    "randomize": "Aleatório",
+    "avaEdit": "Editar",
     "heroTitle": "Escolha seu herói",
     "weaponTitle": "Estilo de arma",
     "gameOptions": "⚙️ Opções de Jogo",
@@ -35,6 +37,12 @@
     "diffHardcore": "Hardcore",
     "varyFonts": "🔤 Fontes Variadas",
     "weather": "🌤️ Clima",
+    "weatherHighlyDetailed": "🌪️ Alta Qualidade",
+    "weatherDetailed": "⛈️ Detalhado",
+    "weatherBalanced": "🌧️ Equilibrado",
+    "weatherPerformance": "🌦️ Performance",
+    "weatherMinimal": "☁️ Mínimo",
+    "weatherOff": "☀️ Desativado",
     "speakWords": "🔊 Falar Palavras",
     "hanjaPowerups": "🀄 Hanja Powerups",
     "translations": "💬 Traduções",
@@ -51,22 +59,24 @@
     "wg_ocean": "Oceano",
     "wg_elements": "Elementos",
     "wg_animals": "Animais",
-    "sfxVolume": "🔉 Efeitos Sonoros",
-    "ambientMusic": "🎵 Música Ambiente"
+    "sfxVolume": "Efeitos Sonoros",
+    "ambientMusic": "Música Ambiente",
+    "title": "Opções"
   },
   "dict": {
     "title": "Dicionário",
     "wikiTitle": "Wiki Coreano",
     "wikiSub": "Todas as palavras · gramática · guia Hangul",
     "tabAll": "Tudo",
-    "tabNoun": "🍓 Subs.",
+    "tabNoun": "🍓 Substantivos",
     "tabVerb": "✅ Verbos",
-    "tabAdj": "📌 Adj.",
-    "tabAdverb": "⏳ Adv.",
-    "tabParticle": "Part.",
-    "tabGrammar": "Gram.",
-    "tabHangul": "Hangul",
+    "tabAdj": "📌 Adjetivos",
+    "tabAdverb": "⏳ Advérbios",
     "searchPlaceholder": "Buscar…",
+    "searchNoun": "Buscar substantivos…",
+    "searchVerb": "Buscar verbos…",
+    "searchAdj": "Buscar adjetivos…",
+    "searchAdverb": "Buscar advérbios…",
     "learnedWords": "Palavras Aprendidas",
     "noWordsYet": "Nenhuma palavra aprendida - derrote monstros!",
     "openBook": "Abrir Livro",
@@ -75,6 +85,7 @@
     "myDictSub": "Palavras encontradas nas suas runs",
     "myDictEmpty": "Continue jogando para descobrir palavras!",
     "tabEmpty": "Nenhuma palavra nesta categoria ainda - continue jogando!",
+    "lessonsEmpty": "Nenhum conteúdo aprendido ainda.",
     "listTooLarge": "Lista com muitas entradas! Busque algo específico ou digite '*' para mostrar tudo.",
     "killed": "derrotados",
     "tensePresent": "Presente",
@@ -82,6 +93,7 @@
     "tenseFuture": "Futuro",
     "untouchedTip": "Nenhum monstro deste tipo derrotado ainda",
     "tabStatistics": "📊 Evolução",
+    "tabLessons": "📚 Aulas",
     "statsLessons": "Aulas Realizadas",
     "statsWords": "Palavras Desbloqueadas",
     "statsMastered": "Palavras Dominadas",
@@ -94,7 +106,8 @@
     "wikiPerms": "✨ Bônus Permanentes",
     "wikiVisited": "Visitado",
     "wikiAcquired": "Adquirido",
-    "wikiPriceRange": "~원"
+    "wikiPriceRange": "~원",
+    "statsProgDisabled": "A progressão do dicionário está desativada. Você pode ativá-la nas Configurações para ir descobrindo novas palavras aos poucos."
   },
   "pause": {
     "title": "Pausado",
@@ -265,7 +278,7 @@
     "findBoss": "Encontre a sala do chefe para aumentar o desafio",
     "buyTent": "Você poderia comprar uma barraca na loja para dormir essa noite",
     "pickHangul": "Digite a sílaba na moeda para pegar um item",
-    "pickHanja": "Digite a sílaba do hanja para pegar o item - ou use um Dicionário para revelá-lo",
+    "pickHanja": "Digite a sílaba do hanja para pegar o item — caso possua e use um item de Dicionário, o hanja será revelado",
     "typeToAdvance": "Digite a palavra para avançar para o próximo mundo",
     "findTeacher": "Encontrar o professor pode lhe ensinar uma lição e aumentar a dificuldade",
     "casinoLuck": "Que tal tentar sua sorte arriscando tudo?"
@@ -448,6 +461,10 @@
     }
   },
   "worlds": {
+    "taekwondo_dojang": {
+      "name": "Dojang de Taekwondo",
+      "desc": "Salas de treinamento marcial onde você domina a digitação do Hangul através do combate."
+    },
     "palace": {
       "name": "Palácio Gyeongbokgung",
       "desc": "O palácio real da dinastia Joseon, coração da história coreana no centro de Seul."

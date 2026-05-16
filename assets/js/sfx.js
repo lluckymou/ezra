@@ -119,13 +119,14 @@ export function setVolume(v) {
    AMBIENT MUSIC SYSTEM
    Looping background music. Each track is an <audio> element for
    reliable looping (Web Audio API looping has gaps on some browsers).
-   Volume stored under 'krr_music_vol' (0–1, default 0.35).
+   Volume stored under 'krr_music_vol' (0–1, default 0.15).
 ================================================================ */
 const MUSIC_STORAGE_KEY = 'krr_music_vol';
-let _musicVol = parseFloat(localStorage.getItem(MUSIC_STORAGE_KEY) ?? '0.35');
+let _musicVol = parseFloat(localStorage.getItem(MUSIC_STORAGE_KEY) ?? '0.15');
 
 const MUSIC_TRACKS = {
-  // World tracks
+  // World tracks (one per location)
+  taekwondo_dojang: 'assets/music/dojang.mp3',
   palace:     'assets/music/palace.mp3',
   jeju:       'assets/music/jeju.mp3',
   haeundae:   'assets/music/haeundae.mp3',
@@ -141,12 +142,13 @@ const MUSIC_TRACKS = {
   gangnam:    'assets/music/gangnam.mp3',
   yonggoong:  'assets/music/yonggoong.mp3',
   cosmos:     'assets/music/cosmos.mp3',
-  // Special tracks
-  forest:     'assets/music/forest.mp3',
+  // Special room tracks
   boss:       'assets/music/boss.mp3',
   casino:     'assets/music/casino.mp3',
-  gift:       'assets/music/gift.mp3',
+  gift:       'assets/music/gift.mp3',     // treasure rooms
+  modifier:   'assets/music/gift.mp3',     // modifier rooms share gift track
   camp:       'assets/music/camp.mp3',
+  study:      'assets/music/study.mp3',    // teacher rooms
   menu:       'assets/music/menu.mp3',
 };
 
@@ -170,40 +172,67 @@ function _stopFade() {
 export function getMusicVolume() { return _musicVol; }
 
 export function setMusicVolume(v) {
+  const prev = _musicVol;
   _musicVol = Math.max(0, Math.min(1, v));
   localStorage.setItem(MUSIC_STORAGE_KEY, String(_musicVol));
-  if (_musicEl) _musicEl.volume = _musicVol;
-  if (_musicFade?.to) _musicFade.to.volume = 0; // will ramp to _musicVol
+  if (_musicVol <= 0) {
+    _stopFade();
+    if (_musicEl) _musicEl.pause();
+  } else if (prev <= 0) {
+    // Rising from 0: resume existing element or restart track
+    if (_musicEl) {
+      _musicEl.volume = _musicVol;
+      _musicEl.play().catch(() => {});
+    } else if (_musicTrack) {
+      playMusic(_musicTrack);
+    }
+  } else {
+    if (_musicEl) _musicEl.volume = _musicVol;
+    if (_musicFade?.to) _musicFade.to.volume = 0; // will ramp to _musicVol
+  }
 }
 
-export function playMusic(trackKey, crossfadeDur = 1.2) {
-  if (_musicVol <= 0) return;
+export function playMusic(trackKey, crossfadeDur = 0) {
   const src = MUSIC_TRACKS[trackKey];
   if (!src) return;
   if (_musicTrack === trackKey && _musicEl && !_musicEl.paused) return; // already playing
-
-  const next = _createAudio(src);
-  next.volume = 0;
-  next.play().catch(() => {}); // silent fail if file missing or before user gesture
+  _musicTrack = trackKey; // remember intent even when muted, so unmute knows what to play
+  if (_musicVol <= 0) return;
 
   _stopFade();
+  // Stop previous track immediately — one sound at a time
+  if (_musicEl) { _musicEl.pause(); _musicEl.src = ''; }
 
-  const prev = _musicEl;
-  const prevStartVol = prev ? prev.volume : 0;
+  const next = _createAudio(src);
+  _musicEl = next;
+
+  const doPlay = () => next.play().catch(() => {
+    // Browser blocked autoplay (no user gesture yet) — retry on first interaction
+    const retry = () => {
+      if (_musicEl === next && next.paused && _musicVol > 0) next.play().catch(() => {});
+    };
+    document.addEventListener('click',      retry, { once: true });
+    document.addEventListener('keydown',    retry, { once: true });
+    document.addEventListener('touchstart', retry, { once: true });
+  });
+
+  if (crossfadeDur <= 0) {
+    next.volume = _musicVol;
+    doPlay();
+    return;
+  }
+
+  // Optional crossfade fade-in (prev already stopped above)
+  next.volume = 0;
+  doPlay();
   const startTime = performance.now();
-
   _musicFade = { to: next, dur: crossfadeDur * 1000 };
-  _musicEl    = next;
-  _musicTrack = trackKey;
-
   function tick() {
-    const p = Math.min(1, (performance.now() - startTime) / _musicFade?.dur);
+    const p = Math.min(1, (performance.now() - startTime) / _musicFade.dur);
     if (next) next.volume = p * _musicVol;
-    if (prev) prev.volume = prevStartVol * (1 - p);
     if (p < 1) {
       _fadeTick = requestAnimationFrame(tick);
     } else {
-      if (prev) { prev.pause(); prev.src = ''; }
       if (next) next.volume = _musicVol;
       _stopFade();
     }
@@ -211,14 +240,22 @@ export function playMusic(trackKey, crossfadeDur = 1.2) {
   _fadeTick = requestAnimationFrame(tick);
 }
 
-export function stopMusic(fadeDur = 0.8) {
+export function stopMusic(fadeDur = 0) {
   if (!_musicEl) return;
+  _stopFade();
+  _musicTrack = null;
+
+  if (fadeDur <= 0) {
+    _musicEl.pause();
+    _musicEl.src = '';
+    _musicEl = null;
+    return;
+  }
+
   const el = _musicEl;
   const startVol = el.volume;
   const startTime = performance.now();
-  _stopFade();
-  _musicEl    = null;
-  _musicTrack = null;
+  _musicEl = null;
 
   function tick() {
     const p = Math.min(1, (performance.now() - startTime) / (fadeDur * 1000));

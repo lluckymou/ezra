@@ -637,6 +637,19 @@ function easeInOut(t) { return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; }
 /* ================================================================
    WEATHER SYSTEM (ported from typing-game.html)
 ================================================================ */
+const _emojiCache = new Map();
+function _getEmojiCanvas(emoji) {
+  if (_emojiCache.has(emoji)) return _emojiCache.get(emoji);
+  const sz = 64;
+  const oc = document.createElement('canvas');
+  oc.width = oc.height = sz;
+  const c = oc.getContext('2d');
+  c.font = `${Math.round(sz * 0.85)}px 'Noto Color Emoji', serif`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(emoji, sz / 2, sz / 2);
+  _emojiCache.set(emoji, oc);
+  return oc;
+}
 function mkWxParticle(type, scatter) {
   const p = { type, life: 1 };
   p.x = Math.random() * G.W;
@@ -655,16 +668,19 @@ function mkWxParticle(type, scatter) {
     p.wobbleSpd = 0.5 + Math.random() * 1.5;
     const hue = Math.random() * 40;
     p.color = `hsl(${200 + hue},${20 + Math.random() * 30}%,${88 + Math.random() * 10}%)`;
+    p.alpha = type === 'blizzard' ? 0.72 + Math.random() * 0.18 : 0.6 + Math.random() * 0.25;
   } else if (type === 'fall' || type === 'blossom') {
     p.emoji = type === 'fall'
       ? ['🍂','🍁','🍃'][Math.floor(Math.random() * 3)]
       : ['🌸','🌺','🌼'][Math.floor(Math.random() * 3)];
     p.r = 8 + Math.random() * 8;
+    p.sz = p.r * 2;
     p.vy = 40 + Math.random() * 60;
     p.vx = -25 + Math.random() * 50;
     p.rot = Math.random() * Math.PI * 2;
     p.rotSpd = (-1 + Math.random() * 2) * 1.2;
     p.alpha = 0.55 + Math.random() * 0.4;
+    _getEmojiCanvas(p.emoji); // pre-warm cache on particle creation
   }
   return p;
 }
@@ -675,7 +691,8 @@ export function initWeather(w) {
   G.wxFogOffset = 0;
   const BASE = { drizzle:120, raining:280, snowing:160, blizzard:420, fall:50, blossom:50 };
   const areaScale = Math.min(1, (window.innerWidth * window.innerHeight) / (1920 * 1080));
-  const count = Math.round((BASE[w] || 0) * areaScale);
+  const weatherMult = G.weatherEnabled ?? 1;
+  const count = Math.round((BASE[w] || 0) * areaScale * weatherMult);
   for (let i = 0; i < count; i++) G.wxParticles.push(mkWxParticle(w, true));
 }
 
@@ -685,12 +702,11 @@ let _wxFade = { active: false, t: 0, dur: 3.0, oldAlpha: 0, newAlpha: 1 };
 
 /** Begin a 3-second crossfade to a new weather type. Old particles fade out; new fade in. */
 export function startWeatherFade(newWeather) {
-  if (!G.weatherEnabled) {
+  if (!(G.weatherEnabled > 0)) {
     G.weather = newWeather;
     G.wxParticles = [];
     G.wxOldParticles = [];
     G.wxOldWeather = null;
-    initWeather(newWeather);
     return;
   }
   // Save current particles as "old" (will fade out)
@@ -708,7 +724,8 @@ function _tickWxParticleGroup(groupKey, w, dt, allowSpawn) {
   if (!particles || w === 'clear') return;
 
   if (w === 'foggy' || w === 'blizzard') {
-    const targets = w === 'blizzard' ? 14 : 28;
+    const weatherMult = G.weatherEnabled ?? 1;
+    const targets = Math.round((w === 'blizzard' ? 14 : 28) * weatherMult);
     const fogParticles = particles.filter(p => p.type === 'fogblob');
     if (allowSpawn) {
       while (fogParticles.length < targets) {
@@ -743,7 +760,8 @@ function _tickWxParticleGroup(groupKey, w, dt, allowSpawn) {
   }
 
   const areaScale = Math.min(1, (G.W * G.vH) / (1920 * 1080));
-  const cap = Math.round(({ drizzle:120, raining:280, snowing:160, blizzard:420, fall:50, blossom:50 })[w] * areaScale) || 0;
+  const weatherMult = G.weatherEnabled ?? 1;
+  const cap = Math.round(({ drizzle:120, raining:280, snowing:160, blizzard:420, fall:50, blossom:50 })[w] * areaScale * weatherMult) || 0;
   if (allowSpawn) {
     while (particles.length < cap) particles.push(mkWxParticle(w, false));
   }
@@ -766,7 +784,7 @@ function _tickWxParticleGroup(groupKey, w, dt, allowSpawn) {
 }
 
 export function tickWeather(dt) {
-  if (!G.weatherEnabled) return;
+  if (!(G.weatherEnabled > 0)) return;
 
   // Advance crossfade - old fades 1→0, new fades 0→1 simultaneously
   if (_wxFade.active) {
@@ -794,46 +812,55 @@ export function tickWeather(dt) {
 
 function _drawWxParticles(particles, w, alphaMult) {
   if (!particles.length || w === 'clear') return;
+
+  // Fog blobs: radial gradient instead of per-blob CSS blur filter (10x cheaper)
   if (w === 'foggy' || w === 'blizzard') {
     for (const p of particles) {
       if (p.type !== 'fogblob') continue;
-      wxCtx.save();
-      wxCtx.filter = 'blur(22px)';
-      wxCtx.globalAlpha = p.alpha * (p._fadeVal ?? 1) * alphaMult;
-      wxCtx.fillStyle = 'rgba(200,215,230,1)';
+      const a = p.alpha * (p._fadeVal ?? 1) * alphaMult;
+      const grad = wxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      grad.addColorStop(0, `rgba(200,215,230,${a})`);
+      grad.addColorStop(1, 'rgba(200,215,230,0)');
+      wxCtx.fillStyle = grad;
       wxCtx.beginPath();
       wxCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       wxCtx.fill();
-      wxCtx.restore();
     }
     if (w === 'foggy') return;
   }
-  for (const p of particles) {
-    if (p.type === 'fogblob') continue;
-    wxCtx.save();
-    if (w === 'drizzle' || w === 'raining') {
+
+  // One save/restore per weather type instead of per particle
+  wxCtx.save();
+  if (w === 'drizzle' || w === 'raining') {
+    wxCtx.strokeStyle = w === 'raining' ? 'rgba(120,175,220,1)' : 'rgba(150,200,235,0.9)';
+    wxCtx.lineWidth = w === 'raining' ? 2.2 : 1.4;
+    for (const p of particles) {
+      if (p.type === 'fogblob') continue;
       wxCtx.globalAlpha = p.alpha * alphaMult;
-      wxCtx.strokeStyle = w === 'raining' ? 'rgba(120,175,220,1)' : 'rgba(150,200,235,0.9)';
-      wxCtx.lineWidth = w === 'raining' ? 2.2 : 1.4;
       wxCtx.beginPath();
       wxCtx.moveTo(p.x, p.y);
       wxCtx.lineTo(p.x + p.vx * 0.03, p.y + p.len);
       wxCtx.stroke();
-    } else if (w === 'snowing' || w === 'blizzard') {
-      wxCtx.globalAlpha = (w === 'blizzard' ? 0.72 + Math.random()*0.18 : 0.6 + Math.random()*0.25) * alphaMult;
+    }
+  } else if (w === 'snowing' || w === 'blizzard') {
+    for (const p of particles) {
+      if (p.type === 'fogblob') continue;
+      wxCtx.globalAlpha = p.alpha * alphaMult;
       wxCtx.fillStyle = p.color;
       wxCtx.beginPath();
       wxCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       wxCtx.fill();
-    } else if (w === 'fall' || w === 'blossom') {
-      wxCtx.globalAlpha = p.alpha * alphaMult;
-      wxCtx.font = `${p.r * 2}px 'Noto Color Emoji', serif`;
-      wxCtx.textAlign = 'center'; wxCtx.textBaseline = 'middle';
-      wxCtx.translate(p.x, p.y); wxCtx.rotate(p.rot);
-      wxCtx.fillText(p.emoji, 0, 0);
     }
-    wxCtx.restore();
+  } else if (w === 'fall' || w === 'blossom') {
+    for (const p of particles) {
+      wxCtx.save();
+      wxCtx.globalAlpha = p.alpha * alphaMult;
+      wxCtx.translate(p.x, p.y); wxCtx.rotate(p.rot);
+      wxCtx.drawImage(_getEmojiCanvas(p.emoji), -p.sz / 2, -p.sz / 2, p.sz, p.sz);
+      wxCtx.restore();
+    }
   }
+  wxCtx.restore();
 }
 
 /** Draw weather particles only - day/night handled separately by drawDayNight(). */

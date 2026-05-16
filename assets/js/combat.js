@@ -254,6 +254,64 @@ export function monsterSpeed(words, isBoss) {
    MONSTER CONSTANTS
 ================================================================ */
 const GENERIC_MONSTERS = ['💩','👹','👺','👻','👽','👾','🤖','🧌','🧟','🧟‍♀️','🕷️','🦟','🦠','🪳','🐀','🐁','🎃','🦇','🦅','🥷'];
+
+/* ── Dojang tutorial word pools (by ring difficulty level) ── */
+// Level 1: individual jamo from the standard Korean keyboard layout
+const DOJANG_JAMO_L1 = ['ㅂ','ㅈ','ㄷ','ㄱ','ㅅ','ㅛ','ㅕ','ㅑ','ㅐ','ㅔ','ㅁ','ㄴ','ㅇ','ㄹ','ㅎ','ㅗ','ㅓ','ㅏ','ㅣ','ㅋ','ㅌ','ㅊ','ㅍ','ㅠ','ㅜ','ㅡ'];
+// Level 2: double/tense consonants and rare vowels + simple 2-jamo syllables
+const DOJANG_JAMO_L2  = ['ㅃ','ㅉ','ㄸ','ㄲ','ㅆ','ㅒ','ㅖ'];
+const DOJANG_COMBS_L2 = ['야','다','개','나','고','도','바','사','가','오','노','소','미','비','이','지','기','우','두','부','수','아'];
+// Level 3: syllables with simple batchim + complex vowel combos without batchim
+const DOJANG_WORDS_L3 = ['닥','설','밥','국','집','산','법','날','물','달','말','발','살','알','계','까','뇨','겨','뒤','봐','줘','쉬','위','왜','외','의','긔'];
+// Level 4: double/compound batchim + complex characters with batchim
+const DOJANG_WORDS_L4 = ['많','닭','삶','읽','꽃','넋','앉','짧','밟','긁','흙','닮','삯','얹','읊'];
+
+function _dojangNinjaEmoji() {
+  // 90% light tones (🥷🏻 🥷🏼), 10% darker tones
+  return Math.random() < 0.9
+    ? (Math.random() < 0.5 ? '🥷🏻' : '🥷🏼')
+    : (['🥷🏽','🥷🏾','🥷🏿'])[Math.floor(Math.random() * 3)];
+}
+
+function _pickDojangWords(level) {
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  switch (level) {
+    case 1: return [pick(DOJANG_JAMO_L1)];
+    case 2: return [Math.random() < 0.35 ? pick(DOJANG_JAMO_L2) : pick(DOJANG_COMBS_L2)];
+    case 3: return [pick(DOJANG_WORDS_L3)];
+    case 4: return [pick(DOJANG_WORDS_L4)];
+    default: return [pick(DOJANG_JAMO_L1)];
+  }
+}
+
+function genDojangRoomEnemies(cell) {
+  if (cell._templates) return cell._templates;
+  const level = cell.dojangLevel || 1;
+  const count = cell.enemyCount || 3;
+  const templates = [];
+  for (let i = 0; i < count; i++) {
+    const words  = _pickDojangWords(level);
+    const ninja  = _dojangNinjaEmoji();
+    const edge   = Math.random();
+    let spawnNX, spawnNY;
+    if (edge < 0.25)      { spawnNX = (80 + Math.random() * (G.W - 160)) / G.W; spawnNY = 0.13 + Math.random() * 0.04; }
+    else if (edge < 0.5)  { spawnNX = 0.84 + Math.random() * 0.09; spawnNY = 0.13 + Math.random() * 0.18; }
+    else if (edge < 0.75) { spawnNX = 0.07 + Math.random() * 0.09; spawnNY = 0.13 + Math.random() * 0.18; }
+    else                  { spawnNX = (80 + Math.random() * (G.W - 160)) / G.W; spawnNY = 0.13 + Math.random() * 0.05; }
+    templates.push({ type:'normal', hp:1, maxHp:1, words, wordEmoji: ninja, wordEmojis: [ninja], spawnNX, spawnNY });
+  }
+  cell._templates = templates;
+  return templates;
+}
+
+function genDojangBoss() {
+  // Boss is the 사범 (instructor): random 1-2 char dictionary words, no learning
+  const candidates = WORD_DICT.filter(w => w.text.length <= 2 && (w.rel ?? 0) >= 80);
+  const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+  const words = shuffled.slice(0, 2).map(w => w.text);
+  if (!words.length) words.push('도');
+  return [{ type:'boss', hp:2, maxHp:2, words, bossEmoji:'🥷', special:'archer', spdMult:0.40, bossPhase:0 }];
+}
 const INSTRUMENTS       = ['🎤','🎹','🥁','🪘','🪇','🎷','🎺','🪗','🎸','🎻'];
 const NOTES             = ['🎶','🎵','🎼'];
 const ARROW_SYLS_EASY   = ['가','나','다','마','바','사','아','자','하','라','카','타','파'];
@@ -454,8 +512,8 @@ export function initRoomSpawner(templates) {
   G.room.wKilled   = 0;
   G.room.wTotal    = templates.length;
   G.room.wPhase    = 'spawning';
-  // Tutorial: first monster(s) spawning in world 0
-  if (G.run?.worldIdx === 0 && G.run?.tutorial && !G.run.tutorial.firstMonsterShown) {
+  // Tutorial: first monster(s) spawning in worlds 0-1
+  if ((G.run?.worldIdx ?? 0) <= 1 && G.run?.tutorial && !G.run.tutorial.firstMonsterShown) {
     G.run.tutorial.firstMonsterShown = true;
     if (typeof window !== 'undefined') window._showTutorial?.('⚔️', 'tutorial.typeToKill', null, { allowDuringCombat: true, autoClose: 30 });
     // In multiplayer, first group is 2 (one per player) — mark both as tutorial stops
@@ -711,6 +769,16 @@ function genNumericTemplate() {
 export function genRoomEnemies(cell) {
   // Deterministic per-room: return cached templates if already generated
   if (cell._templates) return cell._templates;
+
+  // Dojang tutorial: use jamo-based enemies, no dictionary words
+  if (G.dungeon?.worldDef?.isDojangTutorial) {
+    if (cell.type === 'boss') {
+      const t = genDojangBoss();
+      cell._templates = t;
+      return t;
+    }
+    return genDojangRoomEnemies(cell);
+  }
 
   const wn = cell.waveNum;
 
@@ -1009,20 +1077,23 @@ export function hitMonster(m) {
       }
     }
 
-    // Track learned words (only real vocabulary - not projectile monsters or numeric compounds)
-    if (!m.isProjectileMonster) {
+    // Track learned words (skip in dojang tutorial; only real vocabulary)
+    if (!m.isProjectileMonster && !G.dungeon?.worldDef?.noLearning) {
       if (!G.learnedWords) G.learnedWords = [];
-      let newWords = false;
+      const newWordsList = [];
       for (const w of m.words) {
         if (!G.learnedWords.find(lw => lw.text === w)) {
           const wordDef = WORD_DICT.find(d => d.text === w);
           if (wordDef) {  // Only track real vocabulary words (not numeric compounds)
             G.learnedWords.push({ text: w, emoji: wordDef.emoji || '' });
-            newWords = true;
+            newWordsList.push({ text: w, emoji: wordDef.emoji || '' });
           }
         }
       }
-      if (newWords) savePersistentState();
+      if (newWordsList.length) {
+        savePersistentState();
+        showDictUnlockNotif(newWordsList);
+      }
     }
     if (m.type === 'boss') killBossMinions(m.id);
     if (!m.isProjectileMonster) {
@@ -1631,7 +1702,8 @@ export function spawnGroundItem(x, y, precomputed = null) {
   const wn   = G.room.wave || 1;
   const life = precomputed?.life ?? (60 + Math.random() * 180);
   // 1/3 of items are hanja-keyed in hanja mode; rest use hangul complex syllables
-  const useHanja = precomputed ? precomputed.isHanja : (G.hanjaEnabled && Math.random() < 0.33);
+  // Hanja only from world 1 onwards — world 0 focuses on hangul fundamentals
+  const useHanja = precomputed ? precomputed.isHanja : (G.hanjaEnabled && (G.run?.worldIdx || 0) >= 1 && Math.random() < 0.33);
   let keys;
   if (precomputed) {
     keys = precomputed.keys;
@@ -1692,8 +1764,8 @@ export function spawnGroundItem(x, y, precomputed = null) {
     mpSend({ type: 'ground_item_spawn', id: entryId, x, y, keys, coinType, item, life, isHanja: useHanja });
   }
 
-  // Tutorial: item drop hints in world 0 (first time each type) - queued, shows after combat
-  if (!precomputed && G.run?.worldIdx === 0 && G.run?.tutorial && typeof window !== 'undefined') {
+  // Tutorial: item drop hints in worlds 0-1 (first time each type) - queued, shows after combat
+  if (!precomputed && (G.run?.worldIdx ?? 0) <= 1 && G.run?.tutorial && typeof window !== 'undefined') {
     const tut = G.run.tutorial;
     if (useHanja && !tut.hanjaDropShown) {
       tut.hanjaDropShown = true;
@@ -2220,6 +2292,27 @@ export function refreshLives() {
   el.textContent = Array.from({length: G.playerMax}, (_, i) => i < G.playerHP ? '❤️' : '🖤').join('');
 }
 
+let _dictNotifTimer = null;
+function showDictUnlockNotif(words) {
+  const notif = document.getElementById('dict-unlock-notif');
+  if (!notif) return;
+  const hcard = document.getElementById('hcard-wave');
+  if (hcard) {
+    const r = hcard.getBoundingClientRect();
+    notif.style.top  = (r.bottom + 6) + 'px';
+    notif.style.left = r.left + 'px';
+  }
+  notif.innerHTML = '📒 ' + words.map(w => (w.emoji ? w.emoji + ' ' : '') + w.text).join(' • ');
+  notif.classList.remove('off');
+  void notif.offsetWidth;
+  notif.classList.add('on');
+  if (_dictNotifTimer) clearTimeout(_dictNotifTimer);
+  _dictNotifTimer = setTimeout(() => {
+    notif.classList.remove('on');
+    setTimeout(() => { notif.classList.add('off'); _dictNotifTimer = null; }, 250);
+  }, 3000);
+}
+
 export function flashAnnounce(msg, color) {
   const el = document.getElementById('announce-txt');
   if (!el) return;
@@ -2409,12 +2502,14 @@ export function drawMonsters() {
     ctx.filter = 'none';
 
     // Wield icon
-    if (m.wieldIcon) {
+    if (m.wieldIcon || (m.special === 'warrior' && m.shielded)) {
+      const isBlocking = m.special === 'warrior' && m.shielded;
+      const icon = isBlocking ? '🛡️' : m.wieldIcon;
       const wSz = Math.max(14, drawSz * 0.42);
-      const shieldScale = (m.special === 'warrior' && m.shielded) ? 2.2 : 1.0;
+      const shieldScale = isBlocking ? 2.2 : 1.0;
       ctx.font = `${wSz * shieldScale}px 'Noto Color Emoji', serif`;
       ctx.textBaseline = 'middle';
-      ctx.fillText(m.wieldIcon, drawSz * 0.38, drawSz * 0.4);
+      ctx.fillText(icon, drawSz * 0.38, drawSz * 0.4);
     }
 
     // HP hearts - or VERB/ADJ conjugation label for verb/adjective monsters
@@ -2555,7 +2650,7 @@ export function drawMonsters() {
         ctx.strokeStyle = 'rgba(0,0,0,0.9)';
         ctx.strokeText(numStr, 0, subLineY);
         ctx.fillText(numStr, 0, subLineY);
-      } else if (G.translationEnabled && !m.isProjectileMonster && wordDef) {
+      } else if (G.translationEnabled && !m.isProjectileMonster && wordDef && !G.dungeon?.worldDef?.noLearning) {
         const trans = wordTr(wordDef.text, wordDef.emoji);
         if (trans) {
           const transSz = Math.max(7, wordSz * 0.62);

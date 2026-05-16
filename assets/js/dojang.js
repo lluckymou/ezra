@@ -689,24 +689,30 @@ export class DojangManager {
       }
 
     } else if (Array.isArray(strokeDef.a)) {
-      // Compound stroke (L-shape, 7-shape, etc.): check start and end segment directions
+      // Compound stroke (L-shape, 7-shape, etc.): scan split points to find the bend.
+      // Fixed 1/3–2/3 splits fail when the first segment is short (e.g. quick horizontal
+      // before a long downstroke in ㄱ/ㅋ/ㄲ) — so try every 5% and keep the best.
       if (pts.length < 6 || len < MIN_STROKE_LEN * 1.5) { this._onError(); return; }
-      const n = pts.length;
-      const p1 = pts[Math.floor(n / 3)];
-      const p2 = pts[Math.floor(2 * n / 3)];
-
-      const dx1 = p1.x - start.x, dy1 = p1.y - start.y;
-      const dx2 = end.x  - p2.x,  dy2 = end.y  - p2.y;
-      const a1  = (Math.atan2(dy1, dx1) * 180 / Math.PI + 360) % 360;
-      const a2  = (Math.atan2(dy2, dx2) * 180 / Math.PI + 360) % 360;
-
-      const t = strokeDef.t ?? 45;
-      let d1 = Math.abs(a1 - strokeDef.a[0]); if (d1 > 180) d1 = 360 - d1;
-      let d2 = Math.abs(a2 - strokeDef.a[1]); if (d2 > 180) d2 = 360 - d2;
-
-      // Require an actual bend (not a straight line that flukes both checks)
-      let bend = Math.abs(a1 - a2); if (bend > 180) bend = 360 - bend;
-      valid = d1 <= t && d2 <= t && bend >= 20;
+      const n  = pts.length;
+      const t  = strokeDef.t ?? 45;
+      const lo = Math.max(1, Math.floor(n * 0.10));
+      const hi = Math.min(n - 2, Math.floor(n * 0.80));
+      const step = Math.max(1, Math.floor(n * 0.05));
+      let bestD1 = 999, bestD2 = 999, bestBend = 0;
+      for (let si = lo; si <= hi; si += step) {
+        const px  = pts[si];
+        const dx1 = px.x - start.x, dy1 = px.y - start.y;
+        const dx2 = end.x - px.x,   dy2 = end.y - px.y;
+        if (Math.hypot(dx1, dy1) < 4 || Math.hypot(dx2, dy2) < 4) continue;
+        const sa1 = (Math.atan2(dy1, dx1) * 180 / Math.PI + 360) % 360;
+        const sa2 = (Math.atan2(dy2, dx2) * 180 / Math.PI + 360) % 360;
+        let sd1 = Math.abs(sa1 - strokeDef.a[0]); if (sd1 > 180) sd1 = 360 - sd1;
+        let sd2 = Math.abs(sa2 - strokeDef.a[1]); if (sd2 > 180) sd2 = 360 - sd2;
+        let sbend = Math.abs(sa1 - sa2);           if (sbend > 180) sbend = 360 - sbend;
+        if (sbend < 15) continue; // must be an actual bend, not a near-straight stroke
+        if (sd1 + sd2 < bestD1 + bestD2) { bestD1 = sd1; bestD2 = sd2; bestBend = sbend; }
+      }
+      valid = bestD1 <= t && bestD2 <= t && bestBend >= 15;
 
     } else {
       // Simple directional stroke: check direction AND straightness
@@ -773,6 +779,20 @@ export class DojangManager {
       if (refs.length) {
         const avgRefY = refs.reduce((s, r) => s + this._pathCenter(r.pts).y, 0) / refs.length;
         if (this._pathCenter(pts).y < avgRefY - 15) valid = false;
+      }
+    }
+
+    // stayLeftOf: no point of this stroke may exceed the max-X of the reference stroke + margin.
+    // Used for ㅋ stroke 2 (middle bar must not extend past the right edge of the ㄱ body).
+    if (valid && strokeDef.stayLeftOf !== undefined) {
+      const { strokeIdx: sIdx, completedPaths } = this.challenge;
+      const base    = completedPaths.length - sIdx;
+      const refPath = completedPaths[base + strokeDef.stayLeftOf.ref];
+      if (refPath) {
+        const refMaxX = Math.max(...refPath.pts.map(p => p.x));
+        const newMaxX = Math.max(...pts.map(p => p.x));
+        const margin  = strokeDef.stayLeftOf.margin ?? 15;
+        if (newMaxX > refMaxX + margin) valid = false;
       }
     }
 
@@ -916,7 +936,9 @@ export class DojangManager {
     const jamoStrokes = JAMO_STROKES[jamos[jamoIdx]] || [];
     const prevDef = jamoStrokes[strokeIdx - 1];
     if (!prevDef) return true;
-    const prevAngle = Array.isArray(prevDef.a) ? prevDef.a[0] : prevDef.a;
+    // Compound strokes (L-shapes etc.) must not be matched by direction — skip ordering
+    if (Array.isArray(prevDef.a)) return true;
+    const prevAngle = prevDef.a;
     if (prevAngle !== expectedAngle) return true; // previous stroke has a different direction
 
     const jamoCompletedPaths = completedPaths.slice(-strokeIdx);
@@ -1011,8 +1033,7 @@ export class DojangManager {
 
     this.flash = { type: 'ok', t: 0, dur: 0.4 };
     this.nextDelay = 0.55;
-    this._clearStrokes();
-    this.challenge.completedPaths = [];
+    // Keep strokes visible until _nextChallenge() clears them after the delay
   }
 
   _announceStageUp(newStage) {

@@ -100,80 +100,207 @@ body {
 .menu-card h1, .menu-card h2, .menu-card h3,
 .screen h1, .screen h2, .screen h3 { font-weight: 400; }
 
-/* ===== TITLE SCREEN - new design ===== */
+/* ===== TITLE SCREEN - 민화 layout ===== */
 #scr-title {
-  background: rgba(255,255,255,.45);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  flex-direction: column;
+  background: rgb(255 244 210 / 65%);
+  backdrop-filter: blur(2px);
+
   justify-content: stretch;
   align-items: stretch;
   overflow: hidden;
 }
-
-/* ── Content wrapper (max-width centrado) ── */
-#menu-wrap {
-  display: flex; flex-direction: column;
-  flex: 1; min-height: 0;
-  width: 100%; max-width: 1000px;
-  margin: 0 auto;
+#scr-title::after {
+  content: ''; position: absolute; inset: 0;
+  background: url('../img/paper-grain.svg') repeat center/180px 180px;
+  mix-blend-mode: multiply;
+  pointer-events: none; z-index: 0; opacity: 0.22;
 }
 
-/* ── Header: logo + utility buttons ── */
-#menu-header {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 8px 16px 0;
+/* Minhwa tree — bottom-left, black bg removed via screen blend */
+#menu-minhwa {
+  position: absolute; bottom: 0; left: 0;
+  height: 100vh; width: auto;
+  pointer-events: none; user-select: none;
+  mix-blend-mode: multiply;
+  object-fit: contain; object-position: bottom left;
+  z-index: 0;
+  opacity: 30%;
+}
+
+/* Version badge — top-right, desktop only */
+#version-badge {
+  position: absolute; top: 32px; right: 32px;
+  writing-mode: vertical-rl; text-orientation: mixed;
+  font-family: 'Nanum Myeongjo', serif;
+  font-size: 1.25rem; color: #b1382f;
+  opacity: 0.75; pointer-events: none; user-select: none;
+  letter-spacing: 0.45em; z-index: 10;
+  font-weight: 600;
+}
+body.phase-title #version-badge { pointer-events: all; }
+.vb-char { position: relative; cursor: default; }
+.vb-char .vb-h {
+  position: absolute; inset: 0;
+  opacity: 0; transition: opacity .15s;
+  text-orientation: upright;
+  display: flex; align-items: center; justify-content: start;
+}
+.vb-char .vb-n { transition: opacity .15s; }
+.vb-char:hover .vb-n { opacity: 0; }
+.vb-char:hover .vb-h { opacity: 1; }
+.vb-label .vb-h { font-size: 0.65em; letter-spacing: -0.05em; font-weight: 900; }
+.vb-label + .vb-char { transition: margin-top .25s ease; }
+.vb-label:hover + .vb-char { margin-top: 2em; }
+.mtb-version { opacity: 0.55; margin-left: 4px; font-size: .72em; }
+
+/* Minhwa — bottom-right */
+#menu-minhwa-right {
+  position: absolute; bottom: 0; right: 0;
+  height: 100vh; width: auto;
+  pointer-events: none; user-select: none;
+  mix-blend-mode: multiply;
+  object-fit: contain; object-position: bottom right;
+  z-index: 0;
+  opacity: 30%;
+}
+
+/* Dojang stamp */
+#menu-dojang-wrap {
+  position: relative;
+  width: 70px; z-index: 2;
+  cursor: default;
+  margin-bottom: 32px;
   flex-shrink: 0;
+}
+#menu-dojang {
+  width: 100%;
+  user-select: none; display: block;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.18)) saturate(0.5) brightness(1.25);
+  transition: filter .3s ease, opacity .3s ease;
+}
+#menu-dojang-wrap:hover #menu-dojang {
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.18)) blur(3px);
+  opacity: 0.4;
+}
+#menu-dojang-lluc {
+  position: absolute; inset: 0;
+  object-fit: cover; border-radius: 4px;
+  opacity: 0; transition: opacity .3s ease;
+  pointer-events: none; user-select: none;
+  width: 40%; height: 40%;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+}
+#menu-dojang-wrap:hover #menu-dojang-lluc { opacity: 1; }
+
+/* ── Single column wrapper ── */
+#menu-wrap {
+  flex: 1; min-height: 0; height: 100%;
+  width: 100%; max-width: none;
+  position: relative; z-index: 1;
+}
+/* Desktop only: scale menu UI to ~80% so px/rem elements feel proportional */
+@media (min-height: 501px) {
+  #menu-wrap { zoom: 0.8; }
+  #menu-logo-wrap { position: fixed; top: 32px; left: 32px; }
+}
+
+/* ── Left column: all content ── */
+#menu-left {
+  display: flex; flex-direction: column;
+  min-height: 0; height: 100%;
 }
 #menu-logo-wrap {
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center;
+  width: fit-content;
+  cursor: pointer; flex-shrink: 0;
 }
 #menu-logo-gif {
-  height: 160px; width: auto; object-fit: contain;
+  height: 200px; width: auto; object-fit: contain; display: block;
+  padding: 20px 20px 0;
   user-select: none; -webkit-user-select: none;
   pointer-events: none;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,.55));
 }
 #menu-slogan {
-  margin: 4px 0 0; padding: 0;
-  font-size: 1.2rem; font-weight: 300;
+  margin: 8px 0 0; padding: 0;
+  font-size: 1.3rem; font-weight: 500;
   letter-spacing: 2px; text-align: center;
-  color: rgba(255,255,255,.42);
-  line-height: 1.5;
-  font-style: italic;
-}
-#btn-my-dict, #btn-settings {
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.55), 0 0 8px rgba(0,0,0,.3);
+  line-height: 1.5; font-style: italic;
   flex-shrink: 0;
-  width: 100%; box-sizing: border-box;
-  padding: 12px; font-size: .8rem;
-  font-family: inherit; border: none;
-  border-radius: 8px; background: #0e113a; color: #fff;
-  cursor: pointer; transition: opacity .15s; letter-spacing: .4px;
-  opacity: .7; text-align: center;
 }
-#btn-my-dict:hover, #btn-settings:hover { opacity: 1; }
+/* Icon buttons — fixed above the tree bottom edge */
+/* Tree content ends at 968/1953 ≈ 49.6% of image width = 0.496 * 72vh ≈ 35.7vh */
+#menu-left-btns {
+  position: fixed;
+  width: 100%; box-sizing: border-box;
+  padding-left: calc(0.9 * 72vh); padding-right: 32px;
+  display: flex; flex-direction: row; gap: 30px;
+  justify-content: space-between;
+  z-index: 2; align-items: end; bottom: 0;
+}
+#menu-left-btns .btn-group {
+  display: flex; flex-direction: row; gap: 10px;
+  margin-bottom: 32px; height: fit-content;
+}
+.menu-icon-btn {
+  position: relative;
+  background: none; border: none;
+  padding: 12px 6px; border-radius: 10px;
+  cursor: pointer; transition: transform .18s, background .18s;
+  font-family: inherit;
+}
+.menu-icon-btn:hover {
+  background: rgba(255,255,255,.18);
+  transform: translateY(-4px);
+}
+.mic-emoji {
+  display: block;
+  font-size: 4.5rem; line-height: 1;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.35));
+}
+/* Dict icon pulses softly to hint it's clickable */
+#btn-my-dict .mic-emoji {
+  animation: dict-glow 2.8s ease-in-out infinite;
+}
+@keyframes dict-glow {
+  0%, 100% { filter: drop-shadow(0 2px 4px rgba(0,0,0,.35)); }
+  50%       { filter: drop-shadow(0 0 12px rgba(120,180,255,.7)) drop-shadow(0 2px 4px rgba(0,0,0,.3)); }
+}
+.mic-label {
+  position: absolute;
+  bottom: calc(100% + 15px);
+  left: 50%; transform: translateX(-50%);
+  white-space: nowrap; pointer-events: none;
+  color: #fff; font-size: 1.25rem; font-weight: 500; font-style: italic;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 8px rgba(0,0,0,.9), 0 1px 4px rgba(0,0,0,.8), 0 0 20px rgba(0,0,0,.5);
+  opacity: 0; transition: opacity .18s;
+}
+.menu-icon-btn:hover .mic-label { opacity: 1; }
+#menu-footer {
+  font-size: .75rem; color: rgba(10,8,4,.35);
+}
 
-/* ── Main character editor area ── */
+/* ── Character editor area ── */
 #menu-main {
   flex: 1; min-height: 0;
-  display: grid;
-  grid-template-columns: 100px minmax(0, 1fr) 100px;
-  align-items: center;
+  display: flex; align-items: stretch; justify-content: center;
   padding: 0 4px;
 }
 .ava-tabs {
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: row; flex-wrap: wrap;
   justify-content: center; opacity: 0%; visibility: hidden;
-  gap: 16px; height: 100%; padding: 4px 0;
+  gap: 8px; width: 100%; padding: 4px 0 8px;
   transition: opacity 0.3s ease;
 }
-#ava-tabs-left { align-items: flex-start; }
-#ava-tabs-right { align-items: flex-end; }
 .ava-tab {
-  width: 75px; height: 75px;
+  width: 70px; height: 70px;
   border: none;
   border-radius: 10px;
-  background: rgba(255,255,255,.35);
+  background: rgba(255,255,255,.45);
+  backdrop-filter: blur(5px);
   color: rgba(255,255,255,.9);
   font-size: 2rem; line-height: 1;
   cursor: pointer; transition: all .15s;
@@ -181,52 +308,44 @@ body {
 }
 .ava-tab:hover { background: rgba(255,255,255,.28); border-color: rgba(255,255,255,.22); }
 .ava-tab.active { background: rgba(14,17,58,.6); border-color: rgba(14,17,58,.8); }
-/* Tab tooltips */
+/* Tab tooltips: centered below each button */
 .ava-tab[data-tooltip] { position: relative; }
 .ava-tab[data-tooltip]::after {
   font-weight: 200;
   content: attr(data-tooltip);
   position: absolute;
-  top: 50%; transform: translateY(-50%);
+  bottom: calc(100% + 8px); top: auto; left: 50%; transform: translateX(-50%);
   background: rgba(14,17,58,.9); color: #fff;
-  font-size: 1.4rem; white-space: nowrap;
-  padding: 12px 30px; border-radius: 50px;
+  font-size: 1rem; white-space: nowrap;
+  padding: 5px 12px; border-radius: 20px;
   pointer-events: none; opacity: 0; transition: opacity .15s;
   z-index: 200;
 }
-#ava-tabs-left .ava-tab[data-tooltip]::after { left: calc(100% + 16px); }
-#ava-tabs-right .ava-tab[data-tooltip]::after { right: calc(100% + 16px); }
 .ava-tab[data-tooltip]:hover::after { opacity: 1; }
 #ava-center {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 100%; min-height: 0; min-width: 0; overflow-x: clip; overflow-y: visible; padding: 4px;
+  display: flex; flex-direction: column; align-items: center;
+  height: 100%; min-height: 0; min-width: 0; overflow: visible; padding: 4px; padding-bottom: 0;
 }
 #ava-preview-wrap {
-  position: relative;
+  position: relative; margin-top: auto;
   display: flex; align-items: center; justify-content: center;
-  width: min(360px, calc(100vw - 120px));
-  height: min(360px, calc(100vw - 120px));
+  width: min(66vh, calc(100vw - 200px));
+  height: min(66vh, calc(100vw - 200px));
   transition: transform .25s ease;
 }
-#menu-main.edit-open #ava-preview-wrap { transform: scale(.86); }
-#ava-randomize, #ava-edit {
-  position: absolute;  z-index: 1;
-  font-size: 2.25rem; background: none; border: none;
-  cursor: pointer; padding: 3px 5px; border-radius: 6px;
-  opacity: .55; transition: opacity .15s; line-height: 1;
-  color: rgba(255,255,255,.5);
-}
-#ava-randomize { top: 2px; right: 2px; }
-#ava-edit { top: 2px; left: 2px; }
-@media (max-width: 600px), (max-height: 500px) {
-  #ava-randomize, #ava-edit { font-size: 1.5rem; }
-}
-#ava-randomize:hover, #ava-edit:hover { opacity: 1; }
+#menu-main.edit-open #ava-preview-wrap { transform: scale(.86); transform-origin: bottom center; }
+#ava-randomize, #ava-edit { position: absolute; z-index: 1; bottom: 32px; }
+#ava-randomize { right: -60px; }
+#ava-edit { left: -60px; }
 #ava-randomize.spinning {
   opacity: 1;
-  animation: dice-spin .55s cubic-bezier(.36,.07,.19,.97) forwards;
   pointer-events: none;
 }
+#ava-randomize.spinning .mic-emoji {
+  display: inline-block;
+  animation: dice-spin .55s cubic-bezier(.36,.07,.19,.97) forwards;
+}
+#ava-randomize.spinning .mic-label { opacity: 0 !important; transition: opacity 0.04s !important; }
 @keyframes dice-spin {
   0%   { transform: rotate(0deg)   scale(1);    }
   15%  { transform: rotate(120deg) scale(1.25); }
@@ -236,7 +355,7 @@ body {
   90%  { transform: rotate(700deg) scale(1);    }
   100% { transform: rotate(720deg) scale(1);    }
 }
-#ava-preview { width: 100%; height: 100%; }
+#ava-preview { width: 100%; height: 100%; filter: drop-shadow(0 6px 18px rgba(0,0,0,.1)) drop-shadow(0 2px 6px rgba(0,0,0,.4)); }
 #ava-preview svg { width: 100%; height: 100%; display: block; }
 
 /* ── Edit bar ── */
@@ -274,66 +393,27 @@ body {
 }
 .ava-edit-nav:hover { background: rgba(255,255,255,.1); }
 #ava-edit-label1, #ava-edit-label2, #ava-edit-label3 {
-  flex: 1; text-align: center; font-size: 1.2rem; font-weight: 600;
+  flex: 1; text-align: center; font-size: 1rem; font-weight: 600;
   color: rgba(255,255,255,.88); min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-#ava-edit-weapon { display: none; align-items: center; min-width: 0; }
-#ava-edit-bar.weapon-mode #ava-edit-weapon { display: flex; }
-#ava-edit-bar.weapon-mode .ava-edit-row { display: none !important; }
-#ava-edit-weapon .wg-list {
-  display: flex; flex-direction: row; gap: 6px; padding-top: 0;
-  width: 100%; overflow-x: auto; overflow-y: hidden; min-width: 0;
-}
-#ava-edit-weapon .wgbtn { flex-shrink: 0; padding: 5px 10px; }
 
-/* ── Bottom row: CONTROLE | JOGAR | DIFICULDADE ── */
-#menu-bottom {
-  flex-shrink: 0;
-  display: flex; align-items: stretch; gap: 0;
-  padding: 6px 10px 0;
-}
-.menu-bot-wrap {
-  flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 8px;
-}
-.menu-bot-cap {
-  font-size: .78rem; font-weight: 600; text-align: center;
-  letter-spacing: .5px; text-transform: uppercase;
-  color: #0e113a;
-}
-.menu-bot-btn {
-  flex: 1; display: flex;
-  align-items: center; justify-content: center;
-  padding: 14px 16px;
-  border: none;
-  border-radius: 10px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; cursor: pointer;
-  font-family: inherit; color: #c8d8ff; transition: background .15s;
-}
-#mode-toggle-btn { background: #0f133f; }
-#mode-toggle-btn:hover { background: #080b28; }
-#mode-toggle-btn.active { background: #0f133f; }
-#difficulty-toggle-btn { background: #192869; }
-#difficulty-toggle-btn:hover { background: #111c52; }
-#difficulty-toggle-btn.active { background: #192869; }
-.bot-btn-inner {
-  display: flex; align-items: center; gap: 8px;
-}
-.bot-btn-labels {
-  display: flex; flex-direction: column; gap: 1px;
-}
-#mode-toggle-emoji, #difficulty-toggle-emoji { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
-#mode-toggle-label, #difficulty-toggle-label { font-size: .88rem; font-weight: 600; letter-spacing: .3px; text-align: left; }
+/* ── Play button: right-edge vertical tab ── */
 #btn-play {
-  flex: 2; margin: 0 8px;
-  padding: 10px 0; font-size: 1.75rem; font-weight: 200;
-  font-family: inherit; border: none; border-radius: 28px; border-bottom-left-radius: 0; border-bottom-right-radius: 0;
-  background: linear-gradient(135deg, #0e113a, #1a2a6e);
-  color: #fff; cursor: pointer;
-  box-shadow: 0 6px 20px rgba(14,17,58,.35);
-  transition: all .18s; letter-spacing: 1px;
+  position: fixed; bottom: 32px; left: 32px;
+  padding: 28px 52px; font-size: 2.2rem; font-weight: 700;
+  font-family: 'Nanum Myeongjo', serif;
+  border: none; border-radius: 16px;
+  background: rgb(59 53 41 / 80%);
+  backdrop-filter: blur(14px);
+  color: #fff; cursor: pointer; letter-spacing: 4px;
+  box-shadow: 0 4px 28px rgba(0,0,0,.18);
+  transition: background .2s, box-shadow .2s; z-index: 10;
 }
-#btn-play:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(14,17,58,.55); }
-#menu-footer { font-size: .78rem; color: rgba(255,255,255,.25); text-align: center; padding: 2px 0 0; flex-shrink: 0; }
+#btn-play:hover {
+  background: rgb(59 53 41);
+  box-shadow: 0 6px 36px rgba(0,0,0,.26);
+}
 
 /* My Dictionary floating modal */
 #my-dict-modal {
@@ -345,9 +425,9 @@ body {
 #my-dict-modal-inner {
   position: relative;
   border-radius: 12px; padding: 24px 24px 24px 28px;
-  width: min(680px, 96vw); max-height: 88vh;
+  width: min(520px, 96vw); height: min(76vh, 730px);
   display: flex; flex-direction: column; gap: 10px;
-  overflow: visible;
+  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,.5);
 }
 #settings-modal-inner {
@@ -367,11 +447,11 @@ body {
 #my-dict-header {
   position: static !important; /* keep out of positioned context so children anchor to modal-inner */
   display: block;
-  border-bottom: none; padding-bottom: 0; margin-bottom: 0;
+  border-bottom: none; padding-bottom: 0; margin-bottom: 0; margin-top: 6px;
 }
 #my-dict-header > span { font-size: 0.9rem; font-weight: 700; color: #5a3e00; }
 #my-dict-close {
-  position: absolute; top: 5px; right: 5px; z-index: 16;
+  position: absolute; top: 1px; right: 0px; z-index: 16;
   background: rgba(255,255,255,.38); border: 1px solid rgba(101,75,0,.25);
   font-size: 1.1rem; cursor: pointer;
   color: rgba(70,48,0,.9); padding: 0; border-radius: 6px; font-family: inherit;
@@ -380,7 +460,7 @@ body {
 }
 #my-dict-close:hover { color: #3a2800; background: rgba(255,255,255,.6); }
 #my-dict-expand-btn {
-  position: absolute; top: 5px; right: 42px; z-index: 16;
+  position: absolute; top: 1px; right: 36px; z-index: 16;
   background: rgba(255,255,255,.38); border: 1px solid rgba(101,75,0,.25);
   font-size: 1.1rem; cursor: pointer;
   color: rgba(70,48,0,.9); padding: 0; border-radius: 6px; font-family: inherit;
@@ -431,7 +511,6 @@ body {
   flex-direction: column;
   gap: 4px;
   overflow-y: auto;
-  max-height: 55vh;
   flex: 1;
 }
 .dict-expanded #dict-list { max-height: none; }
@@ -526,18 +605,6 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 }
 .gopt-toggle input:checked ~ .gopt-track .gopt-thumb { transform: translateX(16px); }
 
-/* ── Weapon group buttons (used in edit bar) ── */
-.wg-list { display: flex; flex-direction: column; gap: 5px; padding-top: 6px; }
-.wgbtn {
-  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
-  border-radius: 9px; padding: 7px 11px;
-  color: rgba(255,255,255,.65); cursor: pointer;
-  font-family: inherit; font-size: .82rem;
-  transition: all .13s; text-align: left;
-  white-space: nowrap;
-}
-.wgbtn:hover { background: rgba(255,255,255,.12); color: #fff; }
-.wgbtn.sel { border-color: rgba(200,170,50,.55); background: rgba(180,140,20,.18); color: #e8c84a; }
 
 /* ===== SHOP (title screen) ===== */
 #shop-card { background: transparent; border-radius: 18px; padding: 0; overflow: hidden; }
@@ -612,7 +679,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 #scr-pause {
   background: rgba(3,0,24,.65);
   backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+
 }
 #pause-backdrop {
   display: flex; align-items: center; justify-content: center;
@@ -954,7 +1021,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
   box-shadow: 0 2px 0 rgba(0,0,0,.3);
 }
 .map-esc-btn:hover { color: #fff; background: rgba(255,255,255,.2); }
-#book-expand-btn { margin-left: auto; margin-right: 5px; }
+#book-expand-btn { margin-left: auto; }
 #book-expand-btn .icon-fs-enter,
 #book-expand-btn .icon-fs-exit { width: 10px; height: 10px; }
 #book-expand-btn .icon-fs-exit { display: none; }
@@ -1180,7 +1247,7 @@ body.touch-mode #map-panel:not(.off) #map-perms-row {
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+
   min-height: 0; /* allow flex child to shrink in grid */
 }
 body.touch-mode #map-panel:not(.off) #map-next-worlds {
@@ -1251,6 +1318,9 @@ body.touch-mode .map-next-world-row .mnw-name  {
 }
 #pl-emoji {
   filter: drop-shadow(0 4px 8px rgba(0,0,0,.5));
+}
+body.phase-title #pl-emoji {
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,.7)) drop-shadow(0 2px 6px rgba(0,0,0,.55));
   display: flex; align-items: center; justify-content: center;
   transition: transform .12s, opacity .3s;
   line-height: 1;
@@ -1454,7 +1524,7 @@ body.phase-title #player-area,
 body.phase-title #map-panel,
 body.phase-title #book-panel { visibility: hidden !important; }
 #announce-txt {
-  font-size: clamp(2rem, 7vw, 4.5rem); color: #fff;
+  font-size: clamp(2.8rem, 9vw, 6rem); color: #fff;
   text-shadow: 0 0 30px rgba(255,210,80,.8), 0 4px 10px rgba(0,0,0,.6);
   opacity: 0; transition: opacity .35s ease;
   text-align: center; padding: 0 16px;
@@ -1462,6 +1532,23 @@ body.phase-title #book-panel { visibility: hidden !important; }
 }
 #announce-txt.on { opacity: 1; }
 @media (max-height: 600px) { #announce-txt { font-size: clamp(1.1rem, 4.5vw, 2rem); } }
+
+/* ===== DICT UNLOCK NOTIFICATION ===== */
+#dict-unlock-notif {
+  position: fixed; left: 8px; top: 90px;
+  background: rgba(255,255,255,.93);
+  color: #1a1000;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: .78rem; font-weight: 600;
+  box-shadow: 0 2px 10px rgba(0,0,0,.22);
+  pointer-events: none; z-index: 55;
+  opacity: 0; transform: translateY(-6px);
+  transition: opacity .2s ease, transform .2s ease;
+  white-space: nowrap;
+}
+#dict-unlock-notif.on { opacity: 1; transform: translateY(0); }
+#dict-unlock-notif.off { display: none; }
 
 /* ===== FREEZE OVERLAY ===== */
 #freeze-overlay {
@@ -1867,7 +1954,7 @@ body.touch-mode #cheat-menu.on {
   width: auto;
   border-radius: 10px;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+
   touch-action: pan-y;
   overscroll-behavior: contain;
 }
@@ -1913,6 +2000,11 @@ body.touch-mode #cheat-title { cursor: default; }
   color: #1a1a2e;
   background: #fff;
 }
+#pause-panel .gopt-select {
+  background: rgba(0,0,0,.06);
+  border-color: rgba(0,0,0,.15);
+  color: #1a1a2e;
+}
 
 /* ===== SHOP WALLET ALIGNMENT ===== */
 .shop-wallet-display {
@@ -1927,7 +2019,14 @@ body.touch-mode #cheat-title { cursor: default; }
   background: transparent !important;
   border: none !important;
   pointer-events: none;
-  opacity: 0;
+}
+.map-cell.fog::after {
+  content: '';
+  position: absolute;
+  width: 90%;
+  height: 90%;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
 }
 
 /* ===== FIRST-CLEAR BANNER ===== */
@@ -2107,34 +2206,34 @@ body.touch-mode.book-open #player-area * { pointer-events: none !important; }
   zoom: 1.25;
 }
 .lesson-viewer-inner { display: flex; flex-direction: column; gap: 4px; }
-.md-h3 { color: #f1c40f; font-size: 1.05rem; margin: 14px 0 6px; font-weight: 600; }
-.md-h4 { color: #e67e22; font-size: .95rem; margin: 10px 0 4px; font-weight: 600; }
+.md-h3 { color: #d19e17; font-size: 1.05rem; margin: 14px 0 6px; font-weight: 600; }
+.md-h4 { color: #b8820e; font-size: .95rem; margin: 10px 0 4px; font-weight: 600; }
 .md-p  { font-size: .9rem; line-height: 1.5; margin: 2px 0; }
 .md-li { font-size: .9rem; line-height: 1.5; margin-left: 16px; list-style: disc; }
 .md-br { height: 6px; }
 .md-hr {
-  border: none; border-top: 1px solid rgba(255,255,255,.18); margin: 12px 0;
+  border: none; border-top: 1px solid rgba(0,0,0,.18); margin: 12px 0;
 }
 .md-quote {
   border-left: 3px solid #0e113a; padding: 4px 10px;
   background: rgba(14,17,58,.08); border-radius: 0 6px 6px 0;
-  font-size: .88rem; color: #ccd;
+  font-size: .88rem; color: #4d4d5f;
 }
 .md-code {
   background: rgba(255,255,255,.12); border-radius: 4px;
   padding: 1px 5px; font-family: monospace; font-size: .9em;
-  color: #a8d8ff;
+  color: #c14848;
 }
 .md-table {
   width: 100%; border-collapse: collapse; margin: 8px 0;
   font-size: .85rem;
 }
 .md-table th, .md-table td {
-  border: 1px solid rgba(255,255,255,.18);
+  border: 1px solid rgba(0,0,0,.18);
   padding: 5px 8px; text-align: left;
 }
-.md-table thead th { background: rgba(14,17,58,.25); color: #dde; font-weight: 600; }
-.md-table tbody tr:nth-child(even) { background: rgba(255,255,255,.04); }
+.md-table thead th { background: rgba(14,17,58,.25); color: #474763; font-weight: 600; }
+.md-table tbody tr:nth-child(even) { background: rgba(0,0,0,.04); }
 .md-img { display: block; width: 100%; height: auto; }
 .md-link { color: #7db4ff; text-decoration: underline; }
 .md-link:hover { color: #aad0ff; }
@@ -2200,108 +2299,47 @@ body.touch-mode #map-panel:not(.off) {
   #inp-wrap { width: min(640px, 96vw) !important; }
 }
 
-/* ================================================================
-   TITLE SCREEN - mobile portrait: hide toggle buttons (they live in settings)
-================================================================ */
-@media (max-width: 600px) and (orientation: portrait) {
-  #mode-toggle-btn, #difficulty-toggle-btn { display: none !important; }
-  .menu-bot-wrap { justify-content: center; }
-}
 
 /* ================================================================
-   TITLE SCREEN - mobile landscape: 2-column layout
-   Left 40%: logo → slogan → dict (pushes down) → settings
-   Right 60%: avatar editor → play button
+   TITLE SCREEN - mobile landscape (max-height: 500px): compact 2-col
 ================================================================ */
 @media (max-height: 500px) {
+  #version-badge { font-size: 1.08rem; font-weight: 750; }
   .map-cell-hero svg { width: 1.5rem !important; }
-
-  /* Switch menu-wrap to a 2-col grid */
-  #btn-play { font-size: 1.5rem !important; }
-  #ava-edit-label1, #ava-edit-label2, #ava-edit-label3 { font-weight: 400 !important; font-size: 1.1rem !important; }
-
-  #menu-wrap {
-    display: grid !important;
-    grid-template-columns: 40% 60% !important;
-    grid-template-rows: auto 1fr auto !important;
-    padding: 12px !important;
-    padding-bottom: 0 !important;
-    gap: 10px !important;
-    max-width: none !important;
-  }
-
-  /* Dissolve intermediate containers so their children become grid items */
-  #menu-bottom { display: contents !important; }
-  .menu-bot-wrap { display: contents !important; }
-
-  /* Left column, row 1: header (logo + slogan) */
-  #menu-header {
-    grid-column: 1 !important;
-    grid-row: 1 !important;
-    padding: 0 !important;
-  }
-
-  #btn-my-dict, #btn-settings {
-    font-size: 0.9rem !important;
-  }
-
-  /* Left column, row 2 (1fr): Meu Dicionário - align-self: start pushes settings to bottom */
-  #btn-my-dict {
-    grid-column: 1 !important;
-    grid-row: 2 !important;
-    align-self: start !important;
-    border-radius: 10px !important;
-    opacity: 1 !important;
-  }
-
-  /* Left column, row 3: Opções de Jogo */
-  #btn-settings {
-    grid-column: 1 !important;
-    grid-row: 3 !important;
-    border-radius: 28px !important;
-    border-bottom-left-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
-    opacity: 1 !important;
-  }
-
-  /* Right column, rows 1-2: avatar editor */
-  #menu-main {
-    grid-column: 2 !important;
-    grid-row: 1 / 3 !important;
-    grid-template-columns: 15vh minmax(0, 1fr) 15vh !important;
-    align-self: stretch !important;
-  }
-
-  .ava-tab[data-tooltip]::after {
-    font-size: 1rem !important;
-  }
-
-  /* Right column, row 3: Jogar button */
   #btn-play {
-    grid-column: 2 !important;
-    grid-row: 3 !important;
-    margin: 0 !important;
-    padding: 20px 0 !important;
+    font-size: .8rem !important;
+    padding: 8px 105px;
+    bottom: unset !important;
+    top: 160px;
+    border-radius: 12px;
+    left: 16px !important;
   }
-
-  /* Hide non-essential on landscape */
-  #mode-toggle-btn,
-  #difficulty-toggle-btn,
-  #menu-footer { display: none !important; }
-
-  /* Logo and slogan sizing */
-  #menu-logo-gif { height: 120px !important; }
-  #menu-slogan { font-size: 1rem !important; }
-
-  /* Avatar tabs */
+  #scr-title:has(#menu-main.edit-open) #btn-play { display: none; }
+  #ava-edit-bar.open { padding: 6px !important; }
+  #ava-edit-label1, #ava-edit-label2, #ava-edit-label3 { font-weight: 400 !important; font-size: 1.1rem !important; }
+  #menu-left { padding: 10px 10px 8px 14px !important; }
+  #menu-logo-gif { height: 112.5px !important; padding: 2px 20px 0 0 !important; }
+  #menu-slogan { font-size: .85rem !important; padding-right: 20px !important; }
+  #menu-dojang-wrap { width: 40px !important; margin-right: 32px; }
+  #menu-main { grid-template-columns: 12vh minmax(0,1fr) 12vh !important; }
+  #menu-right { padding: 8px 10px 0 0 !important; }
+  .ava-tab[data-tooltip]::after { font-size: .85rem !important; }
   .ava-tabs { justify-content: space-between; }
-  .ava-tab { width: 100% !important; height: auto !important; aspect-ratio: 1/1; font-size: 1.6rem !important; }
+  .ava-tab { width: 50px !important; height: auto !important; aspect-ratio: 1/1; font-size: 1.2rem !important; }
   #ava-preview-wrap {
-    width: min(250px, calc(60vw - 80px)) !important;
-    height: min(250px, calc(100vh - 80px)) !important;
-    margin: auto 0 !important;
+    width: min(260px, calc(56vw - 60px)) !important;
+    height: min(220px, calc(94vh - 60px)) !important;
   }
-  #ava-center { justify-content: space-between !important; }
+  #menu-footer { display: none !important; }
+  /* minhwa height: 90vh → tree end = 0.496 * 90vh ≈ 44.6vh */
+  #menu-left-btns { padding-left: calc(0.5 * 90vh) !important; padding-right: 15px;}
+  .mic-emoji { font-size: 2.5rem !important; }
+  .mic-label { font-size: 1rem !important; }
+  #menu-dojang-wrap.dojang-revealed #menu-dojang {
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,.18)) blur(3px);
+    opacity: 0.4;
+  }
+  #menu-dojang-wrap.dojang-revealed #menu-dojang-lluc { opacity: 1; }
 }
 
 /* ================================================================
@@ -2310,7 +2348,7 @@ body.touch-mode #map-panel:not(.off) {
 #scr-pause { justify-content: stretch; align-items: stretch; }
 #pause-backdrop {
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+
   padding: 20px 12px;
 }
 #pause-panel { margin: auto; }
@@ -2440,6 +2478,13 @@ body.touch-mode #map-panel:not(.off) {
   color: rgba(255,255,255,.8); font-size: .78rem; text-align: center;
   line-height: 1.2; max-width: 90px;
 }
+.dict-prog-disabled-msg {
+  font-style: italic; font-size: .88rem;
+  color: rgba(255,255,255,.5); text-align: center;
+  padding: 32px 24px; line-height: 1.6; margin: 0;
+}
+#book-panel .dict-prog-disabled-msg,
+#my-dict-modal-inner .dict-prog-disabled-msg { color: rgba(40,25,0,.5); }
 
 /* ── Wiki accordion ──────────────────────────────────────────────── */
 .wiki-accordion {
@@ -2561,7 +2606,7 @@ body.touch-mode #map-panel:not(.off) {
 .test-dot.correct { background: #27ae60; border-color: #27ae60; }
 .test-dot.incorrect { background: #e74c3c; border-color: #e74c3c; }
 .test-dot.done { background: #27ae60; border-color: #27ae60; } /* legacy alias */
-.test-dot.current { background: #f1c40f; border-color: #f1c40f; box-shadow: 0 0 4px #f1c40f; }
+.test-dot.current { background: #d19e17; border-color: #d19e17; box-shadow: 0 0 4px #d19e17; }
 .test-hits { font-size: .85rem; opacity: .8; }
 .test-hits.failed { color: #e74c3c; font-weight: bold; }
 .test-giveup-btn {
@@ -2620,7 +2665,7 @@ body.touch-mode #map-panel:not(.off) {
   margin-top: 2px; margin-bottom: 10px; line-height: 1.2;
 }
 .test-won-indicator {
-  font-size: .75rem; color: #f1c40f; font-weight: 600;
+  font-size: .75rem; color: #d19e17; font-weight: 600;
   letter-spacing: 0.5px; opacity: .9;
 }
 .test-listen-btn {
@@ -2649,7 +2694,7 @@ body.touch-mode #map-panel:not(.off) {
   position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
   height: 20px;
   background: rgba(3, 13, 26, 0.72);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+ backdrop-filter: blur(6px);
   padding: 0 16px;
   align-items: center; justify-content: space-between;
   font-size: 0.6rem; color: rgba(255,255,255,.38);
@@ -2786,6 +2831,7 @@ body.touch-mode .test-big-emoji { font-size: 4rem; }
   font-size: 3rem; color: #fff; letter-spacing: 0.05em;
   opacity: 0; transition: opacity 0.3s ease;
   min-height: 1.4em;
+  min-width: 8ch;
   margin-top: 12px;
 }
 #startup-text.visible { opacity: 1; }
@@ -2847,6 +2893,8 @@ body.touch-mode .test-big-emoji { font-size: 4rem; }
   align-items: stretch;
   justify-content: stretch;
 }
+#my-dict-modal.dict-expanded .dict-panel-sub { display: none !important; }
+#my-dict-modal.dict-expanded #my-dict-header > span { display: none; }
 #my-dict-modal.dict-expanded #my-dict-modal-inner {
   width: 100% !important;
   max-height: 100% !important;
@@ -2869,19 +2917,9 @@ body.touch-mode .test-big-emoji { font-size: 4rem; }
   }
 }
 
-/* ===== MOBILE TITLEBAR: offset fullscreen dict modal ===== */
-body.mobile-fs #my-dict-modal.dict-expanded #my-dict-modal-inner {
-  padding-top: 44px !important; /* 24px original + 20px titlebar */
-}
-@media (max-height: 600px) {
-  body.mobile-fs #my-dict-modal-inner {
-    padding-top: 36px !important; /* 16px + 20px titlebar */
-  }
-}
+/* ===== MOBILE TITLEBAR: offset dict modal below titlebar ===== */
+body.mobile-fs #my-dict-modal { top: var(--tb-h); }
 @media (max-height: 500px) {
-  body.mobile-fs #my-dict-modal-inner {
-    padding-top: 28px !important; /* 8px + 20px titlebar */
-  }
   body.mobile-fs #dict-list {
     max-height: unset !important;
   }
@@ -3028,11 +3066,7 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
   box-shadow: 0 4px 12px rgba(0,0,0,.4);
 }
 
-/* ── Desktop: settings button matches difficulty button color ── */
-@media (min-height: 500px) {
-  #btn-settings { background: #192869; }
-  #btn-settings:hover { background: #192869; opacity: 1; }
-}
+/* ── Desktop: settings icon button has no background override needed ── */
 
 /* ================================================================
    BOOK PANEL & MAP PANEL – WHITE / PAPER MODE
@@ -3048,12 +3082,17 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
   border-left: 24px solid #b8820e !important; /* thick spine */
   padding-top: 44px !important; /* 38px tab strip + 6px breathing room */
   padding-left: 10px !important;
+  padding-right: 10px !important;
+  padding-bottom: 0 !important;
   isolation: isolate;
   backdrop-filter: none !important;
 }
+#book-panel,
+#my-dict-modal-inner {
+  overflow: visible !important;
+}
 #book-panel {
   border-bottom: none !important;
-  overflow: visible !important;
 }
 #book-panel::before,
 #my-dict-modal-inner::before {
@@ -3103,10 +3142,10 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 /* ── Book panel header: buttons float in the gold bar, top-right ── */
 #book-panel #book-panel-header {
   position: absolute !important;
-  top: 5px; right: 6px;
+  top: 4px; right: 1px;
   background: transparent !important;
   border: none !important; padding: 0 !important; margin: 0 !important;
-  z-index: 16; display: flex; gap: 5px; align-items: center;
+  z-index: 16; display: flex; gap: 4px; align-items: center;
 }
 #book-panel .map-esc-btn {
   background: rgba(255,255,255,.38);
@@ -3167,24 +3206,19 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
   display: flex;
   align-items: flex-end;
   gap: 3px;
-  overflow-x: auto; overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(180,130,0,.45) transparent;
+  overflow: hidden;
   border-bottom: none;
   margin: 0;
   z-index: 15;
 }
-#book-panel .dict-tabs::-webkit-scrollbar,
-#my-dict-modal-inner .dict-tabs::-webkit-scrollbar { height: 3px; }
-#book-panel .dict-tabs::-webkit-scrollbar-thumb,
-#my-dict-modal-inner .dict-tabs::-webkit-scrollbar-thumb { background: rgba(180,130,0,.45); border-radius: 2px; }
-/* Full border-radius on tabs when the strip is wide enough to scroll */
-#book-panel .dict-tabs.tabs-overflowing .dict-tab,
-#my-dict-modal-inner .dict-tabs.tabs-overflowing .dict-tab {
-  border-radius: 6px !important;
-  border-bottom: 1.5px solid rgba(180,130,0,.5) !important;
-}
-#book-panel .dict-tabs        { left: 8px; right: 78px; }
+/* Compact book (non-expanded) + non-expanded my-dict: emoji only */
+#book-panel:not(.book-expanded) .dict-tab .tab-full,
+#my-dict-modal:not(.dict-expanded) .dict-tab .tab-full { display: none; }
+#book-panel:not(.book-expanded) .dict-tab .tab-short,
+#my-dict-modal:not(.dict-expanded) .dict-tab .tab-short { display: inline; }
+/* Expanded states + default: full labels */
+.tab-short { display: none; }
+#book-panel .dict-tabs        { left: 8px; right: 56px; }
 #my-dict-modal-inner .dict-tabs { left: 8px; right: 78px; }
 #book-panel .dict-tab,
 #my-dict-modal-inner .dict-tab {
@@ -3193,10 +3227,10 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
   border-bottom: none;
   border-radius: 6px 6px 0 0;
   color: #5a3800;
-  padding: 3px 10px;
+  padding: 3px 14px;
   font-size: .8rem;
   font-weight: 600;
-  height: 26px;
+  height: 34px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -3225,7 +3259,7 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 #book-panel .dict-tab[data-cat="stats"]:hover,
 #my-dict-modal-inner .dict-tab[data-cat="stats"]:hover { background: #d8eefb; }
 #book-panel .dict-tab[data-cat="stats"].active,
-#my-dict-modal-inner .dict-tab[data-cat="stats"].active { background: #eaf5fd; border-color: #82bfe0; color: #1a4e6e; }
+#my-dict-modal-inner .dict-tab[data-cat="stats"].active { background: #fdf6e3; border-color: rgba(180,130,0,.6); color: #3d2800; }
 
 /* Word tabs (noun, adverb, verb, adjective) = coral/red bookmark */
 #book-panel .dict-tab[data-cat="noun"],
@@ -3254,7 +3288,7 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 #my-dict-modal-inner .dict-tab[data-cat="verb"].active,
 #book-panel .dict-tab[data-cat="adjective"].active,
 #my-dict-modal-inner .dict-tab[data-cat="adjective"].active {
-  background: #fff0f0; border-color: #d87878; color: #7a1a1a;
+  background: #fdf6e3; border-color: rgba(180,130,0,.6); color: #3d2800;
 }
 
 /* Lesson tabs = white/off-white bookmark (applied dynamically to numeric cat IDs) */
@@ -3277,7 +3311,8 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
   color: #2a1a00;
 }
 #book-panel #book-dict-search::placeholder { color: rgba(80,55,0,.45); }
-#book-panel #book-dict-list { color: #1a1000; }
+#book-panel #book-dict-list { color: #1a1000; display: flex; flex-direction: column; gap: 6px; }
+#my-dict-modal-inner #dict-list { color: #2a1a00; }
 #book-panel .dict-entry,
 #my-dict-modal-inner .dict-entry { color: #1a1000 !important; }
 #book-panel .dict-en,
@@ -3295,11 +3330,13 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 
 /* Wiki sections inside book panel + main-menu dict modal */
 #book-panel .wiki-section,
-#my-dict-modal-inner .wiki-section { border-color: rgba(101,75,0,.2); }
+#my-dict-modal-inner .wiki-section { border-color: rgba(101,75,0,.2); flex-shrink: 0; }
 #book-panel .wiki-header,
-#my-dict-modal-inner .wiki-header  { color: #4a3000; background: rgba(180,130,0,.1); }
+#my-dict-modal-inner .wiki-header  { color: #4a3000 !important; background: rgba(180,130,0,.18); }
 #book-panel .wiki-header:hover,
-#my-dict-modal-inner .wiki-header:hover { background: rgba(180,130,0,.18); }
+#my-dict-modal-inner .wiki-header:hover { background: rgba(180,130,0,.28); }
+#book-panel .wiki-body,
+#my-dict-modal-inner .wiki-body { color: #2a1a00; }
 #book-panel .wiki-card,
 #my-dict-modal-inner .wiki-card {
   background: rgba(255,255,255,.55);
@@ -3358,8 +3395,7 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 #book-panel .dj-book-desc,
 #my-dict-modal-inner .dj-book-desc { color: #2a1a00; background: rgba(255,255,255,.5); }
 
-/* touch fullscreen: keep parchment gradient; put close button on the left */
-body.touch-mode #book-panel:not(.off) #book-panel-header { right: auto; left: 8px; }
+/* touch fullscreen: keep parchment gradient; */
 body.touch-mode #map-panel:not(.off)  { background: #f5eedc !important; box-shadow: none !important; }
 
 /* touch-mode map: legend and perms text on paper */
