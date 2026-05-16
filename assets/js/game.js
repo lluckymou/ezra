@@ -5679,12 +5679,19 @@ function screenOff(id) {
       if (_pausedByRotation && G.phase === 'paused') G.phase = 'run';
       _pausedByRotation = false;
       
-      // If startup animation was pending, run it now after 200ms for rotation animation
+      // If startup animation was pending, run it now after 200ms for rotation animation.
+      // Gate behind fs-overlay the same way the non-portrait path does (line ~882):
+      // if mobile+not-fullscreen, show the overlay first and run animation only after user taps.
       if (_startupAnimationPending) {
+        const fn = _startupAnimationPending;
+        _startupAnimationPending = null;
         setTimeout(() => {
-          if (_startupAnimationPending) {
-            _startupAnimationPending();
-            _startupAnimationPending = null;
+          const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+          const needsFsFirst = !_isPWA && window.innerHeight < 500 && !inFs;
+          if (needsFsFirst) {
+            window._showFsOverlay?.(() => fn());
+          } else {
+            fn();
           }
         }, 200);
       }
