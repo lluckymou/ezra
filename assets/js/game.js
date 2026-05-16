@@ -1618,7 +1618,7 @@ function runLoreAnimation(onComplete) {
   // Show overlay + HUD (boost HUD z-index to float above overlay)
   overlay.style.display = 'block';
   const hudEl = document.getElementById('hud');
-  if (hudEl) { hudEl.style.display = 'flex'; hudEl.style.zIndex = '6000'; }
+  if (hudEl) { hudEl.style.display = 'flex'; hudEl.style.zIndex = '6000'; hudEl.inert = true; }
 
   // Hide wave card during cutscene (and score card on mobile)
   const hcardWave  = document.getElementById('hcard-wave');
@@ -1894,7 +1894,7 @@ function runLoreAnimation(onComplete) {
   // ── Finish / cleanup ─────────────────────────────────────────
   function _hideOverlay() {
     overlay.style.display = 'none';
-    if (hudEl) { hudEl.style.display = 'none'; hudEl.style.zIndex = ''; }
+    if (hudEl) { hudEl.style.display = 'none'; hudEl.style.zIndex = ''; hudEl.inert = false; }
     if (hcardWave) hcardWave.style.opacity = '';
     if (hcardScore) hcardScore.style.opacity = '';
   }
@@ -5571,11 +5571,15 @@ function populateCheatModSel() {
 ================================================================ */
 function screenOn(id)  {
   const el = document.getElementById(id);
-  if (el) el.classList.remove('off');
+  if (!el) return;
+  el.classList.remove('off');
+  el.inert = false;
 }
 function screenOff(id) {
   const el = document.getElementById(id);
-  if (el) el.classList.add('off');
+  if (!el) return;
+  el.classList.add('off');
+  el.inert = true;
 }
 
 /* ================================================================
