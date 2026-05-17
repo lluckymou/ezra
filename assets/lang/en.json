@@ -143,10 +143,50 @@
     "worldSuffix": "World"
   },
   "cheat": {
+    "title": "⚡ Cheat Menu",
+    "tab": {
+      "game": "⚔️ Game",
+      "summon": "👾 Summon",
+      "world": "🌍 World",
+      "room": "🏛 Room"
+    },
+    "godMode": "God Mode",
+    "autoShoot": "Auto-Shoot",
+    "addHp": "Add HP",
+    "addCoins": "Add 원",
+    "nextWorld": "Next World",
+    "clearRoom": "Clear Room",
+    "giveAll": "Give All",
+    "summonMonster": "Summon Monster",
+    "monSpecial": "Special",
+    "spawnOrbs": "Spawn Orbs",
+    "addItem": "Add Item",
+    "addMod": "Add Modifier",
+    "unlockLessons": "Unlock All Lessons",
+    "unlockDict": "Full Dictionary (99 kills)",
+    "time": "Time",
     "godModeOn": "God Mode ON 🟢",
     "godModeOff": "God Mode OFF",
     "autoshootOn": "Autoshoot ON 🟢",
-    "autoshootOff": "Autoshoot OFF"
+    "autoshootOff": "Autoshoot OFF",
+    "btn": {
+      "add": "+Add",
+      "spawn": "Spawn",
+      "set": "Set",
+      "killAll": "Kill All",
+      "giveAll": "Give All",
+      "unlock": "Unlock",
+      "reset": "Reset",
+      "next": "→"
+    },
+    "room": {
+      "disclaimer": "Changes are local only and reset on reload.",
+      "wall": "Wall Type",
+      "floor": "Floor Type",
+      "wallColor": "Wall Color",
+      "floorColor": "Floor Color",
+      "resetRoom": "Reset Room"
+    }
   },
   "weather": {
     "clear": "Clear",
@@ -1751,7 +1791,7 @@
     "resume": "▶ Resume",
     "backMenu": "Main Menu",
     "startAdventure": "⚔️ Start Adventure",
-    "bookTitle": "📖 Practice Log",
+    "bookTitle": "📖 Practice Journal",
     "inspectorTitle": "🔎 Stroke Guide",
     "drawJamo": "Draw {j}",
     "drawSyllable": "Draw {s}ㅤ·ㅤNow: {j}",

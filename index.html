@@ -758,7 +758,7 @@
   <div id="dojang-book-modal" class="off">
     <div id="dojang-book-inner">
       <div id="dojang-book-header">
-        <span data-i18n="dojang.bookTitle">📖 Practice Log</span>
+        <span data-i18n="dojang.bookTitle">📖 Practice Journal</span>
         <button id="dojang-book-close">✕</button>
       </div>
       <div id="dojang-book-body"></div>
@@ -829,111 +829,160 @@
   <span data-i18n="announce.firstClear">Click 🗺️ to view the map</span>
 </div>
 
-<!-- ── CHEAT MENU (hidden; type "cheatcode" to open) ─────── -->
+<!-- ── CHEAT MENU (type "cheatcode" / "CHEATCODE" / "초ㄸㅁㅆ첑ㄸ" to open) ── -->
 <div id="cheat-menu">
   <div id="cheat-title">
-    ⚡ Cheat Menu
+    <span data-i18n="cheat.title">⚡ Cheat Menu</span>
     <span id="cheat-close" onclick="closeCheatMenu()"><span class="icon-close"></span></span>
   </div>
-  <div class="cheat-row">
-    <label>God Mode</label>
-    <button class="cheat-btn" id="c-god" onclick="cheatToggleGod()">OFF</button>
+  <div id="cheat-tabs">
+    <button class="cheat-tab active" data-cheat-tab="game"   data-i18n="cheat.tab.game">⚔️ Game</button>
+    <button class="cheat-tab"        data-cheat-tab="summon" data-i18n="cheat.tab.summon">👾 Summon</button>
+    <button class="cheat-tab"        data-cheat-tab="world"  data-i18n="cheat.tab.world">🌍 World</button>
+    <button class="cheat-tab"        data-cheat-tab="room"   data-i18n="cheat.tab.room">🏛 Sala</button>
   </div>
-  <div class="cheat-row">
-    <label>Auto-Shoot</label>
-    <button class="cheat-btn" id="c-auto" onclick="cheatToggleAuto()">OFF</button>
+
+  <!-- ── Tab: Game ── -->
+  <div class="cheat-panel active" id="cheat-panel-game">
+    <div class="cheat-row">
+      <label data-i18n="cheat.godMode">God Mode</label>
+      <button class="cheat-btn" id="c-god" onclick="cheatToggleGod()">OFF</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.autoShoot">Auto-Shoot</label>
+      <button class="cheat-btn" id="c-auto" onclick="cheatToggleAuto()">OFF</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.addHp">Add HP</label>
+      <input class="cheat-inp" id="c-lives-in" type="number" value="5" min="1" max="20">
+      <button class="cheat-btn" onclick="cheatAddLives()" data-i18n="cheat.btn.add">+Add</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.addCoins">Add 원</label>
+      <button class="cheat-btn" onclick="cheatAddCoins()">+9999</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.nextWorld">Next World</label>
+      <button class="cheat-btn" onclick="cheatNextWorld()" data-i18n="cheat.btn.next">→</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.clearRoom">Clear Room</label>
+      <button class="cheat-btn red" onclick="cheatClearRoom()" data-i18n="cheat.btn.killAll">Kill All</button>
+    </div>
   </div>
-  <div class="cheat-row">
-    <label>Add HP</label>
-    <input class="cheat-inp" id="c-lives-in" type="number" value="5" min="1" max="20">
-    <button class="cheat-btn" onclick="cheatAddLives()">+Add</button>
+
+  <!-- ── Tab: Summon ── -->
+  <div class="cheat-panel" id="cheat-panel-summon">
+    <div class="cheat-row">
+      <label data-i18n="cheat.summonMonster">Summon Monster</label>
+    </div>
+    <div class="cheat-row">
+      <select class="cheat-inp" id="c-mon-type" style="width:70px">
+        <option value="all">All</option>
+        <option value="verb">Verb</option>
+        <option value="adjective">Adj</option>
+        <option value="noun">Noun</option>
+      </select>
+      <input class="cheat-inp" id="c-mon-hp"   type="number" min="1" max="5"  value="1" style="width:40px" title="HP">
+      <input class="cheat-inp" id="c-mon-wave" type="number" min="1" max="48" value="1" style="width:44px" title="Wave">
+      <button class="cheat-btn" onclick="cheatSummonMonster()" data-i18n="cheat.btn.spawn">Spawn</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.monSpecial">Special</label>
+      <select class="cheat-inp" id="c-mon-special" style="width:110px">
+        <option value="">none</option>
+        <option value="archer">🏹 Archer</option>
+        <option value="ice">❄️ Ice</option>
+        <option value="musician">🎵 Musician</option>
+        <option value="warrior">🛡 Warrior</option>
+        <option value="king">🏯 King</option>
+        <option value="eruptor">🌋 Eruptor</option>
+      </select>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.spawnOrbs">Spawn Orbs</label>
+      <input class="cheat-inp" id="c-orb-count" type="number" min="1" max="10" value="3" style="width:44px">
+      <button class="cheat-btn" onclick="cheatSpawnOrbs()" data-i18n="cheat.btn.spawn">Spawn</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.giveAll">Give All</label>
+      <button class="cheat-btn" onclick="cheatGiveAll()" data-i18n="cheat.btn.giveAll">Give All</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.addItem">Add Item</label>
+      <select class="cheat-inp" id="c-item-sel" style="width:110px"></select>
+      <button class="cheat-btn" onclick="cheatAddItem()" data-i18n="cheat.btn.add">Add</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.addMod">Add Modifier</label>
+      <select class="cheat-inp" id="c-mod-sel" style="width:110px"></select>
+      <button class="cheat-btn" onclick="cheatAddMod()" data-i18n="cheat.btn.add">Add</button>
+    </div>
   </div>
-  <div class="cheat-row">
-    <label>Add 원</label>
-    <button class="cheat-btn" onclick="cheatAddCoins()">+9999</button>
+
+  <!-- ── Tab: World ── -->
+  <div class="cheat-panel" id="cheat-panel-world">
+    <div class="cheat-row">
+      <label data-i18n="options.weather">🌤️ Weather</label>
+      <select class="cheat-inp" id="c-wx" style="width:100px">
+        <option value="clear"    data-i18n="weather.clear"    data-i18n-prefix="☀️ ">☀️ Clear</option>
+        <option value="foggy"    data-i18n="weather.foggy"    data-i18n-prefix="🌫️ ">🌫️ Foggy</option>
+        <option value="drizzle"  data-i18n="weather.drizzle"  data-i18n-prefix="🌦 ">🌦 Drizzle</option>
+        <option value="raining"  data-i18n="weather.raining"  data-i18n-prefix="🌧 ">🌧 Rain</option>
+        <option value="snowing"  data-i18n="weather.snowing"  data-i18n-prefix="🌨 ">🌨 Snow</option>
+        <option value="blizzard" data-i18n="weather.blizzard" data-i18n-prefix="❄️ ">❄️ Blizzard</option>
+        <option value="fall"     data-i18n="weather.fall"     data-i18n-prefix="🍁 ">🍁 Autumn</option>
+        <option value="blossom"  data-i18n="weather.blossom"  data-i18n-prefix="🌸 ">🌸 Blossom</option>
+      </select>
+      <button class="cheat-btn" onclick="cheatSetWeather()" data-i18n="cheat.btn.set">Set</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.time">Time</label>
+      <input type="range" id="c-tod" min="0" max="24" step="0.5" value="12" style="width:100px">
+      <span id="c-tod-val">12:00</span>
+      <button class="cheat-btn" onclick="cheatSetTOD()" data-i18n="cheat.btn.set">Set</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.unlockLessons">Unlock Lessons</label>
+      <button class="cheat-btn" id="cheat-unlock-lessons" onclick="cheatUnlockLessons()" data-i18n="cheat.btn.unlock">Unlock</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.unlockDict">Full Dictionary</label>
+      <button class="cheat-btn" id="cheat-unlock-dict" onclick="cheatUnlockDict()" data-i18n="cheat.btn.unlock">Unlock</button>
+    </div>
   </div>
-  <div class="cheat-row">
-    <label>Destravar todas as aulas</label>
-    <button class="cheat-btn" id="cheat-unlock-lessons" onclick="cheatUnlockLessons()">Unlock</button>
-  </div>
-  <div class="cheat-row">
-    <label>Dicionário completo (99 kills)</label>
-    <button class="cheat-btn" id="cheat-unlock-dict" onclick="cheatUnlockDict()">Unlock</button>
-  </div>
-  <div class="cheat-row">
-    <label data-i18n="options.weather">🌤️ Weather</label>
-    <select class="cheat-inp" id="c-wx" style="width:100px">
-      <option value="clear"   data-i18n="weather.clear"    data-i18n-prefix="☀️ ">☀️ Clear</option>
-      <option value="foggy"   data-i18n="weather.foggy"    data-i18n-prefix="🌫️ ">🌫️ Foggy</option>
-      <option value="drizzle" data-i18n="weather.drizzle"  data-i18n-prefix="🌦 ">🌦 Drizzle</option>
-      <option value="raining" data-i18n="weather.raining"  data-i18n-prefix="🌧 ">🌧 Rain</option>
-      <option value="snowing" data-i18n="weather.snowing"  data-i18n-prefix="🌨 ">🌨 Snow</option>
-      <option value="blizzard" data-i18n="weather.blizzard" data-i18n-prefix="❄️ ">❄️ Blizzard</option>
-      <option value="fall"    data-i18n="weather.fall"     data-i18n-prefix="🍁 ">🍁 Autumn</option>
-      <option value="blossom" data-i18n="weather.blossom"  data-i18n-prefix="🌸 ">🌸 Blossom</option>
-    </select>
-    <button class="cheat-btn" onclick="cheatSetWeather()">Set</button>
-  </div>
-  <div class="cheat-row">
-    <label>Time</label>
-    <input type="range" id="c-tod" min="0" max="24" step="0.5" value="12" style="width:100px">
-    <span id="c-tod-val">12:00</span>
-    <button class="cheat-btn" onclick="cheatSetTOD()">Set</button>
-  </div>
-  <div class="cheat-row">
-    <label>Next World</label>
-    <button class="cheat-btn" onclick="cheatNextWorld()">→</button>
-  </div>
-  <div class="cheat-row">
-    <label>Clear Room</label>
-    <button class="cheat-btn red" onclick="cheatClearRoom()">Kill All</button>
-  </div>
-  <div class="cheat-row">
-    <label>Give All</label>
-    <button class="cheat-btn" onclick="cheatGiveAll()">Give All</button>
-  </div>
-  <div class="cheat-row">
-    <label>Summon Monster</label>
-    <select class="cheat-inp" id="c-mon-type" style="width:70px">
-      <option value="all">All</option>
-      <option value="verb">Verb</option>
-      <option value="adjective">Adj</option>
-      <option value="noun">Noun</option>
-    </select>
-    <input class="cheat-inp" id="c-mon-hp" type="number" min="1" max="5" value="1" style="width:40px" title="HP">
-    <input class="cheat-inp" id="c-mon-wave" type="number" min="1" max="48" value="1" style="width:44px" title="Wave/Difficulty">
-    <button class="cheat-btn" onclick="cheatSummonMonster()">Spawn</button>
-  </div>
-  <div class="cheat-row">
-    <label>Mon. Special</label>
-    <select class="cheat-inp" id="c-mon-special" style="width:100px">
-      <option value="">none</option>
-      <option value="archer">🏹 Archer</option>
-      <option value="ice">❄️ Ice</option>
-      <option value="musician">🎵 Musician</option>
-      <option value="warrior">🛡 Warrior</option>
-      <option value="king">🏯 King</option>
-      <option value="eruptor">🌋 Eruptor</option>
-    </select>
-  </div>
-  <div class="cheat-row">
-    <label>Spawn Orbs</label>
-    <input class="cheat-inp" id="c-orb-count" type="number" min="1" max="10" value="3" style="width:44px" title="Count">
-    <button class="cheat-btn" onclick="cheatSpawnOrbs()">Spawn</button>
-  </div>
-  <div class="cheat-row">
-    <label>Add Item</label>
-    <select class="cheat-inp" id="c-item-sel" style="width:110px"></select>
-    <button class="cheat-btn" onclick="cheatAddItem()">Add</button>
-  </div>
-  <div class="cheat-row">
-    <label>Add Modifier</label>
-    <select class="cheat-inp" id="c-mod-sel" style="width:110px"></select>
-    <button class="cheat-btn" onclick="cheatAddMod()">Add</button>
-  </div>
-  <div class="cheat-row">
-    <label>Reset tudo</label>
-    <button class="cheat-btn red" id="cheat-reset-btn">Reset</button>
+
+  <!-- ── Tab: Room Design ── -->
+  <div class="cheat-panel" id="cheat-panel-room">
+    <p class="cheat-disclaimer" data-i18n="cheat.room.disclaimer">Changes are local only and reset on reload.</p>
+    <div class="cheat-row">
+      <label data-i18n="cheat.room.wall">Wall</label>
+      <button class="cheat-btn" onclick="cheatRoomWall(-1)">←</button>
+      <span id="c-wall-name" class="cheat-preset-name">—</span>
+      <button class="cheat-btn" onclick="cheatRoomWall(1)">→</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.room.wallColor">Wall Color</label>
+      <input class="cheat-inp cheat-color-inp" id="c-wall-main" type="color" title="Main">
+      <input class="cheat-inp cheat-color-inp" id="c-wall-alt"  type="color" title="Alt">
+      <button class="cheat-btn" onclick="cheatApplyRoomColors()" data-i18n="cheat.btn.set">Set</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.room.floor">Floor</label>
+      <button class="cheat-btn" onclick="cheatRoomFloor(-1)">←</button>
+      <span id="c-floor-name" class="cheat-preset-name">—</span>
+      <button class="cheat-btn" onclick="cheatRoomFloor(1)">→</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.room.floorColor">Floor Color</label>
+      <input class="cheat-inp cheat-color-inp" id="c-floor-main" type="color" title="Main">
+      <input class="cheat-inp cheat-color-inp" id="c-floor-alt"  type="color" title="Alt">
+      <button class="cheat-btn" onclick="cheatApplyRoomColors()" data-i18n="cheat.btn.set">Set</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.room.resetRoom">Reset Room</label>
+      <button class="cheat-btn red" onclick="cheatResetRoomColors()" data-i18n="cheat.btn.reset">Reset</button>
+    </div>
   </div>
 </div>
 

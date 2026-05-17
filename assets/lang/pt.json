@@ -143,10 +143,50 @@
     "worldSuffix": "Mundo"
   },
   "cheat": {
-    "godModeOn": "Modo Deus ON 🟢",
-    "godModeOff": "Modo Deus OFF",
-    "autoshootOn": "Tiro Automático ON 🟢",
-    "autoshootOff": "Tiro Automático OFF"
+    "title": "⚡ Menu de Cheats",
+    "tab": {
+      "game": "⚔️ Jogo",
+      "summon": "👾 Invocar",
+      "world": "🌍 Mundo",
+      "room": "🏛️ Sala"
+    },
+    "godMode": "Modo Deus",
+    "autoShoot": "Tiro Automático",
+    "addHp": "Adicionar HP",
+    "addCoins": "Adicionar 원",
+    "nextWorld": "Próximo Mundo",
+    "clearRoom": "Limpar Sala",
+    "giveAll": "Dar Tudo",
+    "summonMonster": "Invocar Monstro",
+    "monSpecial": "Especial",
+    "spawnOrbs": "Invocar Orbes",
+    "addItem": "Adicionar Item",
+    "addMod": "Adicionar Modificador",
+    "unlockLessons": "Destravar todas as aulas",
+    "unlockDict": "Dicionário completo (99 kills)",
+    "time": "Hora",
+    "godModeOn": "Modo Deus LIGADO 🟢",
+    "godModeOff": "Modo Deus DESLIGADO",
+    "autoshootOn": "Tiro automático LIGADO 🟢",
+    "autoshootOff": "Tiro automático DESLIGADO",
+    "btn": {
+      "add": "+Adicionar",
+      "spawn": "Invocar",
+      "set": "Aplicar",
+      "killAll": "Matar Todos",
+      "giveAll": "Dar Tudo",
+      "unlock": "Destravar",
+      "reset": "Resetar",
+      "next": "→"
+    },
+    "room": {
+      "disclaimer": "Alterações não são permanentes e são visíveis apenas localmente.",
+      "wall": "Tipo de Parede",
+      "floor": "Tipo de Chão",
+      "wallColor": "Cor da Parede",
+      "floorColor": "Cor do Chão",
+      "resetRoom": "Resetar Sala"
+    }
   },
   "weather": {
     "clear": "Céu Aberto",

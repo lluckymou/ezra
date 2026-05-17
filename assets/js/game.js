@@ -23,6 +23,7 @@ import {
   drawTransition, drawWorldTransition, drawRoomLabel, drawRoomNpc,
   tickWeather, drawWeather, drawDayNight,
   initRenderer, initWeather, startWeatherFade, getDayBrightness,
+  setRoomDesignFloorPat, setRoomDesignWallStyle,
 } from './renderer.js';
 import { initMap, updateMap, updateMapExtras, syncClockToGame, getWeatherLabel } from './map.js';
 import {
@@ -1282,8 +1283,8 @@ function loop(ts) {
     if (!G.ctrlPanelOpen) {
       G.gameTime += dt;
       tickWeather(dt);
-      // Tutorial: night falls for first time in world 0 → tent hint
-      if (G.run?.worldIdx === 0) {
+      // Tutorial: night falls for first time → tent hint (skip worlds with fixed lighting)
+      if (!G.dungeon?.worldDef?.fixedLighting) {
         const tut = G.run?.tutorial;
         if (tut && !tut.nightHintShown) {
           const hr = (G.gameTime % 420) / 420 * 24;
@@ -1627,8 +1628,7 @@ function runLoreAnimation(onComplete) {
   if (hcardScore && window.innerHeight < 500) hcardScore.style.opacity = '0';
 
   // Hide title screen behind overlay
-  const titleScr = document.getElementById('scr-title');
-  if (titleScr) titleScr.classList.add('off');
+  screenOff('scr-title');
 
   // Character geometry helpers - recomputed from W/H/CHAR_SIZE which update on resize.
   // playerOuter: bottom = -(CHAR_SIZE*0.28) → top of element = H + CHAR_SIZE*0.28 - (CHAR_SIZE+20) = H - CHAR_SIZE*0.72 - 20
@@ -1944,7 +1944,7 @@ function runLoreAnimation(onComplete) {
     const ps = document.getElementById('scr-pause');
     if (ps) ps.style.zIndex = '';
     screenOff('scr-pause');
-    if (titleScr) titleScr.classList.remove('off');
+    screenOn('scr-title');
     G.phase = 'title';
   }
 
@@ -3336,8 +3336,7 @@ function _enterDojang() {
 
   // Show dojang screen, hide title
   screenOff('scr-title');
-  const scrDojang = document.getElementById('scr-dojang');
-  if (scrDojang) scrDojang.classList.remove('off');
+  screenOn('scr-dojang');
 
   // Show stroke canvas
   const dojangCanvas = document.getElementById('dojang-canvas');
@@ -3392,8 +3391,7 @@ function _dojangExitToMenu() {
   const dnCanvasEl2 = document.getElementById('dn-canvas');
   if (dnCanvasEl2) dnCanvasEl2.style.visibility = '';
   if (paEl) paEl.style.display = '';
-  const scrDojang = document.getElementById('scr-dojang');
-  if (scrDojang) scrDojang.classList.add('off');
+  screenOff('scr-dojang');
   const dojangCanvas = document.getElementById('dojang-canvas');
   if (dojangCanvas) dojangCanvas.style.display = 'none';
   screenOn('scr-title');
@@ -3410,8 +3408,7 @@ function _dojangStartAdventure() {
   const dnCanvasEl3 = document.getElementById('dn-canvas');
   if (dnCanvasEl3) dnCanvasEl3.style.visibility = '';
   if (paEl) paEl.style.display = '';
-  const scrDojang = document.getElementById('scr-dojang');
-  if (scrDojang) scrDojang.classList.add('off');
+  screenOff('scr-dojang');
   const dojangCanvas = document.getElementById('dojang-canvas');
   if (dojangCanvas) dojangCanvas.style.display = 'none';
   playMusic('boss', 0);
@@ -4855,8 +4852,8 @@ function onInput() {
   // Ground items can always be collected (combat or navigate)
   if (tryCollectGroundItem(val)) { typingEl.value = ''; return; }
 
-  // Cheat code (+ alias: "cheatcode" written on wrong keyboard layout) — host only in co-op
-  if (val === 'cheatcode' || val === '촏ㅁㅅ챙ㄷ') {
+  // Cheat code — case-insensitive + Korean-layout aliases — host only in co-op
+  if (val.toLowerCase() === 'cheatcode' || val === '촏ㅁㅅ챙ㄷ' || val === '초ㄸㅁㅆ첑ㄸ') {
     typingEl.value = '';
     if (G.mp?.active && !G.mp.isHost) return; // guests can't cheat
     openCheatMenu();
@@ -5316,8 +5313,14 @@ document.addEventListener('pointerdown', e => {
    CHEAT MENU
 ================================================================ */
 function buildCheatMenu() {
-  document.getElementById('cheat-reset-btn')?.addEventListener('click', () => {
-    if (confirm(i18n('misc.confirmReset'))) { localStorage.clear(); location.reload(); }
+  // Tab switching via event delegation
+  document.addEventListener('click', e => {
+    const tab = e.target.closest('#cheat-tabs .cheat-tab');
+    if (!tab) return;
+    const panelId = tab.dataset.cheatTab;
+    document.querySelectorAll('#cheat-tabs .cheat-tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('#cheat-menu .cheat-panel').forEach(p => p.classList.toggle('active', p.id === `cheat-panel-${panelId}`));
+    if (panelId === 'room') _syncRoomColorInputs();
   });
 }
 
@@ -5565,6 +5568,68 @@ function populateCheatModSel() {
     ).join('');
   });
 }
+
+// ── Room Design ──────────────────────────────────────────────────
+// Wall texture styles (indices match drawWallPattern in renderer.js)
+const CHEAT_WALL_STYLES = ['Fan Lines', 'Flat Lines', 'Grid', 'Wide Fan'];
+// Floor pattern types (indices match _patIdx in drawBackground in renderer.js)
+const CHEAT_FLOOR_PATS  = ['Checkerboard', 'Large Chess', 'Planks ↕', 'Planks ↔', 'Solid', 'Solid Alt', 'Pixel Art', 'Cross'];
+
+let _cheatWallIdx  = -1;
+let _cheatFloorIdx = -1;
+let _roomColorOrig = null;
+
+function _backupRoomColors() {
+  if (_roomColorOrig) return;
+  const wd = G.dungeon?.worldDef;
+  if (!wd) return;
+  _roomColorOrig = { wallColor: wd.wallColor, altWallColor: wd.altWallColor, floorColor: wd.floorColor, floorColorAlt: wd.floorColorAlt };
+}
+function _syncRoomColorInputs() {
+  const wd = G.dungeon?.worldDef;
+  const wc = wd?.wallColor     || '#1e3d70';
+  const wa = wd?.altWallColor  || '#2e58a0';
+  const fc = wd?.floorColor    || '#141828';
+  const fa = wd?.floorColorAlt || '#0e1220';
+  const wMain = document.getElementById('c-wall-main');
+  const wAlt  = document.getElementById('c-wall-alt');
+  const fMain = document.getElementById('c-floor-main');
+  const fAlt  = document.getElementById('c-floor-alt');
+  if (wMain) wMain.value = wc;
+  if (wAlt)  wAlt.value  = wa;
+  if (fMain) fMain.value = fc;
+  if (fAlt)  fAlt.value  = fa;
+}
+window.cheatRoomWall = function(dir) {
+  _cheatWallIdx = ((_cheatWallIdx + dir) % CHEAT_WALL_STYLES.length + CHEAT_WALL_STYLES.length) % CHEAT_WALL_STYLES.length;
+  setRoomDesignWallStyle(_cheatWallIdx);
+  const nameEl = document.getElementById('c-wall-name');
+  if (nameEl) nameEl.textContent = CHEAT_WALL_STYLES[_cheatWallIdx];
+};
+window.cheatRoomFloor = function(dir) {
+  _cheatFloorIdx = ((_cheatFloorIdx + dir) % CHEAT_FLOOR_PATS.length + CHEAT_FLOOR_PATS.length) % CHEAT_FLOOR_PATS.length;
+  setRoomDesignFloorPat(_cheatFloorIdx);
+  const nameEl = document.getElementById('c-floor-name');
+  if (nameEl) nameEl.textContent = CHEAT_FLOOR_PATS[_cheatFloorIdx];
+};
+window.cheatApplyRoomColors = function() {
+  _backupRoomColors();
+  const wd = G.dungeon?.worldDef;
+  if (!wd) { flashAnnounce('⚠️ Run only', '#ff8888'); return; }
+  wd.wallColor     = document.getElementById('c-wall-main')?.value  || wd.wallColor;
+  wd.altWallColor  = document.getElementById('c-wall-alt')?.value   || wd.altWallColor;
+  wd.floorColor    = document.getElementById('c-floor-main')?.value || wd.floorColor;
+  wd.floorColorAlt = document.getElementById('c-floor-alt')?.value  || wd.floorColorAlt;
+};
+window.cheatResetRoomColors = function() {
+  const wd = G.dungeon?.worldDef;
+  if (wd && _roomColorOrig) { Object.assign(wd, _roomColorOrig); _roomColorOrig = null; }
+  _cheatWallIdx = -1; _cheatFloorIdx = -1;
+  setRoomDesignWallStyle(-1); setRoomDesignFloorPat(-1);
+  const wn = document.getElementById('c-wall-name');  if (wn) wn.textContent = '—';
+  const fn = document.getElementById('c-floor-name'); if (fn) fn.textContent = '—';
+  _syncRoomColorInputs();
+};
 
 /* ================================================================
    SCREEN HELPERS

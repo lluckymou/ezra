@@ -143,10 +143,50 @@
     "worldSuffix": "월드"
   },
   "cheat": {
-    "godModeOn": "갓 모드 ON 🟢",
-    "godModeOff": "갓 모드 OFF",
-    "autoshootOn": "오토슈팅 ON 🟢",
-    "autoshootOff": "오토슈팅 OFF"
+    "title": "⚡ 치트 메뉴",
+    "tab": {
+      "game": "⚔️ 게임",
+      "summon": "👾 소환",
+      "world": "🌍 세계",
+      "room": "🏛 방"
+    },
+    "godMode": "무적 모드",
+    "autoShoot": "자동 발사",
+    "addHp": "HP 추가",
+    "addCoins": "원 추가",
+    "nextWorld": "다음 세계",
+    "clearRoom": "방 정리",
+    "giveAll": "전부 받기",
+    "summonMonster": "몬스터 소환",
+    "monSpecial": "특수",
+    "spawnOrbs": "오브 소환",
+    "addItem": "아이템 추가",
+    "addMod": "수정자 추가",
+    "unlockLessons": "모든 수업 잠금 해제",
+    "unlockDict": "완전한 사전 (99킬)",
+    "time": "시간",
+    "godModeOn": "무적 모드 켜짐 🟢",
+    "godModeOff": "무적 모드 꺼짐",
+    "autoshootOn": "자동 발사 켜짐 🟢",
+    "autoshootOff": "자동 발사 꺼짐",
+    "btn": {
+      "add": "+추가",
+      "spawn": "소환",
+      "set": "적용",
+      "killAll": "전부 죽이기",
+      "giveAll": "전부 받기",
+      "unlock": "잠금 해제",
+      "reset": "초기화",
+      "next": "→"
+    },
+    "room": {
+      "disclaimer": "변경 사항은 로컬에서만 적용되며 새로고침 시 초기화됩니다.",
+      "wall": "벽 유형",
+      "floor": "바닥 유형",
+      "wallColor": "벽 색상",
+      "floorColor": "바닥 색상",
+      "resetRoom": "방 초기화"
+    }
   },
   "weather": {
     "clear": "맑음",

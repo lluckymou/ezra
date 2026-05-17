@@ -1992,6 +1992,32 @@ body.touch-mode #cheat-title { cursor: default; }
   border: 1px solid #0e113a; border-radius: 5px;
   padding: 3px 6px; font-size: .78rem;
 }
+#cheat-tabs {
+  display: flex; gap: 4px; margin-bottom: 12px;
+}
+.cheat-tab {
+  flex: 1; background: #0e113a; color: #8899cc;
+  border: none; border-radius: 6px;
+  padding: 5px 3px; font-size: .72rem;
+  cursor: pointer; transition: background .12s, color .12s;
+}
+.cheat-tab:hover { background: #1a1d5a; color: #ccd4ff; }
+.cheat-tab.active { background: #3a4adf; color: #fff; }
+.cheat-panel { display: none; }
+.cheat-panel.active { display: block; }
+.cheat-disclaimer {
+  font-size: .72rem; color: #ffcc80; line-height: 1.4;
+  background: rgba(255,180,50,.08); border-radius: 6px;
+  padding: 6px 8px; margin: 0 0 10px; border: 1px solid rgba(255,180,50,.18);
+}
+.cheat-preset-name {
+  flex: 1; text-align: center; font-size: .8rem;
+  color: #c8d4ff; font-style: italic;
+}
+.cheat-color-inp {
+  width: 32px !important; height: 26px !important;
+  padding: 1px 2px; cursor: pointer;
+}
 
 /* ===== TITLE FOOTER ===== */
 /* #title-footer removed - replaced by #menu-footer inside #menu-body */

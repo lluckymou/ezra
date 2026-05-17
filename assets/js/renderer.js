@@ -11,6 +11,12 @@ const DIR_DELTA_R = { N: [0,-1], S: [0,1], E: [1,0], W: [-1,0] };
 
 let canvas, ctx, wxCanvas, wxCtx, dnCanvas, dnCtx;
 
+// Room design overrides set by the cheat menu (-1 = use room's natural value)
+let _roomDesignFloorPat  = -1;
+let _roomDesignWallStyle = -1;
+export function setRoomDesignFloorPat(v)  { _roomDesignFloorPat  = v < 0 ? -1 : v; }
+export function setRoomDesignWallStyle(v) { _roomDesignWallStyle = v < 0 ? -1 : v; }
+
 // ── Day/Night Cycle ─────────────────────────────────────────────
 // Full cycle = 420 seconds (7 min). Maps to 0-24h.
 // Bright hours: 7h-20h. Transition 5-7h (dawn), 20-22h (dusk). Dark: 22-5h.
@@ -103,11 +109,11 @@ export function drawBackground() {
   ctx.fillStyle = world.floorColor;
   ctx.fillRect(wallSide, floorTop, W - wallSide * 2, floorBot - floorTop);
 
-  // Per-room floor pattern (deterministic from room position)
+  // Per-room floor pattern (deterministic from room position, overridable via cheat menu)
   // 0=checkerboard 1=large-chess 2=planks-v 3=planks-h 4=mono-main 5=mono-alt 6=pixel-art 7=cross
   const _rCol = cell?.col ?? 0;
   const _rRow = cell?.row ?? 0;
-  const _patIdx = (_rCol * 7 + _rRow * 13) % 8;
+  const _patIdx = _roomDesignFloorPat >= 0 ? _roomDesignFloorPat : (_rCol * 7 + _rRow * 13) % 8;
   const gs = 48;
   const _fw = W - wallSide * 2;
   const _fh = floorBot - floorTop;
@@ -197,10 +203,10 @@ export function drawBackground() {
   ctx.stroke();
   ctx.restore();
 
-  // Wall texture (deterministic per room, 4 styles)
+  // Wall texture (deterministic per room, 4 styles, overridable via cheat menu)
   // 0=stripe-v (fan lines, current default)  1=stripe-h (horizontal/vertical flat lines)
   // 2=cube (grid: both v+h)                  3=wide (stripe-v, sparse)
-  const _wStyle = (_rCol * 11 + _rRow * 5 + Math.abs(_rCol * _rRow)) % 4;
+  const _wStyle = _roomDesignWallStyle >= 0 ? _roomDesignWallStyle : (_rCol * 11 + _rRow * 5 + Math.abs(_rCol * _rRow)) % 4;
   drawWallPattern(_wStyle, wallH, wallSide, wallBot);
 
   // Vignette
