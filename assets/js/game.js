@@ -692,16 +692,64 @@ function _playKeypressSound() {
   clone.play().catch(() => {});
 }
 
+function _showLangSelectPanel(callback) {
+  const langSel = document.getElementById('lang-select');
+  if (!langSel) { callback?.(); return; }
+
+  const btnsEl  = document.getElementById('lang-select-btns');
+  if (btnsEl) {
+    const langs = getAvailableLanguages();
+    btnsEl.innerHTML = langs.map(({ code, name, icon }) =>
+      `<button class="lang-btn" data-lang="${code}"><span class="lang-flag">${icon}</span><span class="lang-name">${name}</span></button>`
+    ).join('');
+  }
+
+  const titleEl = document.getElementById('lang-select-title');
+  let _langTitleTimer = null;
+  if (titleEl) {
+    const langs = getAvailableLanguages();
+    const texts = langs.map(({ code }) => {
+      const meta = getLangMeta(code);
+      return meta?.select || meta?.name || code;
+    }).filter(Boolean);
+    let idx = 0;
+    function showNext() {
+      titleEl.style.opacity = '0';
+      setTimeout(() => { titleEl.textContent = texts[idx % texts.length]; titleEl.style.opacity = '1'; idx++; }, 300);
+    }
+    if (texts.length) { showNext(); _langTitleTimer = setInterval(showNext, 2000); }
+  }
+
+  langSel.classList.remove('off');
+  void langSel.offsetWidth;
+  langSel.classList.add('visible');
+
+  function onLangChosen(lang) {
+    if (_langTitleTimer) { clearInterval(_langTitleTimer); _langTitleTimer = null; }
+    localStorage.setItem('krr_lang', lang);
+    if (lang === 'ko' && localStorage.getItem('krr_dict_prog') === null) {
+      localStorage.setItem('krr_dict_prog', '1');
+    }
+    setLanguage(lang);
+    applyLanguage();
+    langSel.classList.remove('visible');
+    setTimeout(() => { langSel.classList.add('off'); callback?.(); }, 500);
+  }
+
+  btnsEl?.addEventListener('click', e => {
+    const btn = e.target.closest('.lang-btn');
+    if (btn) onLangChosen(btn.dataset.lang);
+  });
+}
+
 function runStartupAnimation(onPrepare, onDone) {
   const overlay  = document.getElementById('startup-overlay');
   const inner    = document.getElementById('startup-inner');
   const logo     = document.getElementById('startup-logo');
   const textEl   = document.getElementById('startup-text');
-  const langSel  = document.getElementById('lang-select');
   if (!overlay) { onPrepare?.(); onDone?.(); return; }
 
   const text = 'lluc.dev';
-  const isFirstTime = !localStorage.getItem('krr_lang');
 
   // Hide weather canvases so they can be revealed smoothly after the overlay is gone
   const _wxEl = document.getElementById('wx-canvas');
@@ -739,76 +787,6 @@ function runStartupAnimation(onPrepare, onDone) {
     }, 650);
   }
 
-  function showLangSelect() {
-    // Build buttons dynamically from available language metadata
-    const btnsEl = document.getElementById('lang-select-btns');
-    if (btnsEl) {
-      const langs = getAvailableLanguages();
-      btnsEl.innerHTML = langs.map(({ code, name, icon }) =>
-        `<button class="lang-btn" data-lang="${code}"><span class="lang-flag">${icon}</span><span class="lang-name">${name}</span></button>`
-      ).join('');
-    }
-
-    // Cycle #lang-select-title through each language's "select" text
-    const titleEl = document.getElementById('lang-select-title');
-    let _langTitleTimer = null;
-    function cycleLangTitle() {
-      const langs = getAvailableLanguages();
-      const texts = langs.map(({ code }) => {
-        const meta = getLangMeta(code);
-        return meta?.select || meta?.name || code;
-      }).filter(Boolean);
-      if (!texts.length) return;
-      let idx = 0;
-      function showNext() {
-        if (!titleEl) return;
-        titleEl.style.opacity = '0';
-        setTimeout(() => {
-          titleEl.textContent = texts[idx % texts.length];
-          titleEl.style.opacity = '1';
-          idx++;
-        }, 300);
-      }
-      showNext();
-      _langTitleTimer = setInterval(showNext, 2000);
-    }
-
-    // Fade out startup-inner, then reveal lang-select buttons
-    inner.classList.add('hidden-fade');
-    setTimeout(() => {
-      inner.style.display = 'none';
-      langSel.classList.remove('startup-hidden');
-      // Force reflow before transition
-      void langSel.offsetWidth;
-      langSel.classList.add('visible');
-      cycleLangTitle();
-    }, 420);
-
-    langSel.querySelectorAll('.lang-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const lang = btn.dataset.lang;
-        if (_langTitleTimer) clearInterval(_langTitleTimer);
-        localStorage.setItem('krr_lang', lang);
-        if (lang === 'ko' && localStorage.getItem('krr_dict_prog') === null) {
-          localStorage.setItem('krr_dict_prog', '1');
-        }
-        finishOverlay();
-      });
-    });
-    // Wire dynamically-created buttons (they may be added after the initial forEach)
-    btnsEl?.addEventListener('click', e => {
-      const btn = e.target.closest('.lang-btn');
-      if (!btn) return;
-      const lang = btn.dataset.lang;
-      if (_langTitleTimer) clearInterval(_langTitleTimer);
-      localStorage.setItem('krr_lang', lang);
-      if (lang === 'ko' && localStorage.getItem('krr_dict_prog') === null) {
-        localStorage.setItem('krr_dict_prog', '1');
-      }
-      finishOverlay();
-    });
-  }
-
   // Phase 1: logo appears (200ms delay, perfectly centered - no text yet)
   setTimeout(() => {
     logo.classList.add('visible');
@@ -824,14 +802,8 @@ function runStartupAnimation(onPrepare, onDone) {
           _playKeypressSound?.();
         } else {
           clearInterval(typeInterval);
-          // Phase 3: after typing done, wait 600ms
-          setTimeout(() => {
-            if (isFirstTime) {
-              showLangSelect();
-            } else {
-              finishOverlay();
-            }
-          }, 600);
+          // Phase 3: after typing done, wait 600ms then finish
+          setTimeout(finishOverlay, 600);
         }
       }, 200);
     }, 700);
@@ -875,22 +847,29 @@ export function init() {
       showTitleScreen();
     }
 
-    if (isPortrait) {
-      // Register the callback to be called when orientation changes to landscape
-      window._registerStartupAnimation?.(() => runStartupAnimation(startupPrepare, _checkStartupModals));
-    } else {
-      // On mobile without fullscreen: show fullscreen prompt FIRST (forces user interaction),
-      // then run the animation after they tap the button.
-      const needsFsFirst = !_isPWA && window.innerHeight < 500
-        && !(document.fullscreenElement || document.webkitFullscreenElement);
-      if (needsFsFirst) {
-        // Apply saved language now so the fs prompt shows in the right language
-        const _earlyLang = localStorage.getItem('krr_lang') || 'en';
-        setLanguage(_earlyLang);
-        window._showFsOverlay?.(() => runStartupAnimation(startupPrepare, _checkStartupModals));
-      } else {
-        runStartupAnimation(startupPrepare, _checkStartupModals);
+    // Sequence: [rotate →] lang select (first launch only) → fullscreen (mobile) → lluc.dev
+    function _startupSequence() {
+      function startAnim() {
+        const needsFs = !_isPWA && window.innerHeight < 500
+          && !(document.fullscreenElement || document.webkitFullscreenElement);
+        if (needsFs) {
+          window._showFsOverlay?.(() => runStartupAnimation(startupPrepare, _checkStartupModals));
+        } else {
+          runStartupAnimation(startupPrepare, _checkStartupModals);
+        }
       }
+      const isFirstTime = !localStorage.getItem('krr_lang');
+      if (isFirstTime) {
+        _showLangSelectPanel(startAnim);
+      } else {
+        startAnim();
+      }
+    }
+
+    if (isPortrait) {
+      window._registerStartupAnimation?.(() => _startupSequence());
+    } else {
+      _startupSequence();
     }
   }).catch(err => {
     console.error('Failed to load languages:', err);
@@ -981,6 +960,7 @@ export function init() {
 
   window._showTutorial = (emoji, msgKey, vars = null, opts = {}) => {
     if (!_tutBox) return;
+    if (G.phase !== 'run') return;
     // If in combat, queue it instead (unless it's allowed during combat)
     if (G.mode === 'combat' && !opts.allowDuringCombat) {
       // Replace queue (last queued tip wins unless higher priority replaces)
@@ -1012,6 +992,7 @@ export function init() {
     if (G.run?.tutorial) G.run.tutorial.key = null;
     _tutPersist    = false;
     _tutCurrentKey = null;
+    if (force) _tutQueue = [];
   };
 
   // Called after room is cleared - flush any queued tip
@@ -2982,11 +2963,11 @@ function _renderStatsContent() {
     const strokes = (JAMO_STROKES[j] || []).length;
     const bar     = Math.min(100, Math.round(count / MAX_JAMO_COUNT * 100));
     const info    = JAMO_INFO[j];
-    const hasDesc = count >= 1;
+    const hasDesc = dictProgDisabled || count >= 1;
     let descHtml  = '';
     if (hasDesc) {
       const baseText    = i18n(`jamo_desc.${j}.base`);
-      const showBatchim = count >= BATCHIM_UNLOCK_COUNT && JAMO_HAS_BATCHIM.has(j);
+      const showBatchim = (dictProgDisabled || count >= BATCHIM_UNLOCK_COUNT) && JAMO_HAS_BATCHIM.has(j);
       const batchimText = showBatchim ? i18n(`jamo_desc.${j}.batchim`) : '';
       const fullMd = baseText + (batchimText ? `\n\n**받침:** ${batchimText}` : '');
       descHtml = parseLessonMarkdown(fullMd);
@@ -2996,8 +2977,8 @@ function _renderStatsContent() {
         <span class="dj-book-jamo">${j}</span>
         <span class="dj-book-name">${info?.name || ''}</span>
         <span class="dj-book-rom">${info?.rom || ''}</span>
-        <div class="dj-book-bar-wrap"${G.dictProgressionDisabled ? ' style="display:none"' : ''}><div class="dj-book-bar" style="width:${bar}%"></div></div>
-        <span class="dj-book-count"${G.dictProgressionDisabled ? ' style="display:none"' : ''}>${count}</span>
+        <div class="dj-book-bar-wrap"${G.dictProgressionDisabled ? ' style="visibility:hidden"' : ''}><div class="dj-book-bar" style="width:${bar}%"></div></div>
+        <span class="dj-book-count"${G.dictProgressionDisabled ? ' style="visibility:hidden"' : ''}>${count}</span>
         <span class="dj-book-strokes">${strokes}획</span>
         ${hasDesc ? '<button class="dj-book-expand-btn">▼</button>' : '<span></span>'}
       </div>
@@ -3706,6 +3687,7 @@ function goToMenu() {
    GAME OVER
 ================================================================ */
 function showGameOver(victory) {
+  window._hideTutorial?.(true);
   screenOff('scr-modifier'); screenOff('scr-shop'); screenOff('scr-treasure');
   screenOn('scr-over');
 
@@ -5752,20 +5734,11 @@ function screenOff(id) {
       _pausedByRotation = false;
       
       // If startup animation was pending, run it now after 200ms for rotation animation.
-      // Gate behind fs-overlay the same way the non-portrait path does (line ~882):
-      // if mobile+not-fullscreen, show the overlay first and run animation only after user taps.
+      // _startupSequence handles lang-select and fullscreen internally.
       if (_startupAnimationPending) {
         const fn = _startupAnimationPending;
         _startupAnimationPending = null;
-        setTimeout(() => {
-          const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-          const needsFsFirst = !_isPWA && window.innerHeight < 500 && !inFs;
-          if (needsFsFirst) {
-            window._showFsOverlay?.(() => fn());
-          } else {
-            fn();
-          }
-        }, 200);
+        setTimeout(() => fn(), 200);
       }
     }
   }

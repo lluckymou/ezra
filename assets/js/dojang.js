@@ -434,8 +434,12 @@ export class DojangManager {
       ctx.fillText(String(i + 1), x, circleY);
 
       // Animated direction indicator (replaces text arrow)
-      const animCy = (arrowY + circleY) / 2 + rNum * 0.5;
-      const animR  = Math.max(5, Math.min(rNum * 1.4, sqW * 0.28));
+      const _isVert   = stroke.a === 90 || stroke.a === -90;
+      const _isCircle = stroke.a === 'circle';
+      let animCy = (arrowY + circleY) / 2 + rNum * 0.5;
+      let animR  = Math.max(5, Math.min(rNum * 1.4, sqW * 0.28));
+      if (_isVert)   { animCy += rNum * 0.35; animR *= 0.72; }
+      if (_isCircle) { animCy += rNum * 0.35; }
       const t = (performance.now() % 1400) / 1400;
       ctx.lineWidth = isCurrent ? 2.0 : 1.4;
       _drawStrokeAnim(ctx, x, animCy, animR, stroke.a, t);
@@ -1003,7 +1007,7 @@ export class DojangManager {
     const stageAfter = computeHangulStage(this.stats);
     if (stageAfter > stageBefore) {
       this._announceStageUp(stageAfter);
-    } else if (isFirstTime) {
+    } else if (isFirstTime && !G.dictProgressionDisabled) {
       this._announce(i18n('dojang.jamoUnlocked').replace('{j}', curJamo));
     }
 
@@ -1325,17 +1329,18 @@ export class DojangManager {
     const countTip   = i18n('dojang.timesWritten');
     const strokesTip = i18n('dojang.strokeCountTip');
 
+    const progDisabled = G.dictProgressionDisabled;
     const rows = DOJANG_BOOK_ORDER.map(j => {
       const count   = jp[j]?.count || 0;
       const strokes = (JAMO_STROKES[j] || []).length;
       const bar     = Math.min(100, Math.round(count / MAX_JAMO_COUNT * 100));
       const info    = JAMO_INFO[j];
-      const hasDesc = count >= 1;
+      const hasDesc = progDisabled || count >= 1;
 
       let descHtml = '';
       if (hasDesc) {
         const baseText = i18n(`jamo_desc.${j}.base`);
-        const showBatchim = count >= BATCHIM_UNLOCK_COUNT && JAMO_HAS_BATCHIM.has(j);
+        const showBatchim = (progDisabled || count >= BATCHIM_UNLOCK_COUNT) && JAMO_HAS_BATCHIM.has(j);
         const batchimText = showBatchim ? i18n(`jamo_desc.${j}.batchim`) : '';
         const fullMd = baseText + (batchimText ? `\n\n**받침:** ${batchimText}` : '');
         descHtml = parseLessonMarkdown(fullMd);
@@ -1346,8 +1351,8 @@ export class DojangManager {
           <span class="dj-book-jamo">${j}</span>
           <span class="dj-book-name">${info?.name || ''}</span>
           <span class="dj-book-rom">${info?.rom || ''}</span>
-          <div class="dj-book-bar-wrap"><div class="dj-book-bar" style="width:${bar}%"></div></div>
-          <span class="dj-book-count" data-tooltip="${countTip}">${count}</span>
+          <div class="dj-book-bar-wrap"${progDisabled ? ' style="visibility:hidden"' : ''}><div class="dj-book-bar" style="width:${bar}%"></div></div>
+          <span class="dj-book-count"${progDisabled ? ' style="visibility:hidden"' : ''} data-tooltip="${countTip}">${count}</span>
           <span class="dj-book-strokes" data-tooltip="${strokesTip}">${strokes}획</span>
           ${hasDesc ? '<button class="dj-book-expand-btn">▼</button>' : '<span></span>'}
         </div>

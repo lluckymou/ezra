@@ -270,12 +270,19 @@ function _pickWeighted(pool) {
 
 const BASIC_JUNG_SET = new Set(BASIC_JUNG_IDX);
 
+// First 5 jamos every new player sees, in fixed order, before random selection kicks in
+const STARTER_ORDER = ['ㄱ', 'ㄴ', 'ㅇ', 'ㅣ', 'ㅡ'];
+
 export function pickNextChallenge(stats) {
   const jp        = stats.jamoProgress || {};
   const seen      = new Set(stats.seenJamos || []);
   const seenSyl   = new Set(stats.seenSyllables || []);
   const stage     = computeHangulStage(stats);
   const pool      = [];
+
+  // Force foundational jamos first for brand-new players
+  const nextStarter = STARTER_ORDER.find(j => !seen.has(j));
+  if (nextStarter) return nextStarter;
 
   if (stage === 0) {
     for (const j of INTRO_JAMOS) {

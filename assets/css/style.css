@@ -570,6 +570,7 @@ body.phase-title #version-badge { pointer-events: all; }
 .gopts-grid { display: flex; flex-direction: column; gap: 6px; }
 @media (max-height: 500px) {
   .gopts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .gopt-card:has(#chk-dict-prog) { grid-column: 1 / -1; }
 }
 .gopts-grid::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); }
 .gopt-card {
@@ -2238,7 +2239,7 @@ body.touch-mode.book-open #player-area * { pointer-events: none !important; }
 }
 #rotate-content { position: relative; padding-bottom: 28px; z-index: 1; }
 #rotate-bg-art {
-  position: absolute; right: 0; top: 0; height: 100%; width: auto;
+  position: absolute; right: 0; top: 0; bottom: 0; height: 125%; width: auto;
   object-fit: contain; object-position: right center;
   opacity: 0.12; pointer-events: none; user-select: none;
   z-index: 0;
@@ -2354,7 +2355,7 @@ body.touch-mode #map-panel:not(.off) {
    TITLE SCREEN - mobile landscape (max-height: 500px): compact 2-col
 ================================================================ */
 @media (max-height: 500px) {
-  #version-badge { font-size: 1.1rem; font-weight: 800; text-shadow: 0px 0px 3px #ffffff; }
+  #version-badge { font-size: 1.1rem; font-weight: 900; text-shadow: 0px 0px 6px #ffffff; }
   .map-cell-hero svg { width: 1.5rem !important; }
   #btn-play {
     font-size: .8rem !important;
@@ -2922,34 +2923,53 @@ body.touch-mode .test-big-emoji { font-size: 4rem; }
 }
 
 /* ===== LANGUAGE SELECT (inside startup overlay) ===== */
+/* Language selection — standalone full-screen panel, same aesthetic as #fs-overlay */
 #lang-select {
-  display: flex; flex-direction: column; align-items: center; gap: 28px;
+  position: fixed; inset: 0; z-index: 100003;
+  background-color: rgba(92, 58, 30, 0.97);
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+  padding: 0 10vw;
+  font-family: 'Song Myung', 'Nanum Myeongjo', Georgia, serif;
+  color: #f0e0c8;
   opacity: 0; pointer-events: none;
   transition: opacity 0.5s ease;
-  position: absolute;
 }
-#lang-select.startup-hidden { display: none; }
+#lang-select::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background-image: url('../img/paper-grain.svg');
+  background-repeat: repeat; opacity: 0.1; pointer-events: none;
+}
+#lang-select::after {
+  content: ''; position: absolute; right: 0; top: 0;
+  height: 100%; width: 50%;
+  background: url('../img/menu-right.png') right center / cover no-repeat;
+  opacity: 0.1; pointer-events: none;
+}
+#lang-select.off { display: none; }
 #lang-select.visible { opacity: 1; pointer-events: all; }
 #lang-select-title {
-  color: rgba(255,255,255,.7); font-size: 0.95rem;
-  letter-spacing: 0.15em; text-transform: uppercase;
+  color: rgba(240, 224, 200, 0.65); font-size: 1rem;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  margin-bottom: 24px;
   transition: opacity 0.3s ease;
 }
 #lang-select-btns {
-  display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;
+  display: flex; gap: 16px; flex-wrap: wrap;
 }
 .lang-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  width: 120px; height: 120px; padding: 16px 8px;
-  background: transparent; border: 1px solid rgba(255,255,255,.2);
-  border-radius: 4px; cursor: pointer; color: #fff;
-  font-family: inherit; transition: all 0.2s ease;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  width: 112px; height: 112px; padding: 14px 8px;
+  background: rgba(240, 224, 200, 0.07);
+  border: 1px solid rgba(240, 224, 200, 0.22);
+  border-radius: 4px; cursor: pointer; color: #f0e0c8;
+  font-family: 'Song Myung', 'Nanum Myeongjo', serif;
+  transition: background 0.2s, border-color 0.2s;
 }
 .lang-btn:hover {
-  background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.5);
+  background: rgba(240, 224, 200, 0.17); border-color: rgba(240, 224, 200, 0.55);
 }
-.lang-flag { font-size: 2.8rem; line-height: 1; }
-.lang-name { font-size: 0.8rem; opacity: 0.85; letter-spacing: 0.05em; }
+.lang-flag { font-size: 2.6rem; line-height: 1; }
+.lang-name { font-size: 0.8rem; opacity: 0.8; letter-spacing: 0.05em; }
 
 /* ===== DICTIONARY DARK MODE TEXT ===== */
 #book-panel .dict-entry { color: #e8e8f0; margin-bottom: 3px; }
@@ -3297,8 +3317,14 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 /* Expanded states + default: full labels */
 .tab-short { display: none; }
 /* Mobile: my-dict is already full-screen, always show full labels */
-body.touch-mode #my-dict-modal .dict-tab .tab-full { display: inline; }
-body.touch-mode #my-dict-modal .dict-tab .tab-short { display: none; }
+body.touch-mode #book-panel .dict-tab .tab-full { display: inline !important; }
+body.touch-mode #book-panel .dict-tab .tab-short { display: none !important; }
+@media (max-height: 500px) {
+  #book-panel .dict-tab .tab-full,
+  #my-dict-modal .dict-tab .tab-full { display: inline !important; }
+  #book-panel .dict-tab .tab-short,
+  #my-dict-modal .dict-tab .tab-short { display: none !important; }
+}
 #book-panel .dict-tabs        { left: 8px; right: 56px; }
 #my-dict-modal-inner .dict-tabs { left: 8px; right: 78px; }
 #book-panel .dict-tab,

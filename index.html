@@ -27,14 +27,16 @@
 </head>
 <body>
 
+<!-- Language selection panel — shown first on first launch, before fullscreen and lluc.dev -->
+<div id="lang-select" class="off">
+  <div id="lang-select-title" data-i18n="langSelect.title">Choose your language</div>
+  <div id="lang-select-btns"></div>
+</div>
+
 <div id="startup-overlay">
   <div id="startup-inner">
     <img id="startup-logo" src="assets/img/lluc.png" alt="lluc">
     <span id="startup-text"></span>
-  </div>
-  <div id="lang-select" class="startup-hidden">
-    <div id="lang-select-title" data-i18n="langSelect.title">Choose your language</div>
-    <div id="lang-select-btns"></div>
   </div>
 </div>
 

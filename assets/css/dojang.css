@@ -767,8 +767,8 @@ body.mobile-fs #dojang-announce { top: calc(88px + var(--tb-h)); }
 
 /* ── Small screen adjustments ────────────────────────────────── */
 @media (max-height: 600px) {
-  #dojang-player-sprite { width: 60px; height: 60px; order: 1; }
-  #dojang-player-sprite svg { width: 60px; height: 60px; }
-  .dj-player-btn { width: 30px; height: 30px; font-size: .8rem; margin-bottom: 14px; }
+  #dojang-player-sprite { width: 91px; height: 91px; order: 1; }
+  #dojang-player-sprite svg { width: 91px; height: 91px; }
+  .dj-player-btn { width: 36px; height: 36px; font-size: .96rem; margin-bottom: 17px; }
   #dojang-announce { top: 76px; font-size: .75rem; }
 }
