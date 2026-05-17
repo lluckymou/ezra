@@ -3498,3 +3498,50 @@ body.touch-mode #map-panel:not(.off) .mnw-name { color: #3d2800; }
 /* cursor auto-hide after 2s of inactivity in-game */
 body.cursor-hidden,
 body.cursor-hidden * { cursor: none !important; }
+
+/* ══════════════════════════════════════════════════════════════════
+   Minhwa Style — Pintura tradicional coreana nos avatares
+   Filtro SVG #minhwa injetado via assets/js/minhwa.js
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Aplica filtro Minhwa a todos os SVGs de avatar inline */
+#pl-emoji > svg,
+#lore-player-inner > svg,
+#lore-p2-inner > svg,
+#pl-door-ghost > svg,
+#ava-preview > svg,
+#mp-p2-avatar-inner > svg {
+  filter: url(#minhwa);
+}
+
+/* ── Textura Hanji (papel) por cima do avatar via ::after ── */
+
+/* Contexto de isolamento para mix-blend-mode não vazar */
+#ava-preview-wrap {
+  isolation: isolate;
+}
+
+/* Grain para o editor de avatar */
+#ava-preview-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('../img/paper-grain.svg') center / 180px 180px;
+  mix-blend-mode: multiply;
+  opacity: 0.12;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+}
+
+/* Grain sobre o lore inteiro (cobre toda a cena, não só o personagem) */
+#lore-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('../img/paper-grain.svg') center / 180px 180px;
+  mix-blend-mode: overlay;
+  opacity: 0.12;
+  pointer-events: none;
+  z-index: 9999;
+}

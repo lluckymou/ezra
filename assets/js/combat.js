@@ -298,7 +298,7 @@ function genDojangRoomEnemies(cell) {
     else if (edge < 0.5)  { spawnNX = 0.84 + Math.random() * 0.09; spawnNY = 0.13 + Math.random() * 0.18; }
     else if (edge < 0.75) { spawnNX = 0.07 + Math.random() * 0.09; spawnNY = 0.13 + Math.random() * 0.18; }
     else                  { spawnNX = (80 + Math.random() * (G.W - 160)) / G.W; spawnNY = 0.13 + Math.random() * 0.05; }
-    templates.push({ type:'normal', hp:1, maxHp:1, words, wordEmoji: ninja, wordEmojis: [ninja], spawnNX, spawnNY });
+    templates.push({ type:'normal', hp:1, maxHp:1, words, wordEmoji: ninja, wordEmojis: [ninja], spawnNX, spawnNY, wieldIcon: false, special: null });
   }
   cell._templates = templates;
   return templates;
@@ -310,7 +310,7 @@ function genDojangBoss() {
   const shuffled = [...candidates].sort(() => Math.random() - 0.5);
   const words = shuffled.slice(0, 2).map(w => w.text);
   if (!words.length) words.push('도');
-  return [{ type:'boss', hp:2, maxHp:2, words, bossEmoji:'🥷', special:'archer', spdMult:0.40, bossPhase:0 }];
+  return [{ type:'boss', hp:2, maxHp:2, words, bossEmoji:'🥷', special: null, spdMult:0.55, bossPhase:0, wieldIcon: false }];
 }
 const INSTRUMENTS       = ['🎤','🎹','🥁','🪘','🪇','🎷','🎺','🪗','🎸','🎻'];
 const NOTES             = ['🎶','🎵','🎼'];
@@ -1131,8 +1131,9 @@ export function hitMonster(m) {
     const nextDef = WORD_DICT.find(d => d.text === m.words[m.wi]);
     if (nextDef) {
       m.emoji = nextDef.emoji;
-      // Update wieldIcon to match secondaryEmoji of new word (if available)
-      m.wieldIcon = nextDef.secondaryEmoji || null;
+      if (m.wieldIcon !== false) {
+        m.wieldIcon = nextDef.secondaryEmoji || null;
+      }
     }
     m.shapeshift = { t: 0, dur: 0.75, from: oldEmoji };
     m.scl = 1.3;

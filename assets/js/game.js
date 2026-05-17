@@ -407,6 +407,8 @@ const _FEMALE_HAIRS = new Set([
 ]);
 // Hairs that are so feminine a male character simply cannot have them
 const _MALE_FORBIDDEN_HAIRS = new Set(['frida']);
+// Ethnic/cultural tops that are rare in random generation (1 ticket vs 3 for regular)
+const _RARE_TOPS = new Set(['turban', 'hijab']);
 // Hairs that clash with facial hair (too feminine to combine)
 const _BEARD_FORBIDDEN_HAIRS = new Set([
   'bob','curvy','longButNotTooLong','miaWallace','straight01','hijab',
@@ -424,15 +426,12 @@ function _avaRandomize() {
   let facialHair;
   if (isMale) {
     if (Math.random() < 0.5) {
-      // beards weight 2, moustaches weight 1
-      const fhWeighted = [
-        'beardLight','beardLight',
-        'beardMagestic','beardMagestic',
-        'beardMedium','beardMedium',
-        'moustaceFancy',
-        'moustacheMagnum',
-      ];
-      facialHair = pick(fhWeighted);
+      // moustaches are very rare (~6% of facial-hair rolls); beards fill the rest
+      if (Math.random() < 0.06) {
+        facialHair = Math.random() < 0.5 ? 'moustaceFancy' : 'moustacheMagnum';
+      } else {
+        facialHair = pick(['beardLight','beardLight','beardMagestic','beardMagestic','beardMedium','beardMedium']);
+      }
     } else {
       facialHair = 'none';
     }
@@ -450,7 +449,7 @@ function _avaRandomize() {
   } else {
     hairPool = allTops.filter(h => !_MALE_FORBIDDEN_HAIRS.has(h));
   }
-  const top = pick(hairPool);
+  const top = pick(hairPool.flatMap(h => _RARE_TOPS.has(h) ? [h] : [h, h, h]));
 
   // moustaceFancy forbidden on feminine hairs - reroll to none if needed
   if (facialHair === 'moustaceFancy' && _FEMALE_HAIRS.has(top)) facialHair = 'none';
@@ -461,9 +460,13 @@ function _avaRandomize() {
   // 5. Skin - 25% light, 25% brown, 50% spread across 5 rarer tones
   let skin;
   const sr = Math.random();
-  if (sr < 0.25)      skin = 'light';
-  else if (sr < 0.50) skin = 'brown';
-  else                skin = pick(['tanned','yellow','pale','darkBrown','black']);
+  if      (sr < 0.28) skin = 'light';
+  else if (sr < 0.53) skin = 'brown';
+  else if (sr < 0.68) skin = 'pale';
+  else if (sr < 0.83) skin = 'yellow';
+  else if (sr < 0.91) skin = 'tanned';
+  else if (sr < 0.96) skin = 'darkBrown';
+  else                skin = 'black';
 
   // 6. Hair color - 33% black, rest equal; pink only for feminine combos and 2× rarer
   //    dreads (short 1, short 2, long) cannot be pink
@@ -5224,7 +5227,7 @@ function updateDoorButtons() {
     if (!canGo) { btn.style.display = 'none'; continue; }
 
     const d = DOOR_SCREEN[dir];
-    btn.style.display = G.clickableDoors ? 'block' : 'none';
+    btn.style.display = (G.clickableDoors || adj?.visited) ? 'block' : 'none';
     btn.style.left   = d.x1 + 'px';
     btn.style.top    = d.y1 + 'px';
     btn.style.width  = (d.x2 - d.x1) + 'px';
