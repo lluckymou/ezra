@@ -129,7 +129,8 @@
   "misc": {
     "confirmReset": "모든 진행 상황을 초기화할까요?",
     "confirmResetConfirm": "정말요? 다시 클릭하면 확인됩니다.",
-    "fullscreenPrompt": "EZRA 타자는 모바일에서 전체 화면으로 플레이됩니다. 위를 탭하여 전체 화면으로 전환하세요."
+    "fullscreenPrompt": "EZRA 타자는 모바일에서 전체 화면으로 플레이됩니다. 위를 탭하여 전체 화면으로 전환하세요.",
+    "audioUnlock": "아무 곳이나 클릭하여 시작하세요 — 브라우저 정책으로 일부 기능을 활성화하려면 클릭이 필요합니다."
   },
   "number": {
     "sino": "한자어",
@@ -912,7 +913,23 @@
     "phase2": "2단계 · 복합 자모",
     "phaseCV": "3단계 · CV 음절",
     "phase3": "4단계 · 받침",
-    "phase4": "5단계 · 단어"
+    "phase4": "5단계 · 단어",
+    "cheat": {
+      "title": "⚡ 치트 메뉴",
+      "skipChallenge": "⏭ 도전 건너뛰기",
+      "skipStage": "⏩ 단계 건너뛰기",
+      "setProgress": "진행도 설정",
+      "ghost": "고스트",
+      "ghostAuto": "자동",
+      "ghostAlways": "항상",
+      "ghostNever": "안 보임",
+      "drawMode": "✏️ 그리기 모드",
+      "reset": "🗑 진행도 초기화",
+      "skipped": "건너뜀",
+      "maxStage": "이미 최고 단계입니다",
+      "stageUnlocked": "{n}단계 해금",
+      "progressSet": "진행도: {n}%"
+    }
   },
   "multiplayer": {
     "btnCoop": "협동 모험",

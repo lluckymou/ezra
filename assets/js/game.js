@@ -611,6 +611,12 @@ const _isPWA = window.matchMedia?.('(display-mode: fullscreen)').matches === tru
             || window.matchMedia?.('(display-mode: standalone)').matches === true
             || navigator.standalone === true;
 
+// True only when the OS is already hiding the status bar — no fs-overlay needed.
+// display-mode:fullscreen  → manifest fullscreen mode is active (Android, status bar gone)
+// navigator.standalone     → iOS PWA; requestFullscreen() is unsupported, overlay is useless
+const _skipFsForPWA = window.matchMedia?.('(display-mode: fullscreen)').matches === true
+                    || navigator.standalone === true;
+
 
 /* ================================================================
    STARTUP MODALS  (donate + TTS warning)
@@ -762,8 +768,8 @@ function runStartupAnimation(onPrepare, onDone) {
     const _lc = parseInt(localStorage.getItem('krr_launchCount') || '0') + 1;
     localStorage.setItem('krr_launchCount', String(_lc));
     // On mobile without fullscreen: hide everything until fullscreen is entered
-    // Skip if already running as PWA (standalone mode is already fullscreen)
-    const needsFs = !_isPWA && window.innerHeight < 500 && !(document.fullscreenElement || document.webkitFullscreenElement);
+    // Skip if already in a truly-fullscreen context (manifest fullscreen mode or iOS PWA)
+    const needsFs = !_skipFsForPWA && window.innerHeight < 500 && !(document.fullscreenElement || document.webkitFullscreenElement);
     const _gameEls = needsFs
       ? ['scr-title','gc','wx-canvas','dn-canvas'].map(id => document.getElementById(id)).filter(Boolean)
       : [];
@@ -829,6 +835,9 @@ export function init() {
 
   // Load languages first, then run startup animation so lang-select callback can apply immediately
   loadLanguages().then(() => {
+    // Apply saved language immediately so i18n() works in startup overlays
+    const _earlyLang = localStorage.getItem('krr_lang');
+    if (_earlyLang) setLanguage(_earlyLang);
     // Wake up voices to prevent activation warning
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.getVoices();
     buildLangSelector(); // rebuild dropdown from available langs
@@ -850,10 +859,14 @@ export function init() {
     // Sequence: [rotate →] lang select (first launch only) → fullscreen (mobile) → lluc.dev
     function _startupSequence() {
       function startAnim() {
-        const needsFs = !_isPWA && window.innerHeight < 500
-          && !(document.fullscreenElement || document.webkitFullscreenElement);
+        const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        const needsFs = !_skipFsForPWA && window.innerHeight < 500 && !inFs;
+        const needsDesktopUnlock = !_isPWA && window.innerHeight >= 500
+          && parseInt(localStorage.getItem('krr_launchCount') || '0') >= 1;
         if (needsFs) {
           window._showFsOverlay?.(() => runStartupAnimation(startupPrepare, _checkStartupModals));
+        } else if (needsDesktopUnlock) {
+          window._showDesktopUnlockOverlay?.(() => runStartupAnimation(startupPrepare, _checkStartupModals));
         } else {
           runStartupAnimation(startupPrepare, _checkStartupModals);
         }
@@ -911,12 +924,29 @@ export function init() {
     if (promptEl) promptEl.textContent = '';
   };
 
+  window._showDesktopUnlockOverlay = function(cb) {
+    const overlay = document.getElementById('fs-overlay');
+    const prompt  = document.getElementById('fs-prompt');
+    if (!overlay) { cb?.(); return; }
+    if (prompt) prompt.textContent = i18n('misc.audioUnlock');
+    overlay.classList.add('desktop-mode');
+    overlay.classList.remove('off');
+    function onClick() {
+      overlay.removeEventListener('click', onClick);
+      overlay.classList.remove('desktop-mode');
+      overlay.classList.add('off');
+      if (prompt) prompt.textContent = '';
+      cb?.();
+    }
+    overlay.addEventListener('click', onClick);
+  };
+
   window._showFsOverlay = function(cb) {
     _fsOverlayCallback = cb || null;
     _syncMobileFs(); // let _syncMobileFs decide visibility based on current state
-    // Call cb immediately if fullscreen is not needed (large screen, PWA, or already in fullscreen)
+    // Call cb immediately if fullscreen is not needed (large screen, already fullscreen, or iOS/manifest-fs PWA)
     const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-    if (window.innerHeight >= 500 || inFs || _isPWA) {
+    if (window.innerHeight >= 500 || inFs || _skipFsForPWA) {
       const c = _fsOverlayCallback; _fsOverlayCallback = null; c?.(); return;
     }
     _startFsPromptCycle();
@@ -4601,16 +4631,18 @@ function applyTouchMode() {
 
 // Sync body.mobile-fs class and fs-overlay visibility
 function _syncMobileFs() {
+  // Don't interfere while the desktop audio-unlock overlay is active
+  if (document.getElementById('fs-overlay')?.classList.contains('desktop-mode')) return;
   const isMobile = window.innerHeight < 500;
   const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-  // PWA (standalone) is always considered fullscreen — no overlay needed
-  const effectivelyFullscreen = inFs || _isPWA;
+  // Truly fullscreen: JS fullscreen API active, or manifest-fs/iOS PWA
+  const effectivelyFullscreen = inFs || _skipFsForPWA;
   document.body.classList.toggle('mobile-fs', isMobile && effectivelyFullscreen);
   const fsOverlay = document.getElementById('fs-overlay');
   const fsBtn = document.getElementById('fs-btn');
   if (!fsOverlay) return;
-  if (!isMobile || _isPWA) {
-    // Screen large enough or running as PWA: hide overlay unconditionally
+  if (!isMobile || _skipFsForPWA) {
+    // Screen large enough or already truly fullscreen: hide overlay unconditionally
     fsOverlay.classList.add('off');
     _stopFsPromptCycle();
     fsBtn?.classList.remove('glow');

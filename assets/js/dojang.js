@@ -5,8 +5,8 @@
 import { G } from './state.js';
 import {
   JAMO_STROKES, JAMO_INFO, JAMO_HAS_BATCHIM, PHASE1_JAMOS, DOJANG_BOOK_ORDER,
-  INTRO_JAMOS, MAX_JAMO_COUNT, BATCHIM_UNLOCK_COUNT, WORDS_UNLOCK_PCT,
-  ALL_CV_SYLLABLES, COMPLEX_SYLLABLES,
+  INTRO_JAMOS, EXTRA_JAMOS, MAX_JAMO_COUNT, BATCHIM_UNLOCK_COUNT, WORDS_UNLOCK_PCT,
+  ALL_CV_SYLLABLES, ALL_CVC_SYLLABLES, COMPLEX_SYLLABLES,
   syllableToJamos, computeHangulStage, pickNextChallenge,
 } from '../data/dojang-data.js';
 import { WORD_DICT } from '../data/words.js';
@@ -38,8 +38,9 @@ export function loadDojangStats() {
     if (raw) {
       const s = JSON.parse(raw);
       // Migrate old saves that lack new fields
-      if (!Array.isArray(s.seenJamos))     s.seenJamos = [];
-      if (!Array.isArray(s.seenSyllables)) s.seenSyllables = [];
+      if (!Array.isArray(s.seenJamos))            s.seenJamos = [];
+      if (!Array.isArray(s.seenSyllables))        s.seenSyllables = [];
+      if (!Array.isArray(s.seenBatchimSyllables)) s.seenBatchimSyllables = [];
       return s;
     }
   } catch (e) { /* ignore */ }
@@ -54,8 +55,9 @@ function saveDojangStats(stats) {
 function freshStats() {
   return {
     jamoProgress: {},
-    seenJamos: [],      // jamos successfully completed at least once
-    seenSyllables: [],  // CV syllables (no batchim) completed at least once
+    seenJamos: [],             // jamos successfully completed at least once
+    seenSyllables: [],         // CV syllables (no batchim) completed at least once
+    seenBatchimSyllables: [],  // CVC syllables (simple batchim) completed at least once
     firstDate: new Date().toISOString().slice(0, 10),
     lastDate:  new Date().toISOString().slice(0, 10),
   };
@@ -207,6 +209,9 @@ export class DojangManager {
     this._poolR         = 0;    // current ink-pool radius (grows when stationary)
     // Idle tracking for hint blinks
     this._idleStart     = performance.now(); // reset on every stroke end / challenge start
+    // Dev cheat state
+    this._cheat           = { ghostMode: 'auto', drawMode: false };
+    this._restartTapCount = 0;
     // Callbacks set by game.js
     this.onStartAdventure = null;
     this.onExitToMenu     = null;
@@ -247,6 +252,10 @@ export class DojangManager {
     this.paused = false;
     this.bookOpen = false;
     this.inspectorOpen = false;
+    if (this._keyHandler) {
+      document.removeEventListener('keydown', this._keyHandler);
+      this._keyHandler = null;
+    }
   }
 
   // ── RAF Loop ─────────────────────────────────────────────
@@ -263,12 +272,17 @@ export class DojangManager {
         this._nextChallenge();
       }
     }
-    // Auto-open inspector: 10 cumulative errors OR 10s idle (not drawing, challenge active)
+    // Auto-open inspector: 10 errors OR 15s idle — disabled above 50% progress
     if (this.challenge && !this.drawing && !this.inspectorOpen) {
-      const idleMs = performance.now() - (this._idleStart ?? 0);
-      if (this._totalErrors >= 10 || idleMs >= 10000) {
-        this._totalErrors = 0;
-        this.openInspector();
+      const jp2 = this.stats.jamoProgress || {};
+      const _pct01 = PHASE1_JAMOS.reduce((s, j) => s + (jp2[j]?.count || 0), 0)
+                   / (PHASE1_JAMOS.length * MAX_JAMO_COUNT);
+      if (_pct01 < 0.50) {
+        const idleMs = performance.now() - (this._idleStart ?? 0);
+        if (this._totalErrors >= 10 || idleMs >= 15000) {
+          this._totalErrors = 0;
+          this.openInspector();
+        }
       }
     }
     // Ink pooling: when held stationary, grow a dot at the cursor position
@@ -326,28 +340,53 @@ export class DojangManager {
     // ── Ghost guide character ─────────────────────────────
     const stage = computeHangulStage(this.stats);
     const { jamos, jamoIdx } = this.challenge;
-    // Stage 0/1: show current individual jamo; stage 2+: show full syllable
+    // Stage 0/1: show current jamo; words: show full word; stage 2+: show current syllable
     const ghostChar = (stage <= 1 && jamoIdx < jamos.length)
       ? jamos[jamoIdx]
-      : this.challenge.char;
+      : (this.challenge.word ?? this.challenge.char);
 
-    const _idleMs    = performance.now() - (this._idleStart ?? 0);
+    const _cheatOpen  = !!document.getElementById('dojang-cheat-menu');
+    const _idleMs    = _cheatOpen ? 0 : performance.now() - (this._idleStart ?? 0);
     const _noStroke  = (this.challenge?.globalStrokeIdx ?? 0) === 0;
     const _blinkGhost = _idleMs > 3000 && !this.drawing && _noStroke;
     const _blinkBox   = _idleMs > 5000 && !this.drawing;
     const _blinkWave  = t => 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
-    // Pulse downward only: from 0.07 toward 0 and back, slow period (~3s)
-    const ghostAlpha  = _blinkGhost
-      ? 0.07 * (0.15 + 0.85 * _blinkWave(performance.now() / 3000))
-      : 0.07;
-    ctx.save();
-    ctx.globalAlpha = ghostAlpha;
-    ctx.fillStyle  = '#333333';
-    ctx.font = `bold ${size}px "Nanum Myeongjo", "SongMyung", serif`;
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(ghostChar, cx, cy);
-    ctx.restore();
+
+    // Ghost visibility fades from 10% → 15% global progress, then gone at rest
+    const jp = this.stats.jamoProgress || {};
+    const _globalPct01 = PHASE1_JAMOS.reduce((s, j) => s + (jp[j]?.count || 0), 0)
+                       / (PHASE1_JAMOS.length * MAX_JAMO_COUNT);
+    let ghostVis = _globalPct01 < 0.10 ? 1.0
+                 : _globalPct01 < 0.15 ? 1 - (_globalPct01 - 0.10) / 0.05
+                 : 0.0;
+    if (this._cheat.ghostMode === 'show') ghostVis = 1.0;
+    if (this._cheat.ghostMode === 'hide') ghostVis = 0.0;
+
+    // Hint ghost: above 15%, reappear pulsing after 10s idle to show what to write
+    const _hintGhost = ghostVis === 0
+      && this._cheat.ghostMode !== 'hide'
+      && _idleMs > 10000 && !this.drawing && _noStroke;
+
+    if (ghostVis > 0 || _hintGhost) {
+      let ghostAlpha;
+      if (_hintGhost) {
+        // Pulse from 0 → 0.10 → 0, period ~2.5s, brighter than rest ghost
+        ghostAlpha = 0.10 * _blinkWave(performance.now() / 2500);
+      } else {
+        // Normal: fixed 0.07, slow pulse downward when idle
+        ghostAlpha = (_blinkGhost
+          ? 0.07 * (0.15 + 0.85 * _blinkWave(performance.now() / 3000))
+          : 0.07) * ghostVis;
+      }
+      ctx.save();
+      ctx.globalAlpha = ghostAlpha;
+      ctx.fillStyle  = '#333333';
+      ctx.font = `bold ${size}px "Nanum Myeongjo", "SongMyung", serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ghostChar, cx, cy);
+      ctx.restore();
+    }
 
     // ── Flash overlay ─────────────────────────────────────
     if (this.flash) {
@@ -500,7 +539,7 @@ export class DojangManager {
       if (stage <= 1) {
         msg = i18n('dojang.drawJamo').replace('{j}', curJamo);
       } else {
-        msg = i18n('dojang.drawSyllable').replace('{s}', this.challenge.char).replace('{j}', curJamo);
+        msg = i18n('dojang.drawSyllable').replace('{s}', this.challenge.word ?? this.challenge.char).replace('{j}', curJamo);
       }
       ctx.fillText(msg, W / 2, instrY);
     }
@@ -537,6 +576,7 @@ export class DojangManager {
       ctx.font = `${sz}px "Nanum Myeongjo", "SongMyung", serif`;
       ctx.fillStyle = 'rgba(60,45,30,0.55)';
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillText(`${curJamo}ㅤ(${info.name})ㅤ·ㅤ${info.rom}`, W / 2, isMob ? mobLabelY : H * 0.22);
     }
 
@@ -577,9 +617,35 @@ export class DojangManager {
     el.addEventListener('touchstart', down, { passive: false });
     el.addEventListener('touchmove',  move, { passive: false });
     el.addEventListener('touchend',   up,   { passive: false });
+
+    // Click-outside to close book / inspector
+    const bookBackdrop = document.getElementById('dojang-book-modal');
+    if (bookBackdrop) {
+      bookBackdrop.addEventListener('mousedown', (e) => {
+        if (this.bookOpen && e.target === bookBackdrop) this.closeBook();
+      });
+    }
+    const inspBackdrop = document.getElementById('dojang-inspector-modal');
+    if (inspBackdrop) {
+      inspBackdrop.addEventListener('mousedown', (e) => {
+        if (this.inspectorOpen && e.target === inspBackdrop) this.closeInspector();
+      });
+    }
+
+    // ESC: close modals in priority order, or open pause
+    this._keyHandler = (e) => {
+      if (!document.body.classList.contains('phase-dojang') || e.key !== 'Escape') return;
+      const cheatMenu = document.getElementById('dojang-cheat-menu');
+      if (cheatMenu) { cheatMenu.remove(); this._idleStart = performance.now(); return; }
+      if (this.bookOpen)      { this.closeBook();      return; }
+      if (this.inspectorOpen) { this.closeInspector(); return; }
+      this.togglePause(); // opens if closed, closes if open
+    };
+    document.addEventListener('keydown', this._keyHandler);
   }
 
   _startStroke(x, y) {
+    this._restartTapCount = 0; // any drawn stroke resets cheat counter
     this.drawing = true;
     this.points  = [{ x, y }];
     this.lastPt  = { x, y };
@@ -658,8 +724,26 @@ export class DojangManager {
     const pts = this.points;
     if (pts.length < 2) { this._onError(); return; }
 
+    // Draw mode: accept any stroke that meets minimum length
+    if (this._cheat.drawMode) {
+      const len = pts.reduce((acc, p, i) => i === 0 ? 0 : acc + Math.hypot(p.x - pts[i-1].x, p.y - pts[i-1].y), 0);
+      if (len >= MIN_STROKE_LEN) { this._onStrokeOk(); return; }
+    }
+
     // Proximity check: strokes within a jamo must be drawn near each other
     if (!this._isNearExisting(pts)) { this._onError(); return; }
+
+    // Multi-syllable word: first stroke of each new syllable must start to the RIGHT
+    // of the rightmost point of all completed strokes (enforces left-to-right writing order).
+    {
+      const cb = this.challenge.charBoundaries;
+      const { jamoIdx: ji, strokeIdx: si, completedPaths: cp } = this.challenge;
+      if (cb && cb.length > 1 && si === 0 && cb.slice(1).includes(ji) && cp.length > 0) {
+        let maxCompX = 0;
+        for (const { pts: rp } of cp) for (const p of rp) { if (p.x > maxCompX) maxCompX = p.x; }
+        if (pts[0].x < maxCompX - 15) { this._onError(); return; }
+      }
+    }
 
     const start = pts[0];
     const end   = pts[pts.length - 1];
@@ -827,6 +911,10 @@ export class DojangManager {
 
     // First stroke of the very first jamo: no constraint
     if (jamoIdx === 0 && strokeIdx === 0) return true;
+
+    // First stroke of a new syllable in a multi-syllable word: handled separately (right-of check)
+    const _cb = this.challenge.charBoundaries;
+    if (_cb && strokeIdx === 0 && _cb.length > 1 && _cb.slice(1).includes(jamoIdx)) return true;
 
     // No completed strokes yet (shouldn't happen after the above guard, but be safe)
     if (completedPaths.length === 0) return true;
@@ -1016,6 +1104,15 @@ export class DojangManager {
 
     this.challenge.jamoIdx++;
 
+    // For multi-syllable challenges, keep challenge.char pointing at current syllable
+    if (this.challenge.charBoundaries && this.challenge.chars) {
+      let ci = 0;
+      for (let k = this.challenge.charBoundaries.length - 1; k >= 0; k--) {
+        if (this.challenge.charBoundaries[k] <= this.challenge.jamoIdx) { ci = k; break; }
+      }
+      this.challenge.char = this.challenge.chars[Math.min(ci, this.challenge.chars.length - 1)];
+    }
+
     if (this.challenge.jamoIdx >= jamos.length) {
       this._onChallengeComplete();
     } else {
@@ -1027,13 +1124,27 @@ export class DojangManager {
   _onChallengeComplete() {
     const { char, jamos } = this.challenge;
 
-    // Track CV syllables (cho + jung only) for stage 2 unlock
-    if (jamos.length === 2) {
-      const stageBefore = computeHangulStage(this.stats);
-      if (!this.stats.seenSyllables.includes(char)) this.stats.seenSyllables.push(char);
-      const stageAfter = computeHangulStage(this.stats);
-      if (stageAfter > stageBefore) this._announceStageUp(stageAfter);
+    const stageBefore = computeHangulStage(this.stats);
+    let didTrack = false;
+
+    // Track CV syllables (cho + jung only) for stage 2→3 unlock
+    if (jamos.length === 2 && !this.stats.seenSyllables.includes(char)) {
+      this.stats.seenSyllables.push(char);
+      didTrack = true;
     }
+
+    // Track CVC syllables (cho + jung + jong) for stage 3→4 unlock
+    if (jamos.length === 3 && !this.stats.seenBatchimSyllables.includes(char)) {
+      this.stats.seenBatchimSyllables.push(char);
+      didTrack = true;
+    }
+
+    const stageAfter = computeHangulStage(this.stats);
+    if (stageAfter > stageBefore) {
+      this._announceStageUp(stageAfter);
+      this._syncHUD();
+    }
+    if (didTrack) saveDojangStats(this.stats);
 
     this.flash = { type: 'ok', t: 0, dur: 0.4 };
     this.nextDelay = 0.55;
@@ -1045,6 +1156,7 @@ export class DojangManager {
       1: i18n('dojang.phaseUp2'),
       2: i18n('dojang.phaseUpCV'),
       3: i18n('dojang.phaseUp3'),
+      4: i18n('dojang.phaseUp4'),
     };
     if (msgs[newStage]) this._announce(msgs[newStage]);
   }
@@ -1072,6 +1184,7 @@ export class DojangManager {
       this.challenge.strokeIdx = 0;
       this.challenge.globalStrokeIdx = 0;
       this.challenge.completedPaths  = [];
+      this.challenge.char = this.challenge.chars?.[0] ?? this.challenge.char;
       this._clearStrokes();
       this._announce(i18n('dojang.resetJamo'));
       this._updateRestartBtn();
@@ -1143,45 +1256,93 @@ export class DojangManager {
     const wordsUnlocked = globalPct >= WORDS_UNLOCK_PCT;
 
     const lastChar = this.challenge?.char ?? null;
+    const stage = computeHangulStage(this.stats);
     let char;
     let attempts = 0;
     do {
-      const rnd = Math.random();
-      if (wordsUnlocked && rnd < 0.05) {
-        // 5% chance: complex syllable
-        char = COMPLEX_SYLLABLES[Math.floor(Math.random() * COMPLEX_SYLLABLES.length)];
-      } else if (wordsUnlocked && rnd < 0.15) {
-        // 10% chance: word from dictionary
-        const entry = WORD_DICT[Math.floor(Math.random() * Math.min(WORD_DICT.length, 300))];
-        char = entry.text[0];
+      if (stage === 4) {
+        // Stage 5 (Words): full multi-syllable words, some syllable review
+        const rnd = Math.random();
+        if (rnd < 0.70) {
+          // 70%: full word from dictionary
+          char = WORD_DICT[Math.floor(Math.random() * WORD_DICT.length)].text;
+        } else if (rnd < 0.85) {
+          // 15%: CVC syllable review
+          char = ALL_CVC_SYLLABLES[Math.floor(Math.random() * ALL_CVC_SYLLABLES.length)];
+        } else if (rnd < 0.95) {
+          // 10%: CV syllable review
+          char = ALL_CV_SYLLABLES[Math.floor(Math.random() * ALL_CV_SYLLABLES.length)];
+        } else {
+          // 5%: complex syllable
+          char = COMPLEX_SYLLABLES[Math.floor(Math.random() * COMPLEX_SYLLABLES.length)];
+        }
       } else {
-        char = pickNextChallenge(this.stats);
+        const rnd = Math.random();
+        if (wordsUnlocked && rnd < 0.05) {
+          // 5% chance: complex syllable
+          char = COMPLEX_SYLLABLES[Math.floor(Math.random() * COMPLEX_SYLLABLES.length)];
+        } else if (wordsUnlocked && rnd < 0.15) {
+          // 10% chance: word from dictionary
+          const entry = WORD_DICT[Math.floor(Math.random() * Math.min(WORD_DICT.length, 300))];
+          char = entry.text[0];
+        } else {
+          char = pickNextChallenge(this.stats);
+        }
       }
+      // pickNextChallenge can return __words__ only for stage 4, handled above
+      if (char === '__words__') char = WORD_DICT[Math.floor(Math.random() * WORD_DICT.length)].text;
       attempts++;
-    } while (char === lastChar && attempts < 5);
+    } while (char === (this.challenge?.word ?? this.challenge?.char) && attempts < 5);
 
-    const jamos = syllableToJamos(char);
-    const totalStrokes = jamos.reduce((sum, j) => sum + (JAMO_STROKES[j]?.length || 0), 0);
-    this.challenge = {
-      char,
-      jamos,
-      jamoIdx: 0,
-      strokeIdx: 0,
+    this.challenge = this._buildChallenge(char);
+    this._speakText(this.challenge.word ?? this.challenge.char);
+    this._updateRestartBtn();
+  }
+
+  _buildChallenge(text) {
+    const chars = [...text]; // one element per Korean syllable (spread handles astral chars too)
+    const allJamos = chars.flatMap(c => syllableToJamos(c));
+    // charBoundaries[i] = jamo index where chars[i] starts
+    const charBoundaries = [];
+    let idx = 0;
+    for (const c of chars) {
+      charBoundaries.push(idx);
+      idx += syllableToJamos(c).length;
+    }
+    const totalStrokes = allJamos.reduce((sum, j) => sum + (JAMO_STROKES[j]?.length || 0), 0);
+    return {
+      word:            chars.length > 1 ? text : null,
+      chars,
+      charBoundaries,
+      char:            chars[0],  // current syllable being drawn (updates as you progress)
+      jamos:           allJamos,
+      jamoIdx:         0,
+      strokeIdx:       0,
       totalStrokes,
       globalStrokeIdx: 0,
-      completedPaths: [],
+      completedPaths:  [],
     };
-    this._speakText(char);
-    this._updateRestartBtn();
   }
 
   // Restart current character from the beginning (bound to ❌ button)
   restartChallenge() {
     if (!this.challenge) return;
+    const hadProgress = this.challenge.globalStrokeIdx > 0;
+    if (!hadProgress) {
+      this._restartTapCount++;
+      if (this._restartTapCount >= 5) {
+        this._restartTapCount = 0;
+        this._openCheatMenu();
+        return;
+      }
+    } else {
+      this._restartTapCount = 0;
+    }
     this.challenge.jamoIdx = 0;
     this.challenge.strokeIdx = 0;
     this.challenge.globalStrokeIdx = 0;
     this.challenge.completedPaths = [];
+    this.challenge.char = this.challenge.chars?.[0] ?? this.challenge.char;
     this.errors = 0;
     this._clearStrokes();
     this._updateRestartBtn();
@@ -1237,8 +1398,13 @@ export class DojangManager {
     }
     const phaseEl = document.getElementById('dojang-phase-label');
     if (phaseEl) {
-      const stageLabels = ['phase1','phase2','phaseCV','phase3','phase4'];
-      phaseEl.textContent = i18n(`dojang.${stageLabels[Math.min(stage, 4)] || 'phase4'}`);
+      const isMastered = PHASE1_JAMOS.every(j => (jp[j]?.count || 0) >= MAX_JAMO_COUNT);
+      if (isMastered) {
+        phaseEl.textContent = i18n('dojang.masterTitle');
+      } else {
+        const stageLabels = ['phase1','phase2','phaseCV','phase3','phase4'];
+        phaseEl.textContent = i18n(`dojang.${stageLabels[Math.min(stage, 4)] || 'phase4'}`);
+      }
     }
 
     // Speak button: show muted icon when TTS is unavailable
@@ -1246,6 +1412,7 @@ export class DojangManager {
     if (speakBtn) {
       const canSpeak = G.ttsEnabled && typeof speechSynthesis !== 'undefined';
       speakBtn.textContent = canSpeak ? '🔊' : '🔇';
+      speakBtn.style.opacity = canSpeak ? '' : '0.4';
     }
 
     this._updateRestartBtn();
@@ -1256,6 +1423,155 @@ export class DojangManager {
     if (!btn) return;
     const hasProgress = this.challenge && this.challenge.globalStrokeIdx > 0;
     btn.style.opacity = hasProgress ? '1' : '0.4';
+  }
+
+  // ── Dev cheat menu ────────────────────────────────────────
+  _openCheatMenu() {
+    if (document.getElementById('dojang-cheat-menu')) return;
+    const panel = document.createElement('div');
+    panel.id = 'dojang-cheat-menu';
+    const gm = this._cheat.ghostMode;
+    const dm = this._cheat.drawMode;
+    panel.innerHTML = `
+      <div id="djc-box">
+        <div class="djc-title">${i18n('dojang.cheat.title')}</div>
+        <div class="djc-row">
+          <button id="djc-skip-phase">${i18n('dojang.cheat.skipChallenge')}</button>
+          <button id="djc-skip-stage">${i18n('dojang.cheat.skipStage')}</button>
+        </div>
+        <div class="djc-row">
+          <input id="djc-prog-input" type="number" min="0" max="100" value="50">%
+          <button id="djc-set-prog" style="margin-left: auto">${i18n('dojang.cheat.setProgress')}</button>
+        </div>
+        <div class="djc-row">
+          <span style="margin-right: auto">${i18n('dojang.cheat.ghost')}:</span>
+          <button class="djc-ghost-btn${gm==='auto'?' djc-active':''}" data-ghost="auto">${i18n('dojang.cheat.ghostAuto')}</button>
+          <button class="djc-ghost-btn${gm==='show'?' djc-active':''}" data-ghost="show">${i18n('dojang.cheat.ghostAlways')}</button>
+          <button class="djc-ghost-btn${gm==='hide'?' djc-active':''}" data-ghost="hide">${i18n('dojang.cheat.ghostNever')}</button>
+        </div>
+        <div class="djc-row">
+          <button id="djc-draw-mode" style="width: 100%" class="${dm?'djc-active':''}">${i18n('dojang.cheat.drawMode')}: ${dm?'ON':'OFF'}</button>
+        </div>
+        <div class="djc-row">
+          <button id="djc-reset" style="width: 100%" class="djc-danger">${i18n('dojang.cheat.reset')}</button>
+        </div>
+        <button id="djc-close" class="djc-close">✕</button>
+      </div>
+    `;
+    (document.getElementById('scr-dojang') || document.body).appendChild(panel);
+
+    const _closeCheat = () => { panel.remove(); this._idleStart = performance.now(); };
+    panel.querySelector('#djc-close').addEventListener('click', _closeCheat);
+    panel.addEventListener('mousedown', (e) => { if (e.target === panel) _closeCheat(); });
+
+    panel.querySelector('#djc-skip-phase').addEventListener('click', () => {
+      // Mark current jamos as seen so STARTER_ORDER advances to the next one
+      if (this.challenge) {
+        this.challenge.jamos.forEach(j => {
+          if (!this.stats.seenJamos.includes(j)) this.stats.seenJamos.push(j);
+        });
+      }
+      this._nextChallenge();
+      this._announce(i18n('dojang.cheat.skipped'));
+    });
+
+    panel.querySelector('#djc-skip-stage').addEventListener('click', () => {
+      const stage = computeHangulStage(this.stats);
+      if (!this.stats.jamoProgress) this.stats.jamoProgress = {};
+      // Entry counts scale with stage: more practice expected to reach each stage
+      // stage 0→1: ~5% per jamo, stage 1→2: ~15%, stage 2→3: ~40%
+      const entryCounts = [
+        Math.round(MAX_JAMO_COUNT * 0.05),  // stage 0→1
+        Math.round(MAX_JAMO_COUNT * 0.15),  // stage 1→2
+        Math.round(MAX_JAMO_COUNT * 0.40),  // stage 2→3
+      ];
+      const count = entryCounts[stage] ?? null;
+      if (stage === 0) {
+        INTRO_JAMOS.forEach(j => {
+          if (!this.stats.seenJamos.includes(j)) this.stats.seenJamos.push(j);
+          this.stats.jamoProgress[j] = { count: Math.max(this.stats.jamoProgress[j]?.count || 0, count) };
+        });
+      } else if (stage === 1) {
+        PHASE1_JAMOS.forEach(j => {
+          if (!this.stats.seenJamos.includes(j)) this.stats.seenJamos.push(j);
+          this.stats.jamoProgress[j] = { count: Math.max(this.stats.jamoProgress[j]?.count || 0, count) };
+        });
+      } else if (stage === 2) {
+        ALL_CV_SYLLABLES.forEach(s => { if (!this.stats.seenSyllables.includes(s)) this.stats.seenSyllables.push(s); });
+        PHASE1_JAMOS.forEach(j => {
+          this.stats.jamoProgress[j] = { count: Math.max(this.stats.jamoProgress[j]?.count || 0, Math.round(MAX_JAMO_COUNT * 0.40)) };
+        });
+      } else if (stage === 3) {
+        if (!this.stats.seenBatchimSyllables) this.stats.seenBatchimSyllables = [];
+        ALL_CVC_SYLLABLES.forEach(s => { if (!this.stats.seenBatchimSyllables.includes(s)) this.stats.seenBatchimSyllables.push(s); });
+        PHASE1_JAMOS.forEach(j => {
+          this.stats.jamoProgress[j] = { count: Math.max(this.stats.jamoProgress[j]?.count || 0, Math.round(MAX_JAMO_COUNT * 0.60)) };
+        });
+      } else {
+        // Already at stage 4 (words): set to 100%
+        this.stats.seenJamos = [];
+        this.stats.seenSyllables = [];
+        this.stats.seenBatchimSyllables = [];
+        this.stats.jamoProgress = {};
+        PHASE1_JAMOS.forEach(j => { this.stats.jamoProgress[j] = { count: MAX_JAMO_COUNT }; });
+        INTRO_JAMOS.forEach(j => { if (!this.stats.seenJamos.includes(j)) this.stats.seenJamos.push(j); });
+        PHASE1_JAMOS.forEach(j => { if (!this.stats.seenJamos.includes(j)) this.stats.seenJamos.push(j); });
+        ALL_CV_SYLLABLES.forEach(s => { if (!this.stats.seenSyllables.includes(s)) this.stats.seenSyllables.push(s); });
+        ALL_CVC_SYLLABLES.forEach(s => { if (!this.stats.seenBatchimSyllables.includes(s)) this.stats.seenBatchimSyllables.push(s); });
+      }
+      saveDojangStats(this.stats);
+      this._nextChallenge();
+      this._syncHUD();
+      this._announce(i18n('dojang.cheat.stageUnlocked').replace('{n}', stage + 1));
+    });
+
+    panel.querySelector('#djc-set-prog').addEventListener('click', () => {
+      const pct = Math.max(0, Math.min(100, parseInt(panel.querySelector('#djc-prog-input').value) || 0));
+      const targetCount = Math.round(pct / 100 * MAX_JAMO_COUNT);
+      // Reset everything and rebuild stage arrays to match the target %
+      this.stats.seenJamos = [];
+      this.stats.seenSyllables = [];
+      this.stats.seenBatchimSyllables = [];
+      this.stats.jamoProgress = {};
+      PHASE1_JAMOS.forEach(j => {
+        this.stats.jamoProgress[j] = { count: targetCount };
+      });
+      // Populate seen arrays to put the player in the correct stage for this %
+      // Stage thresholds: 5%→all INTRO seen, 15%→all PHASE1 seen,
+      // 40%→all CV syllables seen, 60%→all CVC syllables seen
+      if (pct >= 5)  INTRO_JAMOS.forEach(j => { if (!this.stats.seenJamos.includes(j)) this.stats.seenJamos.push(j); });
+      if (pct >= 15) PHASE1_JAMOS.forEach(j => { if (!this.stats.seenJamos.includes(j)) this.stats.seenJamos.push(j); });
+      if (pct >= 40) ALL_CV_SYLLABLES.forEach(s => { if (!this.stats.seenSyllables.includes(s)) this.stats.seenSyllables.push(s); });
+      if (pct >= 60) ALL_CVC_SYLLABLES.forEach(s => { if (!this.stats.seenBatchimSyllables.includes(s)) this.stats.seenBatchimSyllables.push(s); });
+      saveDojangStats(this.stats);
+      this._nextChallenge();
+      this._syncHUD();
+      this._announce(i18n('dojang.cheat.progressSet').replace('{n}', pct));
+    });
+
+    panel.querySelectorAll('.djc-ghost-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this._cheat.ghostMode = btn.dataset.ghost;
+        panel.querySelectorAll('.djc-ghost-btn').forEach(b => b.classList.remove('djc-active'));
+        btn.classList.add('djc-active');
+      });
+    });
+
+    const drawBtn = panel.querySelector('#djc-draw-mode');
+    drawBtn.addEventListener('click', () => {
+      this._cheat.drawMode = !this._cheat.drawMode;
+      drawBtn.textContent = `${i18n('dojang.cheat.drawMode')}: ${this._cheat.drawMode?'ON':'OFF'}`;
+      drawBtn.classList.toggle('djc-active', this._cheat.drawMode);
+    });
+
+    panel.querySelector('#djc-reset').addEventListener('click', () => {
+      if (!confirm('Reset all dojang progress?')) return;
+      this.stats = freshStats();
+      saveDojangStats(this.stats);
+      this._nextChallenge();
+      this._syncHUD();
+      _closeCheat();
+    });
   }
 
   // ── Announce ──────────────────────────────────────────────
@@ -1324,7 +1640,6 @@ export class DojangManager {
       i18n('dojang.phase1'), i18n('dojang.phase2'),
       i18n('dojang.phaseCV'), i18n('dojang.phase3'), i18n('dojang.phase4'),
     ];
-    const phaseLabel = isMastered ? i18n('dojang.masterTitle') : (stageLabels[stage] || stageLabels[3]);
 
     const countTip   = i18n('dojang.timesWritten');
     const strokesTip = i18n('dojang.strokeCountTip');
@@ -1360,15 +1675,29 @@ export class DojangManager {
       </div>`;
     }).join('');
 
+    const currentStageLabel = isMastered ? i18n('dojang.masterTitle') : (stageLabels[stage] || stageLabels[4]);
+    const stageSteps = stageLabels.map((lbl, i) => {
+      const done    = i < stage || isMastered;
+      const current = i === stage && !isMastered;
+      const cls     = done ? 'dj-stage-done' : current ? 'dj-stage-current' : 'dj-stage-future';
+      return `<span class="dj-stage-step ${cls}" title="${lbl}">${i + 1}</span>`;
+    });
+    const stagePipeline = stageSteps.join('<span class="dj-stage-arrow">→</span>');
+    const completedList = stageLabels
+      .slice(0, isMastered ? stageLabels.length : stage)
+      .map(lbl => `<span class="dj-stage-check">✓ ${lbl}</span>`)
+      .join('');
+
     body.innerHTML = `
       <div class="dj-book-header">
         <div class="dj-book-stat">
           <span class="dj-book-stat-val">${globalPct}%</span>
           <span class="dj-book-stat-lbl">${i18n('dojang.globalProgress')}</span>
         </div>
-        <div class="dj-book-stat">
-          <span class="dj-book-stat-val">${isMastered ? '✪' : (stage + 1)}</span>
-          <span class="dj-book-stat-lbl">${phaseLabel}</span>
+        <div class="dj-book-stage-pipeline">
+          <div class="dj-stage-name">${currentStageLabel}</div>
+          <div class="dj-stage-row">${stagePipeline}</div>
+          ${completedList ? `<div class="dj-stage-checks">${completedList}</div>` : ''}
         </div>
       </div>
       <div class="dj-book-list">${rows}</div>
@@ -1389,7 +1718,7 @@ export class DojangManager {
 
   // ── Stroke Inspector ──────────────────────────────────────
   openInspector() {
-    if (!this.challenge) return;
+    if (!this.challenge || document.getElementById('dojang-cheat-menu')) return;
     this.inspectorOpen = true;
     this._showInspector(true);
     this._renderInspector(0);

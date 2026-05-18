@@ -129,7 +129,8 @@
   "misc": {
     "confirmReset": "Resetar todo o progresso?",
     "confirmResetConfirm": "Tem certeza? Clique de novo para confirmar.",
-    "fullscreenPrompt": "EZRA 타자 é jogado em tela cheia no celular. Toque acima para entrar em tela cheia."
+    "fullscreenPrompt": "EZRA 타자 é jogado em tela cheia no celular. Toque acima para entrar em tela cheia.",
+    "audioUnlock": "Clique em qualquer lugar para iniciar — o navegador requer um clique para ativar algumas funcionalidades."
   },
   "number": {
     "sino": "Sino-Coreano",
@@ -1813,7 +1814,23 @@
     "phase2": "Estágio 2 · Jamos compostos",
     "phaseCV": "Estágio 3 · Sílabas CV",
     "phase3": "Estágio 4 · Batchim",
-    "phase4": "Estágio 5 · Palavras"
+    "phase4": "Estágio 5 · Palavras",
+    "cheat": {
+      "title": "⚡ Cheat Menu",
+      "skipChallenge": "⏭ Pular Desafio",
+      "skipStage": "⏩ Pular Estágio",
+      "setProgress": "Definir Progresso",
+      "ghost": "Ghost",
+      "ghostAuto": "Auto",
+      "ghostAlways": "Sempre",
+      "ghostNever": "Nunca",
+      "drawMode": "✏️ Modo Desenho",
+      "reset": "🗑 Resetar Progresso",
+      "skipped": "Pulado",
+      "maxStage": "Já está no estágio máximo",
+      "stageUnlocked": "Estágio {n} desbloqueado",
+      "progressSet": "Progresso: {n}%"
+    }
   },
   "multiplayer": {
     "btnCoop": "Aventura Co-op",

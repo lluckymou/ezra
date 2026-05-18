@@ -2814,6 +2814,13 @@ body.mobile-fs #mobile-titlebar { display: flex; }
   max-width: 280px; text-align: start; line-height: 1.6;
   letter-spacing: .3px;
 }
+/* Desktop audio-unlock variant: no button, whole overlay is the click target */
+#fs-overlay.desktop-mode { cursor: pointer; }
+#fs-overlay.desktop-mode #fs-btn { visibility: hidden; pointer-events: none; }
+#fs-overlay.desktop-mode #fs-prompt {
+  font-size: 1.15rem; color: rgba(240,224,200,.85);
+  max-width: 480px; margin-top: 0;
+}
 
 /* ===== UNSUPPORTED BROWSER OVERLAY ===== */
 #unsupported-overlay {

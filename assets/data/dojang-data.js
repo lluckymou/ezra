@@ -27,7 +27,7 @@ export const JONGSUNGS = [
 ];
 
 // Common simple jongsungs for Phase 3 practice (indices into JONGSUNGS)
-const SIMPLE_JONG_IDX = [1, 4, 8, 16, 17, 19, 21]; // ㄱ ㄴ ㄹ ㅁ ㅂ ㅅ ㅇ
+export const SIMPLE_JONG_IDX = [1, 4, 8, 16, 17, 19, 21]; // ㄱ ㄴ ㄹ ㅁ ㅂ ㅅ ㅇ
 
 // Basic jungsung indices (no compound vowels) for Phase 2/3
 const BASIC_JUNG_IDX = [0, 2, 4, 6, 8, 12, 13, 17, 18, 20]; // ㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ
@@ -230,6 +230,13 @@ export const ALL_CV_SYLLABLES = CHOSUNGS.flatMap((_, ci) =>
   JUNGSUNGS.map((_, ji) => buildSyllable(ci, ji, 0))
 );
 
+// Precomputed list of all 19×21×7=2793 CVC syllables (simple batchim only)
+export const ALL_CVC_SYLLABLES = CHOSUNGS.flatMap((_, ci) =>
+  JUNGSUNGS.flatMap((_, ji) =>
+    SIMPLE_JONG_IDX.map(ki => buildSyllable(ci, ji, ki))
+  )
+);
+
 // Complex syllables for the 50%+ stage
 export const COMPLEX_SYLLABLES = [
   '뾂','쀏','쀒','뾃','읽','짧','삶','닭','몫','흙',
@@ -253,10 +260,12 @@ export const JAMO_HAS_BATCHIM = new Set([
 export function computeHangulStage(stats) {
   const seen = stats.seenJamos || [];
   const seenSyl = stats.seenSyllables || [];
+  const seenCVC = new Set(stats.seenBatchimSyllables || []);
   if (!INTRO_JAMOS.every(j => seen.includes(j))) return 0;
   if (!EXTRA_JAMOS.every(j => seen.includes(j))) return 1;
   if (ALL_CV_SYLLABLES.some(s => !seenSyl.includes(s))) return 2;
-  return 3;
+  if (ALL_CVC_SYLLABLES.some(s => !seenCVC.has(s))) return 3;
+  return 4;
 }
 
 // Weighted random pick from pool [{item, w}]
@@ -315,13 +324,16 @@ export function pickNextChallenge(stats) {
     for (const j of PHASE1_JAMOS) {
       pool.push({ item: j, w: 1 });
     }
-  } else {
-    // Stage 3: batchim syllables
-    for (let i = 0; i < 15; i++) {
-      const ci = Math.floor(Math.random() * CHOSUNGS.length);
-      const ji = Math.floor(Math.random() * JUNGSUNGS.length);
-      const ki = SIMPLE_JONG_IDX[Math.floor(Math.random() * SIMPLE_JONG_IDX.length)];
-      pool.push({ item: buildSyllable(ci, ji, ki), w: 5 });
+  } else if (stage === 3) {
+    // Stage 3: batchim — unseen CVC syllables have high weight
+    const seenCVC = new Set(stats.seenBatchimSyllables || []);
+    for (let ci = 0; ci < CHOSUNGS.length; ci++) {
+      for (let ji = 0; ji < JUNGSUNGS.length; ji++) {
+        for (const ki of SIMPLE_JONG_IDX) {
+          const syl = buildSyllable(ci, ji, ki);
+          pool.push({ item: syl, w: seenCVC.has(syl) ? 1 : 8 });
+        }
+      }
     }
     // CV syllable review
     for (let i = 0; i < 5; i++) {
@@ -333,6 +345,10 @@ export function pickNextChallenge(stats) {
     for (const j of PHASE1_JAMOS) {
       pool.push({ item: j, w: 0.5 });
     }
+  } else {
+    // Stage 4: Words — pool is built in dojang.js which has access to WORD_DICT
+    // Return sentinel so caller handles it
+    return '__words__';
   }
 
   return _pickWeighted(pool);

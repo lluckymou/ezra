@@ -129,7 +129,8 @@
   "misc": {
     "confirmReset": "Reset all progress?",
     "confirmResetConfirm": "Sure? Click again to confirm.",
-    "fullscreenPrompt": "EZRA 타자 runs in full-screen on mobile. Tap above to go full-screen."
+    "fullscreenPrompt": "EZRA 타자 runs in full-screen on mobile. Tap above to go full-screen.",
+    "audioUnlock": "Click anywhere to start — the browser requires a click to enable some features."
   },
   "number": {
     "sino": "Sino",
@@ -1813,7 +1814,23 @@
     "phase2": "Stage 2 · Compound Jamos",
     "phaseCV": "Stage 3 · CV Syllables",
     "phase3": "Stage 4 · Batchim",
-    "phase4": "Stage 5 · Words"
+    "phase4": "Stage 5 · Words",
+    "cheat": {
+      "title": "⚡ Cheat Menu",
+      "skipChallenge": "⏭ Skip Challenge",
+      "skipStage": "⏩ Skip Stage",
+      "setProgress": "Set Progress",
+      "ghost": "Ghost",
+      "ghostAuto": "Auto",
+      "ghostAlways": "Always",
+      "ghostNever": "Never",
+      "drawMode": "✏️ Draw Mode",
+      "reset": "🗑 Reset Progress",
+      "skipped": "Skipped",
+      "maxStage": "Already at max stage",
+      "stageUnlocked": "Stage {n} unlocked",
+      "progressSet": "Progress: {n}%"
+    }
   },
   "multiplayer": {
     "btnCoop": "Co-op Adventure",

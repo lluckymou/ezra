@@ -271,7 +271,7 @@ body.mobile-fs #dojang-ring-wrap {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 162;
+  z-index: 280;
   pointer-events: none;
   display: flex;
   flex-direction: row;
@@ -475,6 +475,8 @@ body:not(.phase-dojang) #dojang-announce { opacity: 0 !important; }
   gap: 18px;
   margin-bottom: 16px;
   justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .dj-book-stat {
   display: flex;
@@ -497,6 +499,69 @@ body:not(.phase-dojang) #dojang-announce { opacity: 0 !important; }
   color: rgba(60,20,20,.55);
   text-transform: uppercase;
   letter-spacing: .04em;
+}
+.dj-book-stage-pipeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0,0,0,.04);
+  border: 1px solid rgba(100,0,0,.12);
+  border-radius: 10px;
+  padding: 10px 16px;
+  min-width: 160px;
+}
+.dj-stage-name {
+  font-size: .78rem;
+  font-weight: 700;
+  color: #8a2020;
+  text-align: center;
+  letter-spacing: .02em;
+}
+.dj-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.dj-stage-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  justify-content: center;
+  margin-top: 2px;
+}
+.dj-stage-check {
+  font-size: .60rem;
+  color: rgba(50,150,70,.8);
+  white-space: nowrap;
+}
+.dj-stage-step {
+  font-size: .85rem;
+  font-weight: 700;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background .15s;
+}
+.dj-stage-done {
+  color: rgba(80,160,80,.9);
+  background: rgba(80,160,80,.12);
+}
+.dj-stage-current {
+  color: #8a2020;
+  background: rgba(138,32,32,.15);
+  box-shadow: 0 0 0 2px rgba(138,32,32,.3);
+}
+.dj-stage-future {
+  color: rgba(60,20,20,.3);
+}
+.dj-stage-arrow {
+  font-size: .65rem;
+  color: rgba(60,20,20,.25);
+  padding: 0 1px;
 }
 .dj-book-list {
   display: flex;
@@ -771,4 +836,38 @@ body.mobile-fs #dojang-announce { top: calc(88px + var(--tb-h)); }
   #dojang-player-sprite svg { width: 91px; height: 91px; }
   .dj-player-btn { width: 36px; height: 36px; font-size: .96rem; margin-bottom: 17px; }
   #dojang-announce { top: 76px; font-size: .75rem; }
+}
+
+/* ── Dev cheat menu ──────────────────────────────────────── */
+#dojang-cheat-menu {
+  position: fixed; inset: 0; z-index: 250;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.55);
+}
+#djc-box {
+  background: #2a1a0a; border: 1.5px solid rgba(240,224,200,.25);
+  border-radius: 10px; padding: 20px; min-width: 260px;
+  display: flex; flex-direction: column; gap: 10px; position: relative;
+}
+.djc-title {
+  font-size: 1rem; font-weight: bold; margin-bottom: 15px; color: #f0e0c8;
+}
+.djc-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: white; }
+.djc-row span { color: rgba(240,224,200,.6); font-size: .8rem; }
+#dojang-cheat-menu button {
+  background: rgba(255,255,255,.08); border: 1px solid rgba(240,224,200,.2);
+  color: #f0e0c8; border-radius: 5px; padding: 4px 10px;
+  font-size: .8rem; cursor: pointer; transition: background .15s;
+}
+#dojang-cheat-menu button:hover { background: rgba(255,255,255,.15); }
+#dojang-cheat-menu .djc-active { background: rgba(240,180,60,.25); border-color: rgba(240,180,60,.6); }
+#dojang-cheat-menu .djc-danger { color: #e07070; border-color: rgba(220,80,80,.3); }
+#dojang-cheat-menu .djc-close {
+  position: absolute; top: 18px; right: 20px;
+  padding: 4px 6px; font-size: .75rem;
+}
+#djc-prog-input {
+  width: 54px; background: rgba(255,255,255,.08);
+  border: 1px solid rgba(240,224,200,.2); border-radius: 4px;
+  color: #f0e0c8; padding: 3px 6px; font-size: .8rem; text-align: center;
 }
