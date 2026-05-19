@@ -79,6 +79,9 @@ export const G = {
   wxOldWeather: null,   // weather type of wxOldParticles
   wxFogOffset: 0,
 
+  // ── Decoration grid (set by cheat menu, used by renderer + combat) ─
+  decorGrid:      null, // null | array[3][5] of 'none'|'float'|'bypass'
+
   // ── Menu preview (background room while on title screen) ─────
   menuPreview:    null, // { worldDef, openDirs, patIdx }
 
@@ -208,6 +211,7 @@ export function resetRoomState(waveNum) {
   G.frozen    = false;
   G.freezeTimer = 0;
   G.announceQ = null;
+  G.decorGrid = null; // per-room temporary; clears on every room change
   // Clear ground items DOM
   const gi = document.getElementById('ground-items');
   if (gi) gi.innerHTML = '';

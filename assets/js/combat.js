@@ -15,6 +15,192 @@ import { play as sfx } from './sfx.js';
 import { genSinoNumber, genNativeNumber, sinoSpelling, nativeSpelling } from '../data/numbers.js';
 
 
+// ── Decor grid helpers (avoid obstacle navigation) ───────────────────
+const DG_X0 = 0.05, DG_CW = 0.18;            // 5 cols
+const DG_Y0 = 0.13, DG_CH = 0.80 / 3, DG_H = 0.80; // 3 rows
+// Physical gap padding (10% of cell size, matching the renderer's pad calc at typical aspect ratio)
+const DG_PAD_X = DG_CW * 0.10, DG_PAD_Y = DG_CH * 0.10;
+
+function _dgIsAvoid(col, row, grid) {
+  if (!grid || col < 0 || col > 4 || row < 0 || row > 2) return false;
+  return grid[row]?.[col] === 'avoid';
+}
+// Line-segment vs avoid-cell AABB test — uses the physically-drawn (padded) box so that
+// lines starting/ending in a corridor gap are not falsely reported as hitting an avoid box.
+function _dgLineHitsAvoid(nx1, ny1, nx2, ny2, grid) {
+  if (!grid) return false;
+  const dx = nx2 - nx1, dy = ny2 - ny1;
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 5; c++) {
+      if (grid[r]?.[c] !== 'avoid') continue;
+      const rx = DG_X0 + c * DG_CW + DG_PAD_X, rw = DG_CW - 2 * DG_PAD_X;
+      const ry = DG_Y0 + r * DG_CH + DG_PAD_Y, rh = DG_CH - 2 * DG_PAD_Y;
+      let tmin = 0, tmax = 1;
+      if (Math.abs(dx) > 1e-9) {
+        const t1 = (rx - nx1) / dx, t2 = (rx + rw - nx1) / dx;
+        tmin = Math.max(tmin, Math.min(t1, t2));
+        tmax = Math.min(tmax, Math.max(t1, t2));
+      } else if (nx1 < rx || nx1 > rx + rw) { continue; }
+      if (Math.abs(dy) > 1e-9) {
+        const t1 = (ry - ny1) / dy, t2 = (ry + rh - ny1) / dy;
+        tmin = Math.max(tmin, Math.min(t1, t2));
+        tmax = Math.min(tmax, Math.max(t1, t2));
+      } else if (ny1 < ry || ny1 > ry + rh) { continue; }
+      if (tmin < tmax) return true;
+    }
+  }
+  return false;
+}
+// Compute avoid-aware path (pre-computed once at spawn, never recalculated).
+// Monsters navigate through the physical gap corridors between avoid boxes — never through them.
+//
+// Corridor intersection graph: nodes (c,r) for c=0..5 and r=0..3.
+//   x = DG_X0 + c*DG_CW  (6 vertical corridor lines between/around the 5 columns)
+//   y = DG_Y0 + r*DG_CH  (4 horizontal corridor lines between/around the 3 rows)
+//   All corridor edges are always passable — the 10% padding gaps always exist.
+//
+// Phase 1: if spawn is inside an avoid cell, move straight up (top half) or down (bottom half)
+//   to reach the horizontal corridor at the near edge of that cell.
+// Phase 2: A* on the corridor graph toward the player. Path is pruned to the first node from
+//   which the player is directly visible (no avoid cells in the way), so the monster takes
+//   the shortest gap-route and then goes diagonally to the player from there.
+// Returns null (direct path fine) or [{nx,ny},...] waypoints to follow before targeting player.
+function _dgBFSPath(spawnNX, spawnNY, grid) {
+  if (!grid?.some(row => row.some(v => v === 'avoid'))) return null;
+
+  const tNX = 0.5, tNY = 0.87;
+  const spawnCellC = Math.max(0, Math.min(4, Math.floor((spawnNX - DG_X0) / DG_CW)));
+  const spawnCellR = Math.max(0, Math.min(2, Math.floor((spawnNY - DG_Y0) / DG_CH)));
+
+  // Phase 1: exit avoid cell by moving straight up/down to the nearest horizontal corridor.
+  // Corridor r sits at y = DG_Y0 + r*DG_CH (r=0: above row 0, r=3: below row 2).
+  let exitNX = spawnNX, exitNY = spawnNY, startCorrR;
+  if (_dgIsAvoid(spawnCellC, spawnCellR, grid)) {
+    const midY = DG_Y0 + spawnCellR * DG_CH + DG_CH / 2;
+    startCorrR = Math.max(0, Math.min(3, spawnNY < midY ? spawnCellR : spawnCellR + 1));
+    exitNY = DG_Y0 + startCorrR * DG_CH;
+  } else {
+    // Not in avoid: start from the corridor below the spawn cell (player is always below)
+    startCorrR = Math.min(3, spawnCellR + 1);
+  }
+
+  // If exit→player is clear, no corridor routing needed
+  if (!_dgLineHitsAvoid(exitNX, exitNY, tNX, tNY, grid)) {
+    return exitNY !== spawnNY ? [{ nx: exitNX, ny: exitNY }] : null;
+  }
+
+  // Phase 2: A* on corridor intersection graph (6 cols × 4 rows).
+  // startC: pick the corridor column in the direction of the player so the monster
+  // immediately heads toward the player rather than hugging the wall.
+  const spawnFrac = (exitNX - DG_X0) / DG_CW;
+  const startC = Math.max(0, Math.min(5,
+    exitNX <= tNX ? Math.ceil(spawnFrac) : Math.floor(spawnFrac)));
+  const endC = Math.max(0, Math.min(5, Math.round((tNX - DG_X0) / DG_CW)));
+  const endR = Math.max(0, Math.min(3, Math.round((tNY - DG_Y0) / DG_CH)));
+
+  const heur = (c, r) => Math.abs(c - endC) + Math.abs(r - endR);
+  const pq   = [[heur(startC, startCorrR), 0, startC, startCorrR, [{ c: startC, r: startCorrR }]]];
+  const gMap = new Map([[`${startC},${startCorrR}`, 0]]);
+  let found = null;
+
+  while (pq.length) {
+    let mi = 0;
+    for (let i = 1; i < pq.length; i++) if (pq[i][0] < pq[mi][0]) mi = i;
+    const [, g, c, r, path] = pq.splice(mi, 1)[0];
+    if (c === endC && r === endR) { found = path; break; }
+    for (const [dc, dr] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+      const nc = c + dc, nr = r + dr;
+      if (nc < 0 || nc > 5 || nr < 0 || nr > 3) continue;
+      const ng = g + 1, key = `${nc},${nr}`;
+      if (ng < (gMap.get(key) ?? Infinity)) {
+        gMap.set(key, ng);
+        pq.push([ng + heur(nc, nr), ng, nc, nr, [...path, { c: nc, r: nr }]]);
+      }
+    }
+  }
+
+  // Prune path to the first corridor node from which the player is directly visible.
+  // The monster will go diagonally to the player from that node, no further gap-walking needed.
+  let cutLen = found ? found.length : 0;
+  if (found) {
+    for (let i = 0; i < found.length; i++) {
+      const nx = DG_X0 + found[i].c * DG_CW, ny = DG_Y0 + found[i].r * DG_CH;
+      if (!_dgLineHitsAvoid(nx, ny, tNX, tNY, grid)) { cutLen = i + 1; break; }
+    }
+  }
+
+  // Build raw waypoint list: phase-1 exit + all pruned corridor nodes (last = visible point)
+  const raw = [];
+  if (exitNY !== spawnNY) raw.push({ nx: exitNX, ny: exitNY });
+  if (found) {
+    for (const { c, r } of found.slice(0, cutLen))
+      raw.push({ nx: DG_X0 + c * DG_CW, ny: DG_Y0 + r * DG_CH });
+  }
+
+  // Collapse collinear intermediate points
+  const waypoints = [];
+  for (let i = 0; i < raw.length; i++) {
+    if (i === 0 || i === raw.length - 1) { waypoints.push(raw[i]); continue; }
+    const a = raw[i-1], b = raw[i], d = raw[i+1];
+    if (Math.abs((b.nx-a.nx)*(d.ny-a.ny) - (b.ny-a.ny)*(d.nx-a.nx)) > 1e-6) waypoints.push(raw[i]);
+  }
+
+  return waypoints.length ? waypoints : null;
+}
+// Total path length in pixels: spawn → waypoints → target.
+function _dgPathLen(m, tx, ty) {
+  if (!m.avoidPath?.length) return Math.hypot(tx - m.spawnNX * G.W, ty - m.spawnNY * G.vH) || 1;
+  let px0 = m.spawnNX * G.W, py0 = m.spawnNY * G.vH, len = 0;
+  for (const wp of m.avoidPath) {
+    const px1 = wp.nx * G.W, py1 = wp.ny * G.vH;
+    len += Math.hypot(px1 - px0, py1 - py0);
+    px0 = px1; py0 = py1;
+  }
+  len += Math.hypot(tx - px0, ty - py0);
+  return len || 1;
+}
+// Pixel position along the avoid path at normalized progress (0→1) toward target.
+function _dgPathPos(m, progress, tx, ty) {
+  if (!m.avoidPath?.length) {
+    return { x: m.spawnNX * G.W + progress * (tx - m.spawnNX * G.W), y: m.spawnNY * G.vH + progress * (ty - m.spawnNY * G.vH) };
+  }
+  const pts = [{ x: m.spawnNX * G.W, y: m.spawnNY * G.vH }];
+  for (const wp of m.avoidPath) pts.push({ x: wp.nx * G.W, y: wp.ny * G.vH });
+  pts.push({ x: tx, y: ty });
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i-1] + Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y));
+  const total = cum[cum.length - 1] || 1;
+  const arc = Math.min(progress, 1) * total;
+  let seg = pts.length - 2;
+  for (let i = 1; i < pts.length; i++) { if (cum[i] >= arc) { seg = i - 1; break; } }
+  const segLen = cum[seg + 1] - cum[seg];
+  const t = segLen > 0 ? (arc - cum[seg]) / segLen : 1;
+  return { x: pts[seg].x + t * (pts[seg+1].x - pts[seg].x), y: pts[seg].y + t * (pts[seg+1].y - pts[seg].y) };
+}
+// Z-layer: true = monster renders in front of decor cells, false = behind.
+// pass-through: per-cell check with x-overlap (monster walks on these, so we test the specific cell).
+// avoid: global check — if monster's bottom is below any avoid cell's mid-Y it's past that obstacle.
+function _dgIsMonsterInFront(m) {
+  const grid = G.decorGrid;
+  if (!grid?.some(r => r.some(v => v === 'avoid' || v === 'pass-through'))) return true;
+  const bot = m.y + m.size * 0.5;
+
+  // Pass-through: check only the cell(s) the monster is currently overlapping in X
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
+    if (grid[r]?.[c] !== 'pass-through') continue;
+    const cx0 = (DG_X0 + c * DG_CW) * G.W, cx1 = (DG_X0 + (c + 1) * DG_CW) * G.W;
+    if (m.x >= cx0 && m.x <= cx1) {
+      return bot > (DG_Y0 + (r + 0.5) * DG_CH) * G.vH;
+    }
+  }
+
+  // Avoid: monster below mid-Y of any avoid cell → in front of it
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
+    if (grid[r]?.[c] === 'avoid' && bot > (DG_Y0 + (r + 0.5) * DG_CH) * G.vH) return true;
+  }
+  return false;
+}
+
 // Parse lesson word string, handling disambiguation like 'text:emoji'
 function parseLessonWord(str) {
   if (str.includes(':')) {
@@ -471,6 +657,7 @@ export function mkMonster(tmpl) {
   }
 
   const wordEmojis = tmpl.wordEmojis ? [...tmpl.wordEmojis] : [emoji];
+  const avoidPath = _dgBFSPath(spawnNX, spawnNY, G.decorGrid);
 
   return {
     id:       ++_id,
@@ -480,6 +667,7 @@ export function mkMonster(tmpl) {
     emoji, wieldIcon, hpIcon, labelColor,
     x, y,
     spawnNX, spawnNY,  // normalized spawn coords - survives resize
+    avoidPath,         // null | [{nx,ny}...] corridor waypoints around avoid cells
     progress: 0,       // 0 = at spawn, 1 = at player; screen-independent movement state
     hp: tmpl.hp, maxHp: tmpl.maxHp,
     words: [...tmpl.words], wi: 0,
@@ -1518,7 +1706,7 @@ export function tickMonsters(dt) {
       if (Math.abs(m.kbVy) < 0.5) m.kbVy = 0;
       // Clamp to spawn boundary - redirect upward force sideways
       const minY = G.vH * 0.13;
-      const pathY = m.spawnNY * G.vH + m.progress * (targetY - m.spawnNY * G.vH);
+      const pathY = _dgPathPos(m, m.progress, targetX, targetY).y;
       if (pathY + m.kbY < minY && m.kbVy < 0) {
         m.kbY = minY - pathY;
         m.kbVx += (m.spawnNX * G.W) >= G.W / 2 ? Math.abs(m.kbVy) : -Math.abs(m.kbVy);
@@ -1566,30 +1754,27 @@ export function tickMonsters(dt) {
       const SPD_CAP = 230 * (G.vH / 800);
       const effSpd = Math.min(m.spd * spdMult, SPD_CAP);
 
-      // Progress-based movement: advance along the normalized spawn→player path.
-      // This decouples screen-pixel position from game state, making resize safe.
-      const sx = m.spawnNX * G.W, sy = m.spawnNY * G.vH;
-      const pathDx = targetX - sx, pathDy = targetY - sy;
-      const totalDist = Math.hypot(pathDx, pathDy) || 1;
+      // Progress-based movement along spawn→player path (bypass-aware).
+      const totalDist = _dgPathLen(m, targetX, targetY);
       m.progress += effSpd * dt / totalDist;
 
       // Tutorial first monster: cap progress so it stops just before hitting
       if (m._tutorialStop) {
-        const stopProgress = Math.max(0, totalDist * 0.65) / totalDist;
-        if (m.progress >= stopProgress) m.progress = stopProgress;
+        if (m.progress >= 0.65) m.progress = 0.65;
       }
 
       if (m.type === 'arrow') {
-        m.angle = Math.atan2(pathDy, pathDx);
+        const sx = m.spawnNX * G.W, sy = m.spawnNY * G.vH;
+        m.angle = Math.atan2(targetY - sy, targetX - sx);
       }
     }
 
-    // Derive pixel position from progress + normalized spawn + current target + kb offset.
+    // Derive pixel position from progress along path (bypass-aware) + kb offset.
     // Recalculated every frame so resize automatically repositions the monster.
     {
-      const sx = m.spawnNX * G.W, sy = m.spawnNY * G.vH;
-      m.x = sx + m.progress * (targetX - sx) + (m.kbX || 0);
-      m.y = sy + m.progress * (targetY - sy) + (m.kbY || 0);
+      const pos = _dgPathPos(m, m.progress, targetX, targetY);
+      m.x = pos.x + (m.kbX || 0);
+      m.y = pos.y + (m.kbY || 0);
     }
 
     if (m.flash > 0) m.flash -= dt * 5;
@@ -2419,14 +2604,21 @@ function getCtx() {
   return c ? c.getContext('2d') : null;
 }
 
-export function drawMonsters() {
+export function drawMonsters(pass) {
   const ctx = getCtx();
   if (!ctx || !G.room) return;
   const monsters = G.room.monsters;
+  const hasAvoid = G.decorGrid?.some(r => r.some(v => v === 'avoid' || v === 'pass-through'));
+  function _show(m) {
+    if (!hasAvoid) return pass !== 'behind';
+    const front = _dgIsMonsterInFront(m);
+    return pass === 'behind' ? !front : pass === 'front' ? front : true;
+  }
 
   // Pass 1: bodies
   for (const m of monsters) {
     if (m.dead) continue;
+    if (!_show(m)) continue;
 
     // ── Spawn animation (falling from ceiling) ──────────────────
     if (m.spawnAnim && m.spawnAnim.t < m.spawnAnim.dur) {
@@ -2585,6 +2777,7 @@ export function drawMonsters() {
   const LABEL_FONTS = ['"Pretendard"', '"Song Myung"', '"Nanum Myeongjo"'];
   for (const m of monsters) {
     if (m.dead) continue;
+    if (!_show(m)) continue;
     if (m.fleeing) continue;
     // Hide label until monster lands (last 25% of spawn)
     if (m.spawnAnim && m.spawnAnim.t < m.spawnAnim.dur) {

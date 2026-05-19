@@ -982,6 +982,32 @@
       <button class="cheat-btn" onclick="cheatApplyRoomColors()" data-i18n="cheat.btn.set">Set</button>
     </div>
     <div class="cheat-row">
+      <label>Floor Decor Grid</label>
+    </div>
+    <div class="cheat-row">
+      <label>Presets</label>
+      <button class="cheat-btn" onclick="cheatDecorPreset(0)" title="X X X X X&#10;X X X X X&#10;0 0 0 0 0">P1</button>
+      <button class="cheat-btn" onclick="cheatDecorPreset(1)" title="0 0 0 0 0&#10;X X X X X&#10;0 0 0 0 0">P2</button>
+      <button class="cheat-btn" onclick="cheatDecorPreset(2)" title="0 0 X X X&#10;X X X 0 0&#10;X 0 0 0 X">P3</button>
+    </div>
+    <div id="c-decor-grid" class="cheat-decor-grid">
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r0c0" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r0c1" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r0c2" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r0c3" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r0c4" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r1c0" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r1c1" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r1c2" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r1c3" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r1c4" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c0" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c1" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c2" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c3" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+      <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c4" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+    </div>
+    <div class="cheat-row">
       <label data-i18n="cheat.room.resetRoom">Reset Room</label>
       <button class="cheat-btn red" onclick="cheatResetRoomColors()" data-i18n="cheat.btn.reset">Reset</button>
     </div>

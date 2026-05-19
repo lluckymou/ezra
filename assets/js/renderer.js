@@ -17,6 +17,9 @@ let _roomDesignWallStyle = -1;
 export function setRoomDesignFloorPat(v)  { _roomDesignFloorPat  = v < 0 ? -1 : v; }
 export function setRoomDesignWallStyle(v) { _roomDesignWallStyle = v < 0 ? -1 : v; }
 
+// 3×5 decoration grid set by cheat menu — stored on G.decorGrid (cleared by resetRoomState)
+export function setDecorGrid(grid) { G.decorGrid = grid; }
+
 // ── Day/Night Cycle ─────────────────────────────────────────────
 // Full cycle = 420 seconds (7 min). Maps to 0-24h.
 // Bright hours: 7h-20h. Transition 5-7h (dawn), 20-22h (dusk). Dark: 22-5h.
@@ -176,6 +179,26 @@ export function drawBackground() {
   }
   ctx.restore();
 
+  // Float overlay only — avoid drawn separately (after behind-monsters, before front-monsters)
+  if (G.decorGrid) {
+    const colW = _fw / 5;
+    const rowH = _fh / 3;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(wallSide, floorTop, _fw, _fh);
+    ctx.clip();
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (G.decorGrid[r]?.[c] === 'float') {
+          ctx.fillStyle = '#000000';
+          const pad = Math.round(Math.min(colW, rowH) * 0.10);
+          ctx.fillRect(wallSide + c * colW + pad, floorTop + r * rowH + pad, colW - pad * 2, rowH - pad * 2);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
   // Draw walls as proper trapezoids following the perspective diagonal lines
   function fillTrap(pts, color) {
     ctx.fillStyle = color;
@@ -215,6 +238,36 @@ export function drawBackground() {
   vig.addColorStop(1, 'rgba(0,0,0,0.5)');
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, W, H);
+}
+
+/* Draw avoid and pass-through cells — called between behind-monsters and front-monsters */
+export function drawDecorAvoids() {
+  if (!G.decorGrid || !ctx) return;
+  const W = G.W, H = G.vH;
+  const wallH    = Math.floor(H * 0.13);
+  const wallSide = Math.floor(W * 0.05);
+  const wallBot  = Math.floor(H * 0.07);
+  const floorTop = wallH;
+  const floorBot = H - wallBot;
+  const _fw = W - wallSide * 2;
+  const _fh = floorBot - floorTop;
+  const colW = _fw / 5;
+  const rowH = _fh / 3;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(wallSide, floorTop, _fw, _fh);
+  ctx.clip();
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 5; c++) {
+      const cellType = G.decorGrid[r]?.[c];
+      if (cellType === 'avoid' || cellType === 'pass-through') {
+        ctx.fillStyle = cellType === 'avoid' ? '#ffffff' : '#ff00ff';
+        const pad = Math.round(Math.min(colW, rowH) * 0.10);
+        ctx.fillRect(wallSide + c * colW + pad, floorTop + r * rowH + pad, colW - pad * 2, rowH - pad * 2);
+      }
+    }
+  }
+  ctx.restore();
 }
 
 // Wall texture styles (deterministic per room).

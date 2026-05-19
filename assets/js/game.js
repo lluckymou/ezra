@@ -23,7 +23,7 @@ import {
   drawTransition, drawWorldTransition, drawRoomLabel, drawRoomNpc,
   tickWeather, drawWeather, drawDayNight,
   initRenderer, initWeather, startWeatherFade, getDayBrightness,
-  setRoomDesignFloorPat, setRoomDesignWallStyle,
+  setRoomDesignFloorPat, setRoomDesignWallStyle, setDecorGrid, drawDecorAvoids,
 } from './renderer.js';
 import { initMap, updateMap, updateMapExtras, syncClockToGame, getWeatherLabel } from './map.js';
 import {
@@ -1313,7 +1313,9 @@ function loop(ts) {
       tickAnnounce(dt);
     }
 
-    drawMonsters();
+    drawMonsters('behind');
+    drawDecorAvoids();
+    drawMonsters('front');
     drawProjs();
     drawParts();
     drawCoins(ctx);
@@ -2764,6 +2766,7 @@ function _initMenuPreview() {
 }
 
 function showTitleScreen() {
+  closeCheatMenu();
   if (G.ctrlPanelOpen || _ctrlState !== 'idle') closeCtrlPanel();
   screenOff('scr-over'); screenOff('scr-pause');
   screenOff('scr-modifier'); screenOff('scr-shop'); screenOff('scr-treasure');
@@ -3383,6 +3386,7 @@ function _enterDojang() {
 }
 
 function _dojangExitToMenu() {
+  closeCheatMenu();
   dojangManager.exit();
   G.dojangStats = loadDojangStats();
   G.phase = 'title';
@@ -4850,7 +4854,8 @@ function onInput() {
   }
 
   // Speak what was typed - queued, fires even on wrong input
-  speakKorean(val);
+  const _ttsVal = (val.toLowerCase() === 'cheatcode' || val === '촏ㅁㅅ챙ㄷ' || val === '초ㄸㅁㅆ첑ㄸ') ? '치트 코드' : val;
+  speakKorean(_ttsVal);
 
   // Ground items can always be collected (combat or navigate)
   if (tryCollectGroundItem(val)) { typingEl.value = ''; return; }
@@ -5331,6 +5336,15 @@ let _cheatOpenedWhileRunning = false;
 function openCheatMenu() {
   populateCheatItemSel();
   populateCheatModSel();
+  // Sync decor grid dropdowns from current G.decorGrid (per-room, null after room change)
+  if (G.decorGrid) {
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
+      const sel = document.getElementById(`c-decor-r${r}c${c}`);
+      if (sel) sel.value = G.decorGrid[r]?.[c] || 'none';
+    }
+  } else {
+    document.querySelectorAll('.cheat-decor-sel').forEach(sel => { sel.value = 'none'; });
+  }
   document.getElementById('cheat-menu')?.classList.add('on');
   document.body.classList.add('cheat-open');
   if (G.touchMode && G.phase === 'run') {
@@ -5632,6 +5646,48 @@ window.cheatResetRoomColors = function() {
   const wn = document.getElementById('c-wall-name');  if (wn) wn.textContent = '—';
   const fn = document.getElementById('c-floor-name'); if (fn) fn.textContent = '—';
   _syncRoomColorInputs();
+  document.querySelectorAll('.cheat-decor-sel').forEach(sel => { sel.value = 'none'; });
+  setDecorGrid(null);
+};
+window.cheatDecorGridChange = function() {
+  const grid = [];
+  let hasOverlay = false;
+  for (let r = 0; r < 3; r++) {
+    grid[r] = [];
+    for (let c = 0; c < 5; c++) {
+      const val = document.getElementById(`c-decor-r${r}c${c}`)?.value || 'none';
+      grid[r][c] = val;
+      if (val !== 'none') hasOverlay = true;
+    }
+  }
+  setDecorGrid(hasOverlay ? grid : null);
+};
+
+// Preset layouts for quick avoid-grid testing (A=avoid, 0=none)
+const _DECOR_PRESETS = [
+  // Preset 1: top 2 rows all avoid
+  [['avoid','avoid','avoid','avoid','avoid'],
+   ['avoid','avoid','avoid','avoid','avoid'],
+   ['none', 'none', 'none', 'none', 'none']],
+  // Preset 2: middle row all avoid
+  [['none', 'none', 'none', 'none', 'none'],
+   ['avoid','avoid','avoid','avoid','avoid'],
+   ['none', 'none', 'none', 'none', 'none']],
+  // Preset 3: diagonal-ish pattern
+  [['none', 'none', 'avoid','avoid','avoid'],
+   ['avoid','avoid','avoid','none', 'none'],
+   ['avoid','none', 'none', 'none', 'avoid']],
+];
+window.cheatDecorPreset = function(idx) {
+  const preset = _DECOR_PRESETS[idx];
+  if (!preset) return;
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 5; c++) {
+      const sel = document.getElementById(`c-decor-r${r}c${c}`);
+      if (sel) sel.value = preset[r][c];
+    }
+  }
+  cheatDecorGridChange();
 };
 
 /* ================================================================
