@@ -1391,7 +1391,7 @@ function spawnRoomNpc(type, emoji, cell) {
 export function tryNpcInteract(val) {
   const npc = G.room.npc;
   if (!npc || !npc.active) return false;
-  if (val !== npc.word) return false;
+  if (val !== npc.word && val !== npc.word.replace(/\s+/g, '')) return false;
 
   const cell = npc.cell || currentCell();
   if (npc.type === 'shop') {

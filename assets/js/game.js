@@ -605,17 +605,6 @@ let _fsPromptTimer      = null;
 let _startFsPromptCycle = () => {};
 let _stopFsPromptCycle  = () => {};
 
-// True when running as an installed PWA (manifest display: fullscreen or standalone)
-// Evaluated once at load time so _syncMobileFs can use it without rechecking
-const _isPWA = window.matchMedia?.('(display-mode: fullscreen)').matches === true
-            || window.matchMedia?.('(display-mode: standalone)').matches === true
-            || navigator.standalone === true;
-
-// True only when the OS is already hiding the status bar — no fs-overlay needed.
-// display-mode:fullscreen  → manifest fullscreen mode is active (Android, status bar gone)
-// navigator.standalone     → iOS PWA; requestFullscreen() is unsupported, overlay is useless
-const _skipFsForPWA = window.matchMedia?.('(display-mode: fullscreen)').matches === true
-                    || navigator.standalone === true;
 
 
 /* ================================================================
@@ -768,8 +757,7 @@ function runStartupAnimation(onPrepare, onDone) {
     const _lc = parseInt(localStorage.getItem('krr_launchCount') || '0') + 1;
     localStorage.setItem('krr_launchCount', String(_lc));
     // On mobile without fullscreen: hide everything until fullscreen is entered
-    // Skip if already in a truly-fullscreen context (manifest fullscreen mode or iOS PWA)
-    const needsFs = !_skipFsForPWA && window.innerHeight < 500 && !(document.fullscreenElement || document.webkitFullscreenElement);
+    const needsFs = window.innerHeight < 500 && !(document.fullscreenElement || document.webkitFullscreenElement);
     const _gameEls = needsFs
       ? ['scr-title','gc','wx-canvas','dn-canvas'].map(id => document.getElementById(id)).filter(Boolean)
       : [];
@@ -860,8 +848,8 @@ export function init() {
     function _startupSequence() {
       function startAnim() {
         const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-        const needsFs = !_skipFsForPWA && window.innerHeight < 500 && !inFs;
-        const needsDesktopUnlock = !_isPWA && window.innerHeight >= 500
+        const needsFs = window.innerHeight < 500 && !inFs;
+        const needsDesktopUnlock = window.innerHeight >= 500
           && parseInt(localStorage.getItem('krr_launchCount') || '0') >= 1;
         if (needsFs) {
           window._showFsOverlay?.(() => runStartupAnimation(startupPrepare, _checkStartupModals));
@@ -944,9 +932,9 @@ export function init() {
   window._showFsOverlay = function(cb) {
     _fsOverlayCallback = cb || null;
     _syncMobileFs(); // let _syncMobileFs decide visibility based on current state
-    // Call cb immediately if fullscreen is not needed (large screen, already fullscreen, or iOS/manifest-fs PWA)
+    // Call cb immediately if fullscreen is not needed (large screen or already fullscreen)
     const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-    if (window.innerHeight >= 500 || inFs || _skipFsForPWA) {
+    if (window.innerHeight >= 500 || inFs) {
       const c = _fsOverlayCallback; _fsOverlayCallback = null; c?.(); return;
     }
     _startFsPromptCycle();
@@ -1647,7 +1635,7 @@ function runLoreAnimation(onComplete) {
   // Character geometry helpers - recomputed from W/H/CHAR_SIZE which update on resize.
   // playerOuter: bottom = -(CHAR_SIZE*0.28) → top of element = H + CHAR_SIZE*0.28 - (CHAR_SIZE+20) = H - CHAR_SIZE*0.72 - 20
   // Avataaars head occupies roughly top 30% of the SVG circle
-  // villain: top = H*0.5 - CHAR_SIZE*0.5 (center anchored); 🦹 head at ~18% from top
+  // villain: top = H*0.5 - CHAR_SIZE*0.5 (center anchored); 🧞‍♀️ head at ~18% from top
   const PLAYER_OUTER_TOP = () => H - CHAR_SIZE * 0.72 - 20;
   const PLAYER_HEAD_Y    = () => PLAYER_OUTER_TOP() + CHAR_SIZE * 0.12;
   const VILLAIN_OUTER_TOP = () => H * 0.5 - CHAR_SIZE * 0.5;
@@ -4635,13 +4623,11 @@ function _syncMobileFs() {
   if (document.getElementById('fs-overlay')?.classList.contains('desktop-mode')) return;
   const isMobile = window.innerHeight < 500;
   const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-  // Truly fullscreen: JS fullscreen API active, or manifest-fs/iOS PWA
-  const effectivelyFullscreen = inFs || _skipFsForPWA;
-  document.body.classList.toggle('mobile-fs', isMobile && effectivelyFullscreen);
+  document.body.classList.toggle('mobile-fs', isMobile && inFs);
   const fsOverlay = document.getElementById('fs-overlay');
   const fsBtn = document.getElementById('fs-btn');
   if (!fsOverlay) return;
-  if (!isMobile || _skipFsForPWA) {
+  if (!isMobile) {
     // Screen large enough or already truly fullscreen: hide overlay unconditionally
     fsOverlay.classList.add('off');
     _stopFsPromptCycle();

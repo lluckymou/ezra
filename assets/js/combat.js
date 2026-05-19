@@ -233,7 +233,8 @@ export function monsterSpeed(words, isBoss) {
   // Wave speed caps (scaled to screen)
   const REF_H = 800;
   const scale = G.vH / REF_H;
-  const wn = G.room?.wave || 1;
+  // World 0 (dojang): all rooms same speed regardless of dojang level
+  const wn = G.run?.worldIdx === 0 ? 1 : (G.room?.wave || 1);
   const waveCap = (wn <= 3  ? 45 :
                    wn <= 5  ? 62 :
                    wn <= 10 ? 88 :
@@ -258,13 +259,14 @@ const GENERIC_MONSTERS = ['💩','👹','👺','👻','👽','👾','🤖','🧌
 /* ── Dojang tutorial word pools (by ring difficulty level) ── */
 // Level 1: individual jamo from the standard Korean keyboard layout
 const DOJANG_JAMO_L1 = ['ㅂ','ㅈ','ㄷ','ㄱ','ㅅ','ㅛ','ㅕ','ㅑ','ㅐ','ㅔ','ㅁ','ㄴ','ㅇ','ㄹ','ㅎ','ㅗ','ㅓ','ㅏ','ㅣ','ㅋ','ㅌ','ㅊ','ㅍ','ㅠ','ㅜ','ㅡ'];
-// Level 2: double/tense consonants and rare vowels + simple 2-jamo syllables
+// Level 2: double/tense consonants + simple syllables + ㅘ-family compound vowels
 const DOJANG_JAMO_L2  = ['ㅃ','ㅉ','ㄸ','ㄲ','ㅆ','ㅒ','ㅖ'];
 const DOJANG_COMBS_L2 = ['야','다','개','나','고','도','바','사','가','오','노','소','미','비','이','지','기','우','두','부','수','아'];
-// Level 3: syllables with simple batchim + complex vowel combos without batchim
-const DOJANG_WORDS_L3 = ['닥','설','밥','국','집','산','법','날','물','달','말','발','살','알','계','까','뇨','겨','뒤','봐','줘','쉬','위','왜','외','의','긔'];
-// Level 4: double/compound batchim + complex characters with batchim
-const DOJANG_WORDS_L4 = ['많','닭','삶','읽','꽃','넋','앉','짧','밟','긁','흙','닮','삯','얹','읊'];
+const DOJANG_VOWELS_L2 = ['봐','과','화','와','놔','봐','계','예','폐','세','혜','얘'];
+// Level 3: harder compound vowels (ㅝ/ㅚ/ㅟ/ㅢ) without batchim
+const DOJANG_WORDS_L3 = ['훠','뭐','줘','둬','쉬','뒤','위','외','쇠','최','봬','왜','웨','궤','의'];
+// Level 4: compound vowels WITH batchim
+const DOJANG_WORDS_L4 = ['봤','왔','됐','쇔','획','뭣','권','뭔','뒀','줬'];
 
 function _dojangNinjaEmoji() {
   // 90% light tones (🥷🏻 🥷🏼), 10% darker tones
@@ -277,7 +279,12 @@ function _pickDojangWords(level) {
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   switch (level) {
     case 1: return [pick(DOJANG_JAMO_L1)];
-    case 2: return [Math.random() < 0.35 ? pick(DOJANG_JAMO_L2) : pick(DOJANG_COMBS_L2)];
+    case 2: {
+      const r = Math.random();
+      if (r < 0.30) return [pick(DOJANG_JAMO_L2)];
+      if (r < 0.65) return [pick(DOJANG_COMBS_L2)];
+      return [pick(DOJANG_VOWELS_L2)];
+    }
     case 3: return [pick(DOJANG_WORDS_L3)];
     case 4: return [pick(DOJANG_WORDS_L4)];
     default: return [pick(DOJANG_JAMO_L1)];
@@ -308,9 +315,9 @@ function genDojangBoss() {
   // Boss is the 사범 (instructor): random 1-2 char dictionary words, no learning
   const candidates = WORD_DICT.filter(w => w.text.length <= 2 && (w.rel ?? 0) >= 80);
   const shuffled = [...candidates].sort(() => Math.random() - 0.5);
-  const words = shuffled.slice(0, 2).map(w => w.text);
+  const words = shuffled.slice(0, 5).map(w => w.text);
   if (!words.length) words.push('도');
-  return [{ type:'boss', hp:2, maxHp:2, words, bossEmoji:'🥷', special: null, spdMult:0.55, bossPhase:0, wieldIcon: false }];
+  return [{ type:'boss', hp:5, maxHp:5, words, bossEmoji:'🥷', special: null, spdMult:1, bossPhase:0, wieldIcon: false }];
 }
 const INSTRUMENTS       = ['🎤','🎹','🥁','🪘','🪇','🎷','🎺','🪗','🎸','🎻'];
 const NOTES             = ['🎶','🎵','🎼'];
@@ -348,8 +355,10 @@ export function mkMonster(tmpl) {
   const vhScale = vhRaw <= 1 ? vhRaw : 1 + (vhRaw - 1) * 0.45; // softer above 1080
   const touchBoost = G.touchMode ? 1.14 : 1;
   const size    = Math.round(baseSize * vhScale * touchBoost);
-  let spd = monsterSpeed(tmpl.words, isBoss);
-  if (tmpl.spdMult) spd *= tmpl.spdMult;
+  let spd = G.run?.worldIdx === 0
+    ? 28 * (G.vH / 800)   // dojang: fixed slow speed for all rooms
+    : monsterSpeed(tmpl.words, isBoss);
+  if (G.run?.worldIdx !== 0 && tmpl.spdMult) spd *= tmpl.spdMult;
 
   // Spawn position & animation
   // spawnNX/spawnNY: normalized landing coords (0..1) so position survives window resize.
@@ -2608,11 +2617,14 @@ export function drawMonsters() {
       
       // Check if this word should be hidden (after 5+ kills on nouns, or conjugation threshold on verbs/adj)
       // But if dictionary item is active, flash between hidden and visible
+      // Dojang (world 0) always shows words — it's a learning environment
       const wordDef = WORD_DICT.find(d => d.text === (m.verbAdjDictWord || word));
       const isNoun = wordDef && wordDef.category !== 'verb' && wordDef.category !== 'adjective';
       let shouldHideWord = false;
-      
-      if (isNoun) {
+
+      if (G.run?.worldIdx === 0) {
+        shouldHideWord = false;
+      } else if (isNoun) {
         // Noun hiding: based on kill count
         shouldHideWord = G.wordHiddenStatus[word];
       } else if (wordDef && (wordDef.category === 'verb' || wordDef.category === 'adjective')) {
