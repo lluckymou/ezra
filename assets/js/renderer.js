@@ -17,6 +17,38 @@ let _roomDesignWallStyle = -1;
 export function setRoomDesignFloorPat(v)  { _roomDesignFloorPat  = v < 0 ? -1 : v; }
 export function setRoomDesignWallStyle(v) { _roomDesignWallStyle = v < 0 ? -1 : v; }
 
+// Full-wall images (cheat menu — null = none)
+const _wallImgs = { N: null, S: null, E: null, W: null };
+export function setWallImage(side, img) { _wallImgs[side] = img || null; }
+
+// Draw an image perspective-stretched to fill a quadrilateral (p0=TL, p1=TR, p2=BR, p3=BL)
+// Uses triangle affine-transform decomposition for canvas 2D
+function _drawImgOnQuad(img, p0, p1, p2, p3) {
+  const iw = img.naturalWidth  || img.width  || 1;
+  const ih = img.naturalHeight || img.height || 1;
+  function tri(sx0,sy0, sx1,sy1, sx2,sy2, dx0,dy0, dx1,dy1, dx2,dy2) {
+    const det = sx0*(sy1-sy2) + sx1*(sy2-sy0) + sx2*(sy0-sy1);
+    if (Math.abs(det) < 1e-8) return;
+    const a = (dx0*(sy1-sy2) + dx1*(sy2-sy0) + dx2*(sy0-sy1)) / det;
+    const b = (dy0*(sy1-sy2) + dy1*(sy2-sy0) + dy2*(sy0-sy1)) / det;
+    const c = (dx0*(sx2-sx1) + dx1*(sx0-sx2) + dx2*(sx1-sx0)) / det;
+    const d = (dy0*(sx2-sx1) + dy1*(sx0-sx2) + dy2*(sx1-sx0)) / det;
+    const e = (dx0*(sx1*sy2-sx2*sy1) + dx1*(sx2*sy0-sx0*sy2) + dx2*(sx0*sy1-sx1*sy0)) / det;
+    const f = (dy0*(sx1*sy2-sx2*sy1) + dy1*(sx2*sy0-sx0*sy2) + dy2*(sx0*sy1-sx1*sy0)) / det;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(dx0,dy0); ctx.lineTo(dx1,dy1); ctx.lineTo(dx2,dy2);
+    ctx.closePath(); ctx.clip();
+    ctx.transform(a, b, c, d, e, f);
+    ctx.drawImage(img, 0, 0);
+    ctx.restore();
+  }
+  // Triangle 1: TL, TR, BR
+  tri(0,0, iw,0, iw,ih,  p0[0],p0[1], p1[0],p1[1], p2[0],p2[1]);
+  // Triangle 2: TL, BR, BL
+  tri(0,0, iw,ih, 0,ih,  p0[0],p0[1], p2[0],p2[1], p3[0],p3[1]);
+}
+
 // 3×5 decoration grid set by cheat menu — stored on G.decorGrid (cleared by resetRoomState)
 export function setDecorGrid(grid) { G.decorGrid = grid; }
 
@@ -231,6 +263,12 @@ export function drawBackground() {
   // 2=cube (grid: both v+h)                  3=wide (stripe-v, sparse)
   const _wStyle = _roomDesignWallStyle >= 0 ? _roomDesignWallStyle : (_rCol * 11 + _rRow * 5 + Math.abs(_rCol * _rRow)) % 4;
   drawWallPattern(_wStyle, wallH, wallSide, wallBot);
+
+  // Full-wall images (stretched to each wall's trapezoid, under vignette)
+  if (_wallImgs.N) _drawImgOnQuad(_wallImgs.N, [0,0], [W,0], [W-wallSide,wallH], [wallSide,wallH]);
+  if (_wallImgs.W) _drawImgOnQuad(_wallImgs.W, [0,0], [wallSide,wallH], [wallSide,floorBot], [0,H]);
+  if (_wallImgs.E) _drawImgOnQuad(_wallImgs.E, [W,0], [W-wallSide,wallH], [W-wallSide,floorBot], [W,H]);
+  if (_wallImgs.S) _drawImgOnQuad(_wallImgs.S, [wallSide,floorBot], [W-wallSide,floorBot], [W,H], [0,H]);
 
   // Vignette
   const vig = ctx.createRadialGradient(W/2, H/2, H*0.15, W/2, H/2, H*0.8);

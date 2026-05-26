@@ -23,7 +23,7 @@ import {
   drawTransition, drawWorldTransition, drawRoomLabel, drawRoomNpc,
   tickWeather, drawWeather, drawDayNight,
   initRenderer, initWeather, startWeatherFade, getDayBrightness,
-  setRoomDesignFloorPat, setRoomDesignWallStyle, setDecorGrid, drawDecorAvoids,
+  setRoomDesignFloorPat, setRoomDesignWallStyle, setDecorGrid, drawDecorAvoids, setWallImage,
 } from './renderer.js';
 import { initMap, updateMap, updateMapExtras, syncClockToGame, getWeatherLabel } from './map.js';
 import {
@@ -2451,6 +2451,26 @@ function buildTitleScreen() {
     updateBook();
   });
 
+  // Clickable doors — default ON
+  const savedClickable = localStorage.getItem('krr_clickable_doors');
+  G.clickableDoors = savedClickable !== null ? savedClickable === '1' : true;
+  const elClickable = document.getElementById('chk-clickable-doors');
+  if (elClickable) elClickable.checked = G.clickableDoors;
+  document.getElementById('chk-clickable-doors')?.addEventListener('change', e => {
+    G.clickableDoors = e.target.checked;
+    localStorage.setItem('krr_clickable_doors', e.target.checked ? '1' : '0');
+  });
+
+  // Random menu music
+  const savedRandMusic = localStorage.getItem('krr_random_menu_music');
+  G.randomMenuMusic = savedRandMusic === '1';
+  const elRandMusic = document.getElementById('chk-random-menu-music');
+  if (elRandMusic) elRandMusic.checked = G.randomMenuMusic;
+  document.getElementById('chk-random-menu-music')?.addEventListener('change', e => {
+    G.randomMenuMusic = e.target.checked;
+    localStorage.setItem('krr_random_menu_music', e.target.checked ? '1' : '0');
+  });
+
   // Start button - show Dojang entry modal
   document.getElementById('btn-play')?.addEventListener('click', () => {
     _showDojangEntryModal();
@@ -2785,14 +2805,19 @@ function showTitleScreen() {
   drawDayNight();   // immediately clear the night overlay canvas (was left dark if returning from a night run)
   _applyDayNightEmoji(); // immediately clear any night-time brightness filter
   playMusic('menu', 0);
-  // Mobile (height < 500px): always enable touch mode and clickable doors
+  if (G.randomMenuMusic) {
+    const worldIds = WORLDS.map(w => w.id);
+    const pick = worldIds[Math.floor(Math.random() * worldIds.length)];
+    _wikiMusicPreview = pick;
+    playMusic(pick, 0);
+  } else {
+    _wikiMusicPreview = null;
+  }
+  // Mobile (height < 500px): always enable touch mode
   if (window.innerHeight < 500) {
     G.touchMode = true;
-    G.clickableDoors = true;
     const chkTouch = document.getElementById('chk-touch');
     if (chkTouch) chkTouch.checked = true;
-    const chkDoors = document.getElementById('chk-clickable-doors');
-    if (chkDoors) chkDoors.checked = true;
   }
   _applyMenuZoom();
   // Initialize background room preview if not already set
@@ -2839,6 +2864,17 @@ function buildLangSelector() {
 }
 
 let _titleDictCat = 'stats';
+let _wikiMusicPreview = null; // world ID currently previewing music in main menu wiki
+
+function _stopWikiMusicPreview() {
+  if (!_wikiMusicPreview) return;
+  _wikiMusicPreview = null;
+  document.querySelectorAll('.wiki-world-music-btn.active').forEach(b => {
+    b.textContent = '🎵';
+    b.classList.remove('active');
+  });
+  playMusic('menu', 0);
+}
 
 // ── Dict title: swap "My Dictionary" ↔ "Dictionary" based on progression setting ──
 function _syncDictTitles() {
@@ -2850,7 +2886,7 @@ function _syncDictTitles() {
 }
 
 // ── Stats tab content (shared by book panel and my-dict modal) ──────────────────
-function _renderStatsContent() {
+function _renderStatsContent(menuOnly = false) {
   const r = 42, circ = +(2 * Math.PI * r).toFixed(2);
 
   function ring(pct, color, labelKey, line1, line2 = '') {
@@ -2937,12 +2973,15 @@ function _renderStatsContent() {
     const unknownCls = revealed ? '' : ' wiki-card-unknown';
     const title = revealed ? (i18n('worlds.'+w.id+'.name') || w.name) : '???????';
     const sub   = revealed ? `${w.bossEmoji} · ${i18n('worlds.'+w.id+'.desc') || ''}` : '???????';
+    const isPreview = menuOnly && _wikiMusicPreview === w.id;
+    const musicBtn = menuOnly ? `<button class="wiki-world-music-btn${isPreview ? ' active' : ''}" data-world-music="${w.id}">${isPreview ? '❌' : '🎵'}</button>` : '';
     return `<div class="wiki-card${visited ? ' wiki-card-seen' : ''}${unknownCls}">
       <div class="wiki-card-icon"${tooltip}>${w.emoji}</div>
       <div class="wiki-card-body">
         <div class="wiki-card-title">${title} ${visitedBadge}</div>
         <div class="wiki-card-sub">${sub}</div>
       </div>
+      ${musicBtn}
     </div>`;
   }).join('');
 
@@ -3103,7 +3142,7 @@ function buildTitleDict(filter) {
 
   if (_titleDictCat === 'stats') {
     if (searchWrap) searchWrap.style.display = 'none';
-    container.innerHTML = _renderStatsContent();
+    container.innerHTML = _renderStatsContent(true);
     _wireStatsInteractions(container);
     return;
   }
@@ -4811,6 +4850,25 @@ document.addEventListener('click', e => {
   }
 });
 
+// Wiki world music preview (main menu only)
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.wiki-world-music-btn');
+  if (!btn) return;
+  const trackId = btn.dataset.worldMusic;
+  if (_wikiMusicPreview === trackId) {
+    _stopWikiMusicPreview();
+  } else {
+    document.querySelectorAll('.wiki-world-music-btn.active').forEach(b => {
+      b.textContent = '🎵';
+      b.classList.remove('active');
+    });
+    _wikiMusicPreview = trackId;
+    btn.textContent = '❌';
+    btn.classList.add('active');
+    playMusic(trackId, 0);
+  }
+});
+
 // Mobile dojang two-tap: first tap reveals lluc, second tap follows link
 document.addEventListener('click', e => {
   const wrap = document.getElementById('menu-dojang-wrap');
@@ -5648,7 +5706,27 @@ window.cheatResetRoomColors = function() {
   _syncRoomColorInputs();
   document.querySelectorAll('.cheat-decor-sel').forEach(sel => { sel.value = 'none'; });
   setDecorGrid(null);
+  ['N','S','E','W'].forEach(s => {
+    setWallImage(s, null);
+    const el = document.getElementById(`c-wall-img-${s}`);
+    if (el) el.value = 'none';
+  });
 };
+// Full-wall image preloads keyed by option value
+const _WALL_IMGS = {};
+function _getWallImg(value) {
+  if (value === 'none' || !value) return null;
+  if (!_WALL_IMGS[value]) {
+    const img = new Image();
+    img.src = `assets/img/full-wall/${value}.png`;
+    _WALL_IMGS[value] = img;
+  }
+  return _WALL_IMGS[value];
+}
+window.cheatWallImage = function(side, value) {
+  setWallImage(side, _getWallImg(value));
+};
+
 window.cheatDecorGridChange = function() {
   const grid = [];
   let hasOverlay = false;

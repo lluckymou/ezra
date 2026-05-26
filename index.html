@@ -196,13 +196,6 @@
           </label>
         </div>
         <div class="gopt-card">
-          <div class="gopt-label" data-i18n="options.speakWords">🔊 Speak Words</div>
-          <label class="gopt-toggle">
-            <input type="checkbox" id="chk-tts" checked>
-            <span class="gopt-track"><span class="gopt-thumb"></span></span>
-          </label>
-        </div>
-        <div class="gopt-card">
           <div class="gopt-label" data-i18n="options.hanjaPowerups">🀄 Hanja Powerups</div>
           <label class="gopt-toggle">
             <input type="checkbox" id="chk-hanja" checked>
@@ -241,6 +234,20 @@
           <div class="gopt-label" data-i18n="options.dictProgression">🔓 Disable Dict. Progression</div>
           <label class="gopt-toggle">
             <input type="checkbox" id="chk-dict-prog">
+            <span class="gopt-track"><span class="gopt-thumb"></span></span>
+          </label>
+        </div>
+        <div class="gopt-card">
+          <div class="gopt-label" data-i18n="options.randomMenuMusic">🎲 Random Menu Music</div>
+          <label class="gopt-toggle">
+            <input type="checkbox" id="chk-random-menu-music">
+            <span class="gopt-track"><span class="gopt-thumb"></span></span>
+          </label>
+        </div>
+        <div class="gopt-card">
+          <div class="gopt-label" data-i18n="options.speakWords">🔊 Speak Words</div>
+          <label class="gopt-toggle">
+            <input type="checkbox" id="chk-tts" checked>
             <span class="gopt-track"><span class="gopt-thumb"></span></span>
           </label>
         </div>
@@ -1006,6 +1013,37 @@
       <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c2" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
       <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c3" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
       <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c4" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
+    </div>
+    <div class="cheat-row">
+      <label>Full-Wall Image</label>
+    </div>
+    <div class="cheat-row">
+      <label style="min-width:2em">N</label>
+      <select class="cheat-inp" id="c-wall-img-N" onchange="cheatWallImage('N',this.value)">
+        <option value="none">none</option>
+        <option value="flag">flag</option>
+      </select>
+    </div>
+    <div class="cheat-row">
+      <label style="min-width:2em">S</label>
+      <select class="cheat-inp" id="c-wall-img-S" onchange="cheatWallImage('S',this.value)">
+        <option value="none">none</option>
+        <option value="flag">flag</option>
+      </select>
+    </div>
+    <div class="cheat-row">
+      <label style="min-width:2em">E</label>
+      <select class="cheat-inp" id="c-wall-img-E" onchange="cheatWallImage('E',this.value)">
+        <option value="none">none</option>
+        <option value="flag">flag</option>
+      </select>
+    </div>
+    <div class="cheat-row">
+      <label style="min-width:2em">W</label>
+      <select class="cheat-inp" id="c-wall-img-W" onchange="cheatWallImage('W',this.value)">
+        <option value="none">none</option>
+        <option value="flag">flag</option>
+      </select>
     </div>
     <div class="cheat-row">
       <label data-i18n="cheat.room.resetRoom">Reset Room</label>
