@@ -313,15 +313,19 @@
         <div id="pause-run-stats" style="display:none"></div>
       </div>
       <div id="pause-mid-opts">
-        <div class="pause-opt-row">
+        <div class="pause-opt-row pause-opt-full">
           <span class="pause-opt-label"><span id="pause-sfx-emoji">🔉</span> SFX</span>
           <input type="range" id="pause-sfx-vol" min="0" max="100" value="50" style="width:90px;accent-color:#4a9eff">
         </div>
-        <div class="pause-opt-row">
+        <div class="pause-opt-row pause-opt-full">
           <span class="pause-opt-label"><span id="pause-music-emoji">🎵</span> <span data-i18n="options.ambientMusic">Ambient Music</span></span>
           <input type="range" id="pause-music-vol" min="0" max="100" value="35" style="width:90px;accent-color:#4a9eff">
         </div>
-        <div class="pause-opt-row">
+        <div class="pause-opt-row pause-opt-full">
+          <span class="pause-opt-label" data-i18n="options.speakWords">🔊 Speak Words</span>
+          <label class="gopt-toggle"><input type="checkbox" id="pause-chk-tts" checked><span class="gopt-track"><span class="gopt-thumb"></span></span></label>
+        </div>
+        <div class="pause-opt-row pause-opt-full">
           <span class="pause-opt-label" data-i18n="options.weather">🌤️ Weather</span>
           <select id="pause-sel-weather" class="gopt-select" style="width:auto">
             <option value="1"    data-i18n-opt="options.weatherHighlyDetailed">Highly Detailed</option>
@@ -331,10 +335,6 @@
             <option value="0.1"  data-i18n-opt="options.weatherMinimal">Minimal</option>
             <option value="0"    data-i18n-opt="options.weatherOff">Disabled</option>
           </select>
-        </div>
-        <div class="pause-opt-row">
-          <span class="pause-opt-label" data-i18n="options.speakWords">🔊 Speak Words</span>
-          <label class="gopt-toggle"><input type="checkbox" id="pause-chk-tts" checked><span class="gopt-track"><span class="gopt-thumb"></span></span></label>
         </div>
         <div class="pause-opt-row mp-session-row">
           <span class="pause-opt-label" data-i18n="options.translations">💬 Translations</span>
@@ -503,7 +503,7 @@
   </div>
   <div id="minimap-grid"></div>
   <div id="map-legend">
-    <span>⚔️ <span data-i18n="map.legendCombat">Combat</span></span>
+    <span>🗡️ <span data-i18n="map.legendCombat">Combat</span></span>
     <span><span id="map-legend-boss">🐲</span> <span data-i18n="map.legendBoss">Boss</span></span>
     <span>🏪 <span data-i18n="map.legendShop">Shop</span></span>
     <span>✨ <span data-i18n="map.legendItem">Item</span></span>
@@ -698,24 +698,26 @@
 <!-- ── DOJANG ENTRY MODAL ─────────────────────────────────── -->
 <div id="dojang-entry-modal" class="off">
   <div id="dojang-entry-inner">
-    <h2 data-i18n="dojang.entryTitle">Ready, adventurer?</h2>
-    <p data-i18n="dojang.entrySub">Do you want to train in the Hangul Dojang before your adventure?</p>
-    <div id="dojang-entry-btns">
-      <button class="dj-entry-btn dj-btn-primary" id="dojang-entry-go">
-        <span class="dj-btn-icon">🥋</span>
-        <span class="dj-btn-main" data-i18n="dojang.btnDojang">Hangul Dojang</span>
-        <span class="dj-btn-sub" data-i18n="dojang.btnDojangSub">Learn to write Hangul</span>
+    <div id="dej-modal-title" data-i18n="dojang.entry.title">Answer Your Calling</div>
+    <div id="dej-paths">
+      <button class="dej-path-btn" data-path="0">
+        <span class="dej-path-icon">ㅃ</span>
+        <span class="dej-path-label" data-i18n="dojang.entry.path0">I can't read or write Korean well</span>
       </button>
-      <button class="dj-entry-btn" id="dojang-entry-skip">
-        <span class="dj-btn-icon">⚔️</span>
-        <span class="dj-btn-main" data-i18n="dojang.btnAdventure">Start Adventure</span>
-        <span class="dj-btn-sub" data-i18n="dojang.btnAdventureSub">Jump straight in</span>
+      <span class="dej-connector">·</span>
+      <button class="dej-path-btn" data-path="1">
+        <span class="dej-path-icon">쀄</span>
+        <span class="dej-path-label" data-i18n="dojang.entry.path1">I can't type on Korean keyboards yet</span>
       </button>
-      <button class="dj-entry-btn dj-btn-coop" id="dojang-entry-coop">
-        <span class="dj-btn-icon">🧑‍🤝‍🧑</span>
-        <span class="dj-btn-main" data-i18n="multiplayer.btnCoop">Co-op Adventure</span>
-        <span class="dj-btn-sub" data-i18n="multiplayer.btnCoopSub">Play with a friend</span>
+      <span class="dej-connector">·</span>
+      <button class="dej-path-btn" data-path="2">
+        <span class="dej-path-icon">쀏</span>
+        <span class="dej-path-label" data-i18n="dojang.entry.path2">I can already type on Korean keyboards</span>
       </button>
+    </div>
+    <div id="dej-detail" class="off">
+      <div id="dej-detail-title"></div>
+      <div id="dej-cards"></div>
     </div>
   </div>
 </div>
@@ -759,7 +761,6 @@
       </div>
       <button class="dj-pause-btn dj-pause-primary" id="dojang-btn-resume" data-i18n="dojang.resume">▶ Resume</button>
       <button class="dj-pause-btn" id="dojang-btn-menu" data-i18n="dojang.backMenu">Main Menu</button>
-      <button class="dj-pause-btn off" id="dojang-btn-adventure" data-i18n="dojang.startAdventure">⚔️ Start Adventure</button>
     </div>
   </div>
 
@@ -783,6 +784,16 @@
       </div>
       <div id="dojang-inspector-body"></div>
       <div id="dojang-inspector-nav"></div>
+    </div>
+  </div>
+
+  <div id="dojang-leaf-modal" class="off">
+    <div id="dojang-leaf-inner">
+      <div id="dojang-leaf-header">
+        <button id="dojang-leaf-nospoil" data-i18n="dojang.leafNoSpoil">I know hangul</button>
+        <button id="dojang-leaf-close">✕</button>
+      </div>
+      <div id="dojang-leaf-body"></div>
     </div>
   </div>
 </div>

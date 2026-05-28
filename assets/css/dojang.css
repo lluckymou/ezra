@@ -10,9 +10,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(3, 8, 26, 0.82);
-  backdrop-filter: blur(6px);
-
+  background: rgba(3, 8, 26, 0.88);
+  backdrop-filter: blur(8px);
   transition: opacity .3s;
 }
 #dojang-entry-modal.off {
@@ -20,72 +19,242 @@
   pointer-events: none;
 }
 #dojang-entry-inner {
-  background: #0d1428;
-  border: 1px solid rgba(80, 140, 255, 0.2);
-  border-radius: 20px;
-  padding: 36px 32px 28px;
-  width: min(650px, 94vw);
-  text-align: center;
-  color: #e8eaf6;
-  box-shadow: 0 24px 80px rgba(0,0,0,.6);
+  background: hsla(42, 28%, 95%, 1);
+  background-image: url('../img/noise.svg');
+  background-size: 200px;
+  border: 1px solid rgba(80, 30, 10, 0.18);
+  border-radius: 16px;
+  padding: 24px 26px 26px 24px;
+  width: min(660px, 94vw);
+  color: #1a0808;
+  box-shadow: 0 28px 80px rgba(0,0,0,.65);
+  position: relative;
 }
-#dojang-entry-inner h2 {
-  font-size: clamp(1.1rem, 3vw, 1.5rem);
+
+/* Modal title */
+#dej-modal-title {
+  font-size: .9rem;
   font-weight: 700;
-  margin-bottom: 8px;
-  color: #f0f4ff;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(100, 30, 20, .45);
+  margin-bottom: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(100, 30, 20, .14);
 }
-#dojang-entry-inner p {
-  font-size: clamp(.8rem, 2vw, .95rem);
-  color: rgba(200,210,240,.7);
-  margin-bottom: 28px;
-}
-#dojang-entry-btns {
+
+/* Path selector row */
+#dej-paths {
   display: flex;
-  gap: 14px;
-  justify-content: center;
-  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
 }
-.dj-entry-btn {
+.dej-path-btn {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  background: rgba(255,255,255,.05);
-  border: 1.5px solid rgba(255,255,255,.15);
-  border-radius: 14px;
-  padding: 18px 22px;
-  min-width: 150px;
+  gap: 10px;
+  background: rgba(0,0,0,.03);
+  border: 1.5px solid rgba(0,0,0,.1);
+  border-radius: 10px;
+  padding: 18px 12px;
   cursor: pointer;
-  transition: background .2s, transform .15s, border-color .2s;
-  color: #e8eaf6;
+  color: rgba(30, 10, 5, .8);
+  transition: background .2s, border-color .2s, transform .15s, box-shadow .2s;
 }
-.dj-entry-btn:hover {
-  background: rgba(255,255,255,.1);
-  border-color: rgba(255,255,255,.35);
+.dej-path-btn:hover {
+  background: rgba(0,0,0,.06);
+  border-color: rgba(0,0,0,.18);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
 }
-.dj-entry-btn .dj-btn-icon {
+/* Per-path active accent colours */
+.dej-path-btn[data-path="0"].active {
+  background: rgba(154, 24, 24, .07);
+  border-color: rgba(154, 24, 24, .4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(154,24,24,.1);
+}
+.dej-path-btn[data-path="1"].active {
+  background: rgba(26, 60, 140, .07);
+  border-color: rgba(26, 60, 140, .38);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26,60,140,.1);
+}
+.dej-path-btn[data-path="2"].active {
+  background: rgba(14, 80, 55, .07);
+  border-color: rgba(14, 80, 55, .38);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14,80,55,.1);
+}
+
+/* Path icons — calligraphic for 0 and 1, typeset for 2 */
+.dej-path-icon {
+  font-size: 2.6rem;
+  line-height: 1;
+  color: rgba(30, 10, 5, .75);
+  transition: color .2s;
+}
+.dej-path-btn[data-path="0"] .dej-path-icon {
+  font-family: "Song Myung", "Nanum Myeongjo", serif;
+  font-size: 3rem;
+}
+
+.dej-path-btn[data-path="1"] .dej-path-icon {
+  font-family: "Nanum Myeongjo", serif;
+  font-size: 3rem;
+}
+.dej-path-btn[data-path="0"].active .dej-path-icon,
+.dej-path-btn[data-path="0"]:hover  .dej-path-icon { color: #9a1818; }
+.dej-path-btn[data-path="1"].active .dej-path-icon,
+.dej-path-btn[data-path="1"]:hover  .dej-path-icon { color: #1a3c8c; }
+.dej-path-btn[data-path="2"].active .dej-path-icon,
+.dej-path-btn[data-path="2"]:hover  .dej-path-icon { color: #0e5037; }
+
+.dej-path-label {
+  font-size: .74rem;
+  color: rgba(40, 15, 10, .55);
+  text-align: center;
+  line-height: 1.4;
+}
+.dej-connector {
+  font-size: 1.1rem;
+  color: rgba(100, 30, 20, .2);
+  flex-shrink: 0;
+  align-self: center;
+  letter-spacing: .05em;
+}
+
+/* Detail section */
+#dej-detail {
+  margin-top: 16px;
+  border-top: 1px solid rgba(100, 30, 20, .13);
+  padding-top: 16px;
+}
+#dej-detail.off { display: none; }
+#dej-detail-title {
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(80, 20, 10, .4);
+  text-align: center;
+  margin-bottom: 16px;
+}
+#dej-detail[data-path="0"] #dej-detail-title { color: rgba(154, 24,  24,  .8);  }
+#dej-detail[data-path="1"] #dej-detail-title { color: rgba(26,  60,  140, .75); }
+#dej-detail[data-path="2"] #dej-detail-title { color: rgba(14,  80,  55,  .75);
+}
+#dej-cards {
+  display: flex;
+  gap: 10px;
+}
+.dej-card {
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0,0,0,.03);
+  border: 1px solid rgba(0,0,0,.1);
+  border-radius: 10px;
+  padding: 11px 12px 0 12px;
+  cursor: pointer;
+  color: rgba(30,10,5,.85);
+  text-align: left;
+  position: relative;
+  transition: background .2s, border-color .2s, transform .15s, box-shadow .2s;
+}
+.dej-card:hover {
+  background: rgba(0,0,0,.06);
+  border-color: rgba(0,0,0,.18);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.07);
+}
+/* Per-action default background tints */
+.dej-card[data-action="dojang"]      { background: rgba(154,24,24,.04);  border-color: rgba(154,24,24,.2);  }
+.dej-card[data-action="solo-normal"] { background: rgba(26,60,140,.04);  border-color: rgba(26,60,140,.18); }
+.dej-card[data-action="coop"]        { background: rgba(26,60,140,.04);  border-color: rgba(26,60,140,.18); }
+.dej-card[data-action="solo-expert"] { background: rgba(14,80,55,.04);   border-color: rgba(14,80,55,.18);  }
+.dej-card[data-action="coop-expert"] { background: rgba(14,80,55,.04);   border-color: rgba(14,80,55,.18);  }
+
+/* Card hover accents */
+#dej-detail[data-path="0"] .dej-card:hover { background: rgba(154,24,24,.09); border-color: rgba(154,24,24,.35); }
+#dej-detail[data-path="1"] .dej-card:hover { background: rgba(26,60,140,.09); border-color: rgba(26,60,140,.32); }
+#dej-detail[data-path="2"] .dej-card:hover { background: rgba(14,80,55,.09);  border-color: rgba(14,80,55,.32);  }
+
+.dej-card-desc {
+  font-size: .9rem;
+  font-family: "Nanum Myeongjo", serif;
+  color: rgb(40, 15, 10);
+  line-height: 1.5;
+  padding-right: 5.5rem;
+  flex: 1;
+}
+.dej-card-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+.dej-card-portrait {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.28));
+}
+.dej-card-portrait svg { width: 80px; height: 80px; }
+.dej-card-portrait-coop {
+  font-size: 62px;
+  line-height: 91px;
+  text-align: center;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.28));
+}
+.dej-card-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.dej-cta-emoji {
   font-size: 2rem;
   line-height: 1;
-  margin-bottom: 5px;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.28));
 }
-.dj-entry-btn .dj-btn-main {
-  font-size: .95rem;
+.dej-cta-label {
+  font-size: 1.25rem;
   font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+  color: rgba(30,10,5,.75);
+  padding-bottom: 10px;
+}
+.dej-card-coop { flex: 0.75; }
+.dej-card-coop .dej-card-desc { padding-right: 2.8rem; }
+.dej-beta {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #dc2626;
   color: #fff;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1.3;
 }
-.dj-entry-btn .dj-btn-sub {
-  font-size: .72rem;
-  color: rgba(200,210,240,.6);
+@media (max-width: 480px) {
+  #dej-paths { gap: 5px; }
+  .dej-path-btn { padding: 14px 8px; gap: 8px; }
+  .dej-path-icon { font-size: 2rem !important; }
+  .dej-path-label { font-size: .9rem; }
+  .dej-connector { display: none; }
+  #dej-cards { flex-direction: column; }
 }
-.dj-entry-btn.dj-btn-primary {
-  border-color: rgba(100,180,255,.4);
-  background: rgba(40,80,160,.25);
-}
-.dj-entry-btn.dj-btn-primary:hover {
-  background: rgba(40,80,160,.45);
-  border-color: rgba(100,180,255,.7);
+@media (max-height: 500px) {
+  #dojang-entry-inner { zoom: 0.8; }
 }
 
 /* ── Dojang Paper Background (noise texture over gradient canvas) ── */
@@ -598,6 +767,11 @@ body:not(.phase-dojang) #dojang-announce { opacity: 0 !important; }
   color: rgba(40,15,15,.8);
   font-size: .78rem;
 }
+.dj-book-name-rom {
+  color: rgba(80,30,30,.45);
+  font-size: .68rem;
+  font-weight: 400;
+}
 .dj-book-rom {
   color: rgba(120,40,40,.7);
   font-size: .72rem;
@@ -654,8 +828,162 @@ body:not(.phase-dojang) #dojang-announce { opacity: 0 !important; }
   background: rgba(255,240,240,.4);
 }
 .dj-book-desc.off { display: none; }
+
+/* ── Jamo font preview (top of dj-book-desc) ──────────────────── */
+.jamo-font-preview {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 6px 2px 10px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(100,0,0,.12);
+}
+.jamo-fp-main .jamo-fp-char {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 3.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.jamo-fp-variants {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+.jamo-fp-variant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+}
+.jamo-fp-variant .jamo-fp-char {
+  font-size: 2.5rem;
+  line-height: 1;
+  border: 1px solid rgba(100,0,0,.18);
+  border-radius: 6px;
+  padding: 4px;
+  background: rgba(255,255,255,.55);
+}
+.jamo-fp-song .jamo-fp-char    { font-family: 'Song Myung', serif; padding: 2px 4px 0 !important; }
+.jamo-fp-myeongjo .jamo-fp-char { font-family: 'Nanum Myeongjo', serif; padding: 6px 4px 0 !important; }
+.jamo-fp-label {
+  font-size: .6rem;
+  color: rgba(60,30,30,.45);
+  font-family: 'Pretendard', sans-serif;
+  letter-spacing: .02em;
+}
+.jamo-name-sound {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 2px 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(100,0,0,.1);
+  font-size: .76rem;
+}
+.jamo-ns-row { display: flex; gap: 8px; font-size: .9rem; }
+.jamo-ns-label { color: rgba(60,20,20,.5); flex-shrink: 0; }
+.jamo-ns-val   { color: rgba(30,10,10,.85); font-weight: 600; }
+.jamo-ns-rom   { color: rgba(80,30,30,.45); font-size: .8em; font-weight: 400; }
 #dojang-book-inner .md-speak-word { color: #c02020; font-weight: 700; }
 #dojang-book-inner .md-speak-word:hover { color: #e03030; }
+
+/* ── Jamo Unlock Leaf Modal ──────────────────────────────────── */
+#dojang-leaf-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 305;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3,8,26,0.72);
+  backdrop-filter: blur(6px);
+}
+#dojang-leaf-modal.off { display: none; }
+#dojang-leaf-inner {
+  background: hsla(8,30%,96%,1);
+  background-image: url('../img/noise.svg');
+  background-size: 200px;
+  border: 6px solid #b82222;
+  border-left: 20px solid #9a1818;
+  border-radius: 4px 14px 14px 4px;
+  padding: 0 0 24px;
+  width: min(400px, 92vw);
+  max-height: 82vh;
+  overflow-y: auto;
+  color: #1a0808;
+  box-shadow: -4px 0 14px rgba(100,0,0,.16), 0 24px 80px rgba(0,0,0,.65);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(150,0,0,.2) transparent;
+}
+#dojang-leaf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(154,24,24,.2);
+  position: sticky;
+  top: 0;
+  background: hsla(0,30%,96%,.97);
+  z-index: 1;
+}
+#dojang-leaf-nospoil {
+  font-size: .72rem;
+  color: rgba(154,24,24,.5);
+  background: none;
+  border: 1px solid rgba(154,24,24,.25);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color .15s, border-color .15s;
+}
+#dojang-leaf-nospoil:hover { color: rgba(154,24,24,.85); border-color: rgba(154,24,24,.5); }
+#dojang-leaf-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: rgba(154,24,24,.35);
+  padding: 2px 4px;
+  line-height: 1;
+}
+#dojang-leaf-close:hover { color: rgba(154,24,24,.7); }
+
+/* ── Markdown spacing inside book descriptions ──────────────── */
+.dj-book-desc .md-p  { margin: 5px 0; }
+.dj-book-desc .md-li { margin-top: 4px; margin-bottom: 4px; }
+.dj-book-desc .md-br { height: 8px; }
+
+/* ── Batchim section in book desc ───────────────────────────── */
+.dj-batchim-section {
+  margin-top: 14px;
+  padding-top: 18px;
+  border-top: 1.5px solid rgba(138,32,32,.22);
+}
+.dj-batchim-header {
+  font-size: .85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: rgba(120,20,20,.65);
+  margin-bottom: 12px;
+}
+.dj-double-batchim-section {
+  border-top-color: rgba(60,40,120,.18);
+}
+.dj-double-batchim-section .dj-batchim-header {
+  color: rgba(60,40,120,.65);
+}
+#dojang-leaf-body {
+  padding: 0 20px;
+}
+#dojang-leaf-body .dj-book-desc {
+  display: block;
+  background: none;
+  border: none;
+  padding: 0;
+}
 
 /* ── Stroke Inspector Modal ──────────────────────────────────── */
 #dojang-inspector-modal {
@@ -724,21 +1052,22 @@ body:not(.phase-dojang) #dojang-announce { opacity: 0 !important; }
   width: 100%;
 }
 .dj-insp-char {
-  font-size: clamp(3.5rem, 20vw, 5rem);
+  font-size: 3rem;
   color: rgba(30,20,10,.9);
   line-height: 1.1;
-  font-family: "Nanum Myeongjo", "SongMyung", serif;
+  font-family: "Nanum Myeongjo", "Song Myung", serif;
+  margin-top: 8px;
 }
 .dj-insp-name {
-  font-size: .8rem;
+  font-size: .9rem;
   color: rgba(80,50,20,.65);
   font-style: italic;
 }
 .dj-insp-strokes {
   display: flex;
   flex-wrap: nowrap;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 12px;
+  margin-top: 4px;
   overflow-x: auto;
   padding-bottom: 6px;
   scrollbar-width: thin;
@@ -758,15 +1087,15 @@ body:not(.phase-dojang) #dojang-announce { opacity: 0 !important; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   background: rgba(0,0,0,.04);
   border: 1px solid rgba(0,0,0,.1);
-  border-radius: 10px;
-  padding: 10px 14px;
-  min-width: 52px;
+  border-radius: 12px;
+  padding: 12px 16px;
+  min-width: 62px;
 }
 .dj-insp-num {
-  font-size: .78rem;
+  font-size: .88rem;
   color: rgba(40,80,160,.8);
   font-weight: 700;
 }
@@ -775,8 +1104,8 @@ body:not(.phase-dojang) #dojang-announce { opacity: 0 !important; }
   align-items: center;
   justify-content: center;
   color: rgba(30,20,10,.85);
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
 }
 /* Inspector nav as notebook tabs, below the dark header */
 #dojang-inspector-nav {

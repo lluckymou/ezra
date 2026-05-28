@@ -146,7 +146,7 @@ export const WORLDS = [
   // ── World 8: 전주 한옥마을 ─────────────────────────────────────
   {
     id: 'jeonju',
-    name: '전주 한옥마을',
+    name: '전주',
     emoji: '🏘️',          transport: '🚌',
     bgTop: '#120804',      bgBot: '#200e08',
     bossEmoji: '🎭',       // Tal mask - worn in traditional Talchum mask dance
@@ -174,7 +174,7 @@ export const WORLDS = [
   // ── World 10: 여의도 벚꽃, Seoul ──────────────────────────────
   {
     id: 'yeouido',
-    name: '여의도 벚꽃',
+    name: '여의도',
     emoji: '🌸',           transport: '🛳️',
     bgTop: '#100608',      bgBot: '#180c14',
     bossEmoji: '🐍',       // Serpent lurking beneath the sakura
@@ -584,16 +584,42 @@ export function generateDungeon(worldIdx) {
 
   const maxHops = Math.max(...grid.map(c => c.hopDist));
 
-  // Boss room: prefer corners/edges with high hop distance from player
+  // Boss room: must be on edge/corner, far from spawn, with a single entrance
+  const isEdge   = c => c.col === 0 || c.col === COLS - 1 || c.row === 0 || c.row === ROWS - 1;
+  const isCorner = c => (c.col === 0 || c.col === COLS - 1) && (c.row === 0 || c.row === ROWS - 1);
   function edgeScore(cell) {
-    const onCorner = (cell.col === 0 || cell.col === COLS - 1) && (cell.row === 0 || cell.row === ROWS - 1);
-    const onEdge   = cell.col === 0 || cell.col === COLS - 1 || cell.row === 0 || cell.row === ROWS - 1;
-    return cell.hopDist + (onCorner ? 4 : onEdge ? 2 : 0);
+    return cell.hopDist + (isCorner(cell) ? 4 : isEdge(cell) ? 2 : 0);
   }
-  const bossPool = grid.filter(c => c.hopDist >= 2);
-  const sorted = (bossPool.length ? bossPool : grid).sort((a, b) => edgeScore(b) - edgeScore(a));
-  const bossCell = sorted[0];
+  const minBossHops = Math.max(3, Math.floor(maxHops * 0.45));
+  let bossPool = grid.filter(c => isEdge(c) && c.hopDist >= minBossHops);
+  if (!bossPool.length) bossPool = grid.filter(c => isEdge(c));
+  if (!bossPool.length) bossPool = grid.filter(c => c.hopDist >= 2);
+  bossPool.sort((a, b) => edgeScore(b) - edgeScore(a));
+  const bossCell = bossPool[0];
   bossCell.type = 'boss';
+
+  // Trim boss to exactly one entrance: keep the connection toward the lowest-hopDist neighbor
+  {
+    const bossCons = [...bossCell.connections];
+    if (bossCons.length > 1) {
+      let keepDir = bossCons[0], bestHop = Infinity;
+      for (const dir of bossCons) {
+        const { dc, dr } = DIRS.find(d => d.dir === dir);
+        const nc = bossCell.col + dc, nr = bossCell.row + dr;
+        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+        const nb = grid[idx(nc, nr)];
+        if (nb && nb.hopDist < bestHop) { bestHop = nb.hopDist; keepDir = dir; }
+      }
+      for (const dir of bossCons) {
+        if (dir === keepDir) continue;
+        bossCell.connections.delete(dir);
+        const { dc, dr, opp } = DIRS.find(d => d.dir === dir);
+        const nc = bossCell.col + dc, nr = bossCell.row + dr;
+        if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS)
+          grid[idx(nc, nr)]?.connections.delete(opp);
+      }
+    }
+  }
 
   // Classify remaining rooms by hop distance
   const normal = grid.filter(c => c !== bossCell);
@@ -671,13 +697,16 @@ export function generateDungeon(worldIdx) {
   // difficulty cap raised to world 5 so progression feels longer.
   const worldDef = pickWorldDef(worldIdx);
   const effIdx = Math.min(worldIdx, 10); // Difficulty now peaks at World 10
+  // Softer world-2 entry: half the multiplier for the first real world,
+  // then shift the curve so world 3 feels like old world 2, etc.
+  const diffBase = effIdx <= 1 ? effIdx * 2 : (effIdx - 1) * 4;
   for (const cell of grid) {
     if (cell.type === 'boss') {
-      cell.waveNum = (effIdx * 4) + 8; // Step reduced from 8 to 4
+      cell.waveNum = diffBase + 8;
       cell.enemyCount = 1;
     } else {
       const noise = Math.floor(Math.random() * 3) - 1; // -1, 0, or +1
-      cell.waveNum = Math.max(1, (effIdx * 4) + Math.floor(cell.hopDist / Math.max(maxHops, 1) * 6) + 1 + noise);
+      cell.waveNum = Math.max(1, diffBase + Math.floor(cell.hopDist / Math.max(maxHops, 1) * 6) + 1 + noise);
       cell.enemyCount = 3 + Math.floor(cell.hopDist / Math.max(maxHops, 1) * 3);
     }
   }
@@ -1573,7 +1602,10 @@ export function startNewWorld(worldIdx) {
 
 export function startRun() {
   G.phase = 'run';
-  G.run.worldIdx = 0;
+  const _skipIntro = G.skipIntroWorld;
+  G.skipIntroWorld = false;
+  const _startIdx = _skipIntro ? 1 : 0;
+  G.run.worldIdx = _startIdx;
   G.run.seed = Math.floor(Math.random() * 1e6); // per-run seed for deterministic room labels
   // Only generate worldSequence if not already seeded (MP host pre-seeds it before generateDungeon)
   if (!G.run.worldSequence?.length) G.run.worldSequence = generateWorldSequence(14);
@@ -1586,7 +1618,7 @@ export function startRun() {
     G.dungeon = reconstructDungeon(G.mp._blueprintPending);
     G.mp._blueprintPending = null;
   } else {
-    G.dungeon = generateDungeon(0);
+    G.dungeon = generateDungeon(_startIdx);
   }
   G.currentRoom = { ...G.dungeon.start };
   G.run.nextWorldsPreview = previewNextWorlds(7);

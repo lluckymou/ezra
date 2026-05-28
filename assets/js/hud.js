@@ -11,6 +11,7 @@ import { addToInventory, flashAnnounce } from './combat.js';
 import { play as sfx } from './sfx.js';
 import { LESSONS_BASE } from '../data/lessons.js';
 import { WORD_DICT } from '../data/words.js';
+import { JAMO_INFO } from '../data/dojang-data.js';
 
 // Parse lesson word string, handling disambiguation like 'text:emoji'
 function parseLessonWord(str) {
@@ -123,8 +124,8 @@ export function updateInventoryBar() {
 export function renderShopScreen(cell) {
   const scr = document.getElementById('scr-shop');
   if (!scr) return;
-  ['scr-modifier', 'scr-treasure'].forEach(id => document.getElementById(id)?.classList.add('off'));
-  scr.classList.remove('off');
+  ['scr-modifier', 'scr-treasure'].forEach(id => { const e = document.getElementById(id); if (e) { e.classList.add('off'); e.inert = true; } });
+  scr.classList.remove('off'); scr.inert = false;
 
   const body = document.getElementById('shop-items-grid');
   const tooltip = document.getElementById('shop-tooltip');
@@ -239,6 +240,32 @@ function _inlineMarkdown(text) {
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>');
+}
+
+export function jamoFontPreview(j, name, sound) {
+  const brush = i18n('dojang.fontBrush');
+  const serif = i18n('dojang.fontSerif');
+  const labelName  = i18n('dojang.labelName');
+  const labelSound = i18n('dojang.labelSound');
+  const ji = JAMO_INFO[j];
+  const romSuffix = ji?.nameRom
+    ? ` <span class="jamo-ns-rom">(${ji.nameRom}${ji.nameMR && ji.nameMR !== ji.nameRom ? ' / ' + ji.nameMR : ''})</span>`
+    : '';
+  const nameLine  = name  ? `<div class="jamo-ns-row"><span class="jamo-ns-label">${labelName}:</span> <span class="jamo-ns-val">${name}${romSuffix}</span></div>`  : '';
+  const soundLine = sound ? `<div class="jamo-ns-row"><span class="jamo-ns-label">${labelSound}:</span> <span class="jamo-ns-val">${sound}</span></div>` : '';
+  return `<div class="jamo-font-preview">
+    <div class="jamo-fp-main"><span class="jamo-fp-char">${j}</span></div>
+    <div class="jamo-fp-variants">
+      <div class="jamo-fp-variant jamo-fp-song">
+        <span class="jamo-fp-char">${j}</span>
+        <span class="jamo-fp-label">${brush}</span>
+      </div>
+      <div class="jamo-fp-variant jamo-fp-myeongjo">
+        <span class="jamo-fp-char">${j}</span>
+        <span class="jamo-fp-label">${serif}</span>
+      </div>
+    </div>
+  </div>${nameLine || soundLine ? `<div class="jamo-name-sound">${nameLine}${soundLine}</div>` : ''}`;
 }
 
 export function parseLessonMarkdown(md) {
@@ -372,9 +399,13 @@ function buildQuestions() {
   if (pool.length < 10) return []; // Too few words to test
 
   const questions = [];
+  const ttsOk = G.ttsEnabled !== false && typeof speechSynthesis !== 'undefined';
   const types = ['ko_to_trans', 'emoji_to_ko', 'emoji_to_write', 'ko_to_emoji', 'listen_to_write', 'listen_to_choice', 'conj_choice'];
-  // Filter conj_choice if verb counting not unlocked
-  const availableTypes = G.verbCountingUnlocked ? types : types.filter(t => t !== 'conj_choice');
+  // Filter listen types when TTS unavailable; filter conj_choice when verb counting not unlocked
+  const availableTypes = types.filter(t =>
+    (ttsOk   || (t !== 'listen_to_write' && t !== 'listen_to_choice')) &&
+    (G.verbCountingUnlocked || t !== 'conj_choice')
+  );
   
   for (let i = 0; i < 20; i++) {
     const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
@@ -792,7 +823,7 @@ function getLessonCooldownRemaining() {
 export function renderTeacherScreen(cell) {
   const scr = document.getElementById('scr-teacher');
   if (!scr) return;
-  scr.classList.remove('off');
+  scr.classList.remove('off'); scr.inert = false;
   window._onTeacherOpen?.();
 
   const container = document.getElementById('teacher-content');
@@ -943,8 +974,8 @@ window._teacherRenderer = renderTeacherScreen;
 export function renderModifierScreen(cell) {
   const scr = document.getElementById('scr-modifier');
   if (!scr) return;
-  ['scr-shop', 'scr-treasure'].forEach(id => document.getElementById(id)?.classList.add('off'));
-  scr.classList.remove('off');
+  ['scr-shop', 'scr-treasure'].forEach(id => { const e = document.getElementById(id); if (e) { e.classList.add('off'); e.inert = true; } });
+  scr.classList.remove('off'); scr.inert = false;
 
   const container = document.getElementById('modifier-choices');
   if (!container) return;
@@ -977,7 +1008,7 @@ export function renderModifierScreen(cell) {
     }
     div.onclick = () => {
       pickModifierItem(cell, i);
-      document.getElementById('scr-modifier')?.classList.add('off');
+      const _m = document.getElementById('scr-modifier'); if (_m) { _m.classList.add('off'); _m.inert = true; }
       updateHud();
     };
     container.appendChild(div);
@@ -985,7 +1016,7 @@ export function renderModifierScreen(cell) {
 
   // Skip button
   const skip = document.getElementById('modifier-skip');
-  if (skip) skip.onclick = () => scr.classList.add('off');
+  if (skip) skip.onclick = () => { scr.classList.add('off'); scr.inert = true; };
 }
 
 /* ================================================================
@@ -994,8 +1025,8 @@ export function renderModifierScreen(cell) {
 export function renderTreasureScreen(cell) {
   const scr = document.getElementById('scr-treasure');
   if (!scr) return;
-  ['scr-shop', 'scr-modifier'].forEach(id => document.getElementById(id)?.classList.add('off'));
-  scr.classList.remove('off');
+  ['scr-shop', 'scr-modifier'].forEach(id => { const e = document.getElementById(id); if (e) { e.classList.add('off'); e.inert = true; } });
+  scr.classList.remove('off'); scr.inert = false;
 
   const container = document.getElementById('treasure-items');
   if (!container) return;
@@ -1044,9 +1075,8 @@ let _casinoInterval = null;
 export function renderCasinoScreen(cell) {
   const scr = document.getElementById('scr-casino');
   if (!scr) return;
-  ['scr-shop', 'scr-modifier', 'scr-treasure'].forEach(id =>
-    document.getElementById(id)?.classList.add('off'));
-  scr.classList.remove('off');
+  ['scr-shop', 'scr-modifier', 'scr-treasure'].forEach(id => { const e = document.getElementById(id); if (e) { e.classList.add('off'); e.inert = true; } });
+  scr.classList.remove('off'); scr.inert = false;
 
   // Build item pool: shop-style goods + bad outcomes
   const shopInv = generateShopInventory(G, G.run?.worldIdx || 0);
@@ -1150,7 +1180,7 @@ export function renderCasinoScreen(cell) {
       }
     }
     cell.casinoUsed = true;
-    scr.classList.add('off');
+    scr.classList.add('off'); scr.inert = true;
     if (_casinoInterval) { clearInterval(_casinoInterval); _casinoInterval = null; }
     updateHud();
   };
@@ -1170,10 +1200,9 @@ export function showGameOver(victory) {
    TITLE SCREEN
 ================================================================ */
 export function showTitle() {
-  ['scr-over','scr-pause','scr-modifier','scr-shop','scr-treasure'].forEach(
-    id => document.getElementById(id)?.classList.add('off'));
+  ['scr-over','scr-pause','scr-modifier','scr-shop','scr-treasure'].forEach(id => { const e = document.getElementById(id); if (e) { e.classList.add('off'); e.inert = true; } });
   const scr = document.getElementById('scr-title');
-  if (scr) scr.classList.remove('off');
+  if (scr) { scr.classList.remove('off'); scr.inert = false; }
 
   const hiEl = document.getElementById('title-hi');
   if (hiEl) {

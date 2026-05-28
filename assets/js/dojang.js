@@ -11,8 +11,8 @@ import {
 } from '../data/dojang-data.js';
 import { WORD_DICT } from '../data/words.js';
 import { get as i18n } from './i18n.js';
-import { parseLessonMarkdown } from './hud.js';
-import { play as sfx } from './sfx.js';
+import { parseLessonMarkdown, jamoFontPreview } from './hud.js';
+import { play as sfx, getVolume } from './sfx.js';
 
 const STORAGE_KEY = 'krr_dojang';
 const BASE_ERRORS = 3;     // base error allowance; +1 per 4 jamos in the challenge
@@ -126,24 +126,22 @@ function _drawStrokeAnim(ctx, cx, cy, R, angle, t) {
 
 // Returns an animated inline SVG string for the dojang inspector.
 function _makeStrokeAnimSVG(angle) {
-  const S = 20; // viewBox size
-  const c = S / 2, R = S * 0.36, dur = '1.4s';
+  const S = 25; // viewBox size (1.25× larger than before)
+  const c = S / 2, R = S * 0.36, dur = '3.2s', sw = '2.4';
   const rad = a => (a * Math.PI) / 180;
 
-  // draw-and-reset: animate from full offset to 0 (reveal), then instantly reset
+  // easeInExpo draw (0→68.75% = 2.2s), then hold fully drawn (68.75%→100% = 1s)
   const animAttr = (L) =>
-    `from="${L}" to="0" dur="${dur}" repeatCount="indefinite" fill="freeze"`;
+    `values="${L};0;0" keyTimes="0;0.6875;1" calcMode="spline" keySplines="0.12 0 0.39 0;0 0 1 1" dur="${dur}" repeatCount="indefinite"`;
 
   if (angle === 'circle') {
-    const r  = (R * 0.8).toFixed(2);
+    const r   = (R * 0.8).toFixed(2);
     const top = (c - R * 0.8).toFixed(2);
     const bot = (c + R * 0.8).toFixed(2);
-    // Two counterclockwise semicircles (sweep=0): top→left→bottom→right→top
-    // Avoids the near-degenerate single-arc trick that browsers render inconsistently
     const pathD = `M ${c},${top} A ${r},${r},0,0,0,${c},${bot} A ${r},${r},0,0,0,${c},${top}`;
     const circ = (2 * Math.PI * R * 0.8).toFixed(1);
     return `<svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" aria-hidden="true">
-      <path d="${pathD}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+      <path d="${pathD}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round"
         stroke-dasharray="${circ}" stroke-dashoffset="${circ}">
         <animate attributeName="stroke-dashoffset" ${animAttr(circ)}/>
       </path></svg>`;
@@ -155,7 +153,7 @@ function _makeStrokeAnimSVG(angle) {
     const x2 = (c + dx * R).toFixed(2), y2 = (c + dy * R).toFixed(2);
     const L = (R * 2).toFixed(2);
     return `<svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" aria-hidden="true">
-      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round"
         stroke-dasharray="${L}" stroke-dashoffset="${L}">
         <animate attributeName="stroke-dashoffset" ${animAttr(L)}/>
       </line></svg>`;
@@ -173,7 +171,7 @@ function _makeStrokeAnimSVG(angle) {
   const L1 = (R * 1.1).toFixed(2), L2 = (R * 0.9).toFixed(2);
   const totalL = (parseFloat(L1) + parseFloat(L2)).toFixed(2);
   return `<svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" aria-hidden="true">
-    <polyline points="${sx},${sy} ${mx},${my} ${ex},${ey}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+    <polyline points="${sx},${sy} ${mx},${my} ${ex},${ey}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"
       stroke-dasharray="${totalL}" stroke-dashoffset="${totalL}">
       <animate attributeName="stroke-dashoffset" ${animAttr(totalL)}/>
     </polyline></svg>`;
@@ -190,6 +188,7 @@ export class DojangManager {
     this.challenge      = null;
     this.errors         = 0;
     this._totalErrors   = 0; // cumulative errors this session (never resets mid-challenge)
+    this._firstStrokeErrors = 0; // consecutive errors on the very first stroke (for early inspector)
     // In-progress stroke tracking
     this.drawing        = false;
     this.points         = [];
@@ -213,7 +212,6 @@ export class DojangManager {
     this._cheat           = { ghostMode: 'auto', drawMode: false };
     this._restartTapCount = 0;
     // Callbacks set by game.js
-    this.onStartAdventure = null;
     this.onExitToMenu     = null;
   }
 
@@ -273,7 +271,8 @@ export class DojangManager {
       }
     }
     // Auto-open inspector: 10 errors OR 15s idle — disabled above 50% progress
-    if (this.challenge && !this.drawing && !this.inspectorOpen) {
+    const _leafOpen = !document.getElementById('dojang-leaf-modal')?.classList.contains('off');
+    if (this.challenge && !this.drawing && !this.inspectorOpen && !_leafOpen) {
       const jp2 = this.stats.jamoProgress || {};
       const _pct01 = PHASE1_JAMOS.reduce((s, j) => s + (jp2[j]?.count || 0), 0)
                    / (PHASE1_JAMOS.length * MAX_JAMO_COUNT);
@@ -381,7 +380,7 @@ export class DojangManager {
       ctx.save();
       ctx.globalAlpha = ghostAlpha;
       ctx.fillStyle  = '#333333';
-      ctx.font = `bold ${size}px "Nanum Myeongjo", "SongMyung", serif`;
+      ctx.font = `bold ${size}px "Nanum Myeongjo", "Song Myung", serif`;
       ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(ghostChar, cx, cy);
@@ -412,20 +411,25 @@ export class DojangManager {
     const strokes = JAMO_STROKES[curJamo] || [];
     if (strokes.length === 0) return;
 
+    // Compute global progress to gate error-scaling feature
+    const _jp = this.stats?.jamoProgress || {};
+    const _globalPct = PHASE1_JAMOS.reduce((s, j) => s + (_jp[j]?.count || 0), 0)
+                     / (PHASE1_JAMOS.length * MAX_JAMO_COUNT);
+
     const isMob   = H < 600;
     const guideY  = isMob ? H * 0.84 : H * 0.70;
     const maxItemW = isMob ? 46 : 62;
     const itemW   = Math.max(28, Math.min(maxItemW, (W * 0.60) / Math.max(strokes.length, 1)));
     const totalW  = strokes.length * itemW;
     const startX  = W / 2 - totalW / 2 + itemW / 2;
-    const rNum    = Math.max(8, H * 0.016);  // circle radius
-    const circleY = guideY - rNum * 2.2;     // center of the numbered circle
-    const arrowY  = guideY + H * 0.006;      // center of the arrow glyph
+    const rNum    = Math.max(8, H * 0.016);
 
-    const sqPad = rNum * 0.7;
-    const sqTop = circleY - rNum - sqPad;
-    const sqBot = arrowY + rNum * 1.0 + sqPad;
-    const sqH   = sqBot - sqTop;
+    // easeInExpo draw for 2.2s, then hold fully drawn for 1s
+    const ANIM_DUR = 3200;
+    const DRAW_FRAC = 2200 / 3200;
+    const t_raw = (performance.now() % ANIM_DUR) / ANIM_DUR;
+    const t_draw = t_raw <= DRAW_FRAC ? t_raw / DRAW_FRAC : 1.0;
+    const t_eased = t_draw === 0 ? 0 : Math.pow(2, 10 * (t_draw - 1));
 
     ctx.save();
     ctx.textAlign    = 'center';
@@ -435,22 +439,41 @@ export class DojangManager {
       const isCompleted = i < strokeIdx;
       const isCurrent   = i === strokeIdx;
       if (isCompleted) return;
-      const sqW = itemW * 0.82;
+
+      // Error-grow: scale up current box when player has made ≥1 error and is early
+      const errScale = (isCurrent && _globalPct < 0.10 && this.errors > 0)
+        ? 1 + Math.min(this.errors * 0.10, 0.30)
+        : 1.0;
+
+      const sqW_base = itemW * 0.82;
+      const sqW = sqW_base * errScale;
       const sqX = x - sqW / 2;
 
-      // Background square
+      // Box height: animation area (top) + number area (bottom)
+      const animH = rNum * 2.8 * errScale;
+      const numH  = rNum * 1.8 * errScale;
+      const sqPad = rNum * 0.7 * errScale;
+      const sqH   = animH + numH + sqPad * 2;
+      const sqTop = guideY - sqH;
+
+      const animCenterY = sqTop + sqPad + animH * 0.5;
+      const numY        = sqTop + sqPad + animH + numH * 0.5;
+
+      // Background box
       ctx.globalAlpha = 1;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(sqX, sqTop, sqW, sqH, 7);
+      if (ctx.roundRect) ctx.roundRect(sqX, sqTop, sqW, sqH, 7 * errScale);
       else ctx.rect(sqX, sqTop, sqW, sqH);
 
       if (isCurrent) {
         const ba = blinkBox && blinkWave ? 0.2 + 0.8 * blinkWave(performance.now() / 1000 + 0.25) : 1;
         ctx.globalAlpha = ba;
-        ctx.fillStyle = 'rgba(80,220,120,0.18)';
+        ctx.fillStyle = this.errors > 0 && _globalPct < 0.10
+          ? 'rgba(80,220,120,0.26)' : 'rgba(80,220,120,0.18)';
         ctx.fill();
-        ctx.strokeStyle = 'rgba(50,170,90,0.7)';
-        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = this.errors > 0 && _globalPct < 0.10
+          ? 'rgba(50,170,90,0.95)' : 'rgba(50,170,90,0.7)';
+        ctx.lineWidth = (1.8 + this.errors * 0.3) * errScale;
         ctx.stroke();
         ctx.globalAlpha = 1;
       } else {
@@ -461,27 +484,18 @@ export class DojangManager {
         ctx.stroke();
       }
 
-      // Text colors on top of squares
-      if (isCurrent) {
-        ctx.fillStyle = 'rgba(20,100,50,1)';
-      } else {
-        ctx.fillStyle = 'rgba(80,80,80,0.55)';
-      }
+      // Animation arrow (top of box)
+      const animR = Math.max(5, Math.min(rNum * 1.4, sqW * 0.28)) * errScale;
+      const baseW = isCurrent ? 3.2 : 2.0;
+      ctx.lineWidth = baseW * (1.8 - 0.9 * t_eased);
+      if (isCurrent) ctx.strokeStyle = 'rgba(20,100,50,1)';
+      else           ctx.strokeStyle = 'rgba(80,80,80,0.55)';
+      _drawStrokeAnim(ctx, x, animCenterY, animR, stroke.a, t_eased);
 
-      // Stroke number
-      ctx.font = `bold ${Math.round(rNum * 1.0)}px "Pretendard Variable", sans-serif`;
-      ctx.fillText(String(i + 1), x, circleY);
-
-      // Animated direction indicator (replaces text arrow)
-      const _isVert   = stroke.a === 90 || stroke.a === -90;
-      const _isCircle = stroke.a === 'circle';
-      let animCy = (arrowY + circleY) / 2 + rNum * 0.5;
-      let animR  = Math.max(5, Math.min(rNum * 1.4, sqW * 0.28));
-      if (_isVert)   { animCy += rNum * 0.35; animR *= 0.72; }
-      if (_isCircle) { animCy += rNum * 0.35; }
-      const t = (performance.now() % 1400) / 1400;
-      ctx.lineWidth = isCurrent ? 2.0 : 1.4;
-      _drawStrokeAnim(ctx, x, animCy, animR, stroke.a, t);
+      // Stroke number (bottom of box)
+      ctx.font = `bold ${Math.round(rNum * 1.0 * errScale)}px "Pretendard Variable", sans-serif`;
+      ctx.fillStyle = isCurrent ? 'rgba(20,100,50,1)' : 'rgba(80,80,80,0.55)';
+      ctx.fillText(String(i + 1), x, numY);
     });
     ctx.restore();
   }
@@ -498,7 +512,7 @@ export class DojangManager {
     // Guard against out-of-bounds after challenge complete (during nextDelay)
     if (jamoIdx >= jamos.length) {
       // Show all dots green
-      const dotY   = isMob ? mobDotY : H * 0.856;
+      const dotY   = isMob ? mobDotY : H * 0.828;
       const dotR   = H * 0.009;
       const dotGap = dotR * 3.5;
       const startX = W / 2 - (totalStrokes - 1) * dotGap / 2;
@@ -512,7 +526,7 @@ export class DojangManager {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = 'rgba(30,140,70,0.9)';
-      ctx.font = `bold ${Math.round(isMob ? Math.max(15, H * 0.032) : H * 0.026)}px "Nanum Myeongjo", "SongMyung", serif`;
+      ctx.font = `bold ${Math.round(isMob ? Math.max(15, H * 0.032) : H * 0.026)}px "Nanum Myeongjo", "Song Myung", serif`;
       ctx.fillText(i18n('dojang.great'), W / 2, isMob ? mobInstrY : H * 0.80);
       ctx.restore();
       return;
@@ -529,11 +543,11 @@ export class DojangManager {
 
     if (this.errors >= _maxErrors(jamos.length) - 1 && this.challenge.globalStrokeIdx > 0) {
       ctx.fillStyle = 'rgba(200,80,20,0.9)';
-      ctx.font = `bold ${Math.round(isMob ? Math.max(15, H * 0.032) : Math.max(13, H * 0.026))}px "Nanum Myeongjo", "SongMyung", serif`;
+      ctx.font = `bold ${Math.round(isMob ? Math.max(15, H * 0.032) : Math.max(13, H * 0.026))}px "Nanum Myeongjo", "Song Myung", serif`;
       ctx.fillText(i18n('dojang.lastTry'), W / 2, instrY);
     } else {
       ctx.fillStyle = 'rgba(50,40,30,0.70)';
-      ctx.font = `${Math.round(isMob ? Math.max(14, H * 0.030) : Math.max(12, H * 0.024))}px "Nanum Myeongjo", "SongMyung", serif`;
+      ctx.font = `${Math.round(isMob ? Math.max(14, H * 0.030) : Math.max(12, H * 0.024))}px "Nanum Myeongjo", "Song Myung", serif`;
       const stage = computeHangulStage(this.stats);
       let msg;
       if (stage <= 1) {
@@ -573,11 +587,11 @@ export class DojangManager {
     // Jamo name label above ghost area
     if (info) {
       const sz = Math.round(isMob ? Math.max(14, H * 0.028) : Math.max(12, H * 0.022));
-      ctx.font = `${sz}px "Nanum Myeongjo", "SongMyung", serif`;
+      ctx.font = `${sz}px "Nanum Myeongjo", "Song Myung", serif`;
       ctx.fillStyle = 'rgba(60,45,30,0.55)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${curJamo}ㅤ(${info.name})ㅤ·ㅤ${info.rom}`, W / 2, isMob ? mobLabelY : H * 0.22);
+      ctx.fillText(`${curJamo}ㅤ(${info.name})ㅤ·ㅤ${info.rom}`, W / 2, isMob ? mobLabelY : H * 0.15);
     }
 
     ctx.restore();
@@ -1069,6 +1083,7 @@ export class DojangManager {
 
     this.challenge.strokeIdx++;
     this.challenge.globalStrokeIdx++;
+    if (this.challenge.globalStrokeIdx === 1) this._firstStrokeErrors = 0;
 
     const { jamos, jamoIdx } = this.challenge;
     const curJamo    = jamos[jamoIdx];
@@ -1097,6 +1112,7 @@ export class DojangManager {
       this._announceStageUp(stageAfter);
     } else if (isFirstTime && !G.dictProgressionDisabled) {
       this._announce(i18n('dojang.jamoUnlocked').replace('{j}', curJamo));
+      this._showLeafModal(curJamo);
     }
 
     saveDojangStats(this.stats);
@@ -1171,6 +1187,16 @@ export class DojangManager {
     // First stroke of the whole character: free retries, nothing to lose
     if (this.challenge.globalStrokeIdx === 0) {
       sfx('doMinorError', 0.3);
+      this._firstStrokeErrors++;
+      if (this._firstStrokeErrors >= 2 && !this.inspectorOpen) {
+        const jp = this.stats?.jamoProgress || {};
+        const pct = PHASE1_JAMOS.reduce((s, j) => s + (jp[j]?.count || 0), 0)
+                  / (PHASE1_JAMOS.length * MAX_JAMO_COUNT);
+        if (pct < 0.05) {
+          this._firstStrokeErrors = 0;
+          this.openInspector();
+        }
+      }
       return;
     }
 
@@ -1180,6 +1206,7 @@ export class DojangManager {
       sfx('doMajorError', 0.8);
       // Reset entire character - clear all ink and restart from first jamo
       this.errors = 0;
+      this._firstStrokeErrors = 0;
       this.challenge.jamoIdx   = 0;
       this.challenge.strokeIdx = 0;
       this.challenge.globalStrokeIdx = 0;
@@ -1344,6 +1371,7 @@ export class DojangManager {
     this.challenge.completedPaths = [];
     this.challenge.char = this.challenge.chars?.[0] ?? this.challenge.char;
     this.errors = 0;
+    this._firstStrokeErrors = 0;
     this._clearStrokes();
     this._updateRestartBtn();
   }
@@ -1359,6 +1387,7 @@ export class DojangManager {
   // immediate=false (default): wait for current to finish, then speak
   _speakText(text, immediate = false) {
     if (!G.ttsEnabled || !text || typeof speechSynthesis === 'undefined') return;
+    if (getVolume() <= 0) return;
     if (immediate) {
       speechSynthesis.cancel();
       this._pendingSpeak = null;
@@ -1601,11 +1630,6 @@ export class DojangManager {
   _showPauseMenu(show) {
     const el = document.getElementById('dojang-pause-overlay');
     if (el) el.classList.toggle('off', !show);
-    const advBtn = document.getElementById('dojang-btn-adventure');
-    if (advBtn) {
-      const stage = computeHangulStage(this.stats || {});
-      advBtn.classList.toggle('off', stage < 2);
-    }
   }
 
   // ── Book ──────────────────────────────────────────────────
@@ -1655,17 +1679,24 @@ export class DojangManager {
       let descHtml = '';
       if (hasDesc) {
         const baseText = i18n(`jamo_desc.${j}.base`);
+        const firstLine = baseText.split('\n')[0];
+        const jamoName  = (firstLine.match(/\*\*([^*]+)\*\*/) || [])[1] || (info?.name || '');
+        const jamoSound = (firstLine.match(/·\s*(.+)/) || [])[1]?.trim() || '';
+        const bodyMd = baseText.replace(/^[^\n]*\n*/, '');
         const showBatchim = (progDisabled || count >= BATCHIM_UNLOCK_COUNT) && JAMO_HAS_BATCHIM.has(j);
         const batchimText = showBatchim ? i18n(`jamo_desc.${j}.batchim`) : '';
-        const fullMd = baseText + (batchimText ? `\n\n**받침:** ${batchimText}` : '');
-        descHtml = parseLessonMarkdown(fullMd);
+        const batchimHtml = batchimText ? `<div class="dj-batchim-section"><div class="dj-batchim-header">${i18n('dojang.batchimSection')}</div>${parseLessonMarkdown(batchimText)}</div>` : '';
+        const dblKey = `jamo_desc.${j}.double_batchim`;
+        const dblRaw = showBatchim ? i18n(dblKey) : '';
+        const dblHtml = (dblRaw && dblRaw !== dblKey) ? `<div class="dj-batchim-section dj-double-batchim-section"><div class="dj-batchim-header">${i18n('dojang.doubleBatchimSection')}</div>${parseLessonMarkdown(dblRaw)}</div>` : '';
+        descHtml = jamoFontPreview(j, jamoName, jamoSound) + parseLessonMarkdown(bodyMd) + batchimHtml + dblHtml;
       }
 
       return `<div class="dj-book-row${hasDesc ? ' has-desc' : ''}">
         <div class="dj-book-row-main">
           <span class="dj-book-jamo">${j}</span>
-          <span class="dj-book-name">${info?.name || ''}</span>
-          <span class="dj-book-rom">${info?.rom || ''}</span>
+          <span class="dj-book-name" data-tooltip="${i18n('dojang.tooltipName')}">${info?.name || ''}${info?.nameRom ? `<span class="dj-book-name-rom"> (${info.nameRom}${info.nameMR && info.nameMR !== info.nameRom ? ' / ' + info.nameMR : ''})</span>` : ''}</span>
+          <span class="dj-book-rom" data-tooltip="${i18n('dojang.tooltipRom')}">${info?.rom || ''}</span>
           <div class="dj-book-bar-wrap"${progDisabled ? ' style="visibility:hidden"' : ''}><div class="dj-book-bar" style="width:${bar}%"></div></div>
           <span class="dj-book-count"${progDisabled ? ' style="visibility:hidden"' : ''} data-tooltip="${countTip}">${count}</span>
           <span class="dj-book-strokes" data-tooltip="${strokesTip}">${strokes}획</span>
@@ -1717,6 +1748,43 @@ export class DojangManager {
   }
 
   // ── Stroke Inspector ──────────────────────────────────────
+  _showLeafModal(jamo) {
+    if (G.lang === 'ko') return;
+    if (localStorage.getItem('krr_dojang_noLeafModal') === '1') return;
+    const modal = document.getElementById('dojang-leaf-modal');
+    const body  = document.getElementById('dojang-leaf-body');
+    if (!modal || !body) return;
+
+    const info      = JAMO_INFO[jamo];
+    const baseText  = i18n(`jamo_desc.${jamo}.base`);
+    const firstLine = baseText.split('\n')[0];
+    const jamoName  = (firstLine.match(/\*\*([^*]+)\*\*/) || [])[1] || (info?.name || '');
+    const jamoSound = (firstLine.match(/·\s*(.+)/) || [])[1]?.trim() || '';
+    const bodyMd    = baseText.replace(/^[^\n]*\n*/, '');
+    const displayName = jamoName + (info?.nameRom ?? info?.rom ? ` (${info?.nameRom ?? info?.rom})` : '');
+    body.innerHTML  = jamoFontPreview(jamo, displayName, jamoSound) + parseLessonMarkdown(bodyMd);
+
+    // i18n the no-spoil button text (may have been set before lang was ready)
+    const nospoilBtn = document.getElementById('dojang-leaf-nospoil');
+    if (nospoilBtn) nospoilBtn.textContent = i18n('dojang.leafNoSpoil');
+
+    modal.classList.remove('off');
+
+    const close = () => {
+      modal.classList.add('off');
+      this._idleStart = performance.now(); // reset inspector timer after leaf modal closes
+      this._totalErrors = 0;
+    };
+    document.getElementById('dojang-leaf-close')?.addEventListener('click', close, { once: true });
+    document.getElementById('dojang-leaf-nospoil')?.addEventListener('click', () => {
+      localStorage.setItem('krr_dojang_noLeafModal', '1');
+      close();
+    }, { once: true });
+    modal.addEventListener('click', e => {
+      if (e.target === modal) close();
+    }, { once: true });
+  }
+
   openInspector() {
     if (!this.challenge || document.getElementById('dojang-cheat-menu')) return;
     this.inspectorOpen = true;
@@ -1750,16 +1818,16 @@ export class DojangManager {
     const strokeRows = strokes.map((s, i) => {
       const animSvg = _makeStrokeAnimSVG(s.a);
       return `<div class="dj-insp-stroke-row">
-        <span class="dj-insp-num">&#${9311 + i + 1};</span>
         <span class="dj-insp-arrow">${animSvg}</span>
+        <span class="dj-insp-num">&#${9311 + i + 1};</span>
       </div>`;
     }).join('');
 
     body.innerHTML = `
       <div class="dj-insp-card">
-        <div class="dj-insp-char">${j}</div>
         <div class="dj-insp-name">${info?.name || ''} · ${info?.rom || ''}</div>
         <div class="dj-insp-strokes">${strokeRows}</div>
+        <div class="dj-insp-char">${j}</div>
       </div>
     `;
 

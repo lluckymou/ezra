@@ -1789,6 +1789,22 @@
     "btnDojangSub": "Aprender a escrever Hangul",
     "btnAdventure": "Começar Aventura",
     "btnAdventureSub": "Pular direto para o jogo",
+    "entry": {
+      "title": "Antes do Primeiro Traço",
+      "path0": "Não sei ler e escrever em coreano",
+      "path1": "Não sei digitar em teclados coreanos",
+      "path2": "Já sei digitar em teclados coreanos",
+      "diffNone": "SEM DIFICULDADE",
+      "diffMedium": "DIFICULDADE MÉDIA",
+      "diffHard": "DIFICULDADE DIFÍCIL",
+      "desc0": "Aprenda e pratique os caracteres do alfabeto coreano",
+      "desc1": "Aprenda a digitar sílabas e palavras em coreano",
+      "desc2": "Acumule vocabulário digitando em coreano",
+      "descCoop": "Desafie monstros com um amigo online",
+      "btnDojang": "Dojang de Hangul",
+      "btnSolo": "Aventura Solo",
+      "btnCoop": "Co-op"
+    },
     "paused": "Pausado",
     "resume": "▶ Continuar",
     "backMenu": "Menu Principal",
@@ -1816,6 +1832,15 @@
     "phaseCV": "Estágio 3 · Sílabas CV",
     "phase3": "Estágio 4 · Batchim",
     "phase4": "Estágio 5 · Palavras",
+    "fontBrush": "Pincel",
+    "fontSerif": "Serifa",
+    "labelName": "Nome da letra",
+    "labelSound": "Som",
+    "leafNoSpoil": "Já sei 한글",
+    "tooltipName": "nome do jamo / letra",
+    "tooltipRom": "romanização",
+    "batchimSection": "Como batchim · 받침",
+    "doubleBatchimSection": "Batchim duplo · 겹받침",
     "cheat": {
       "title": "⚡ Cheat Menu",
       "skipChallenge": "⏭ Pular Desafio",
@@ -1872,11 +1897,13 @@
   "jamo_desc": {
     "ㄱ": {
       "base": "**기역** · consoante velar, sem aspiração\n\nNo início de sílaba soa como um 'g' suave - <speak='가'>, <speak='기다리다'>. Não é um 'k' forte do inglês, e também não é exatamente o 'g' do português. Fica num ponto intermediário, sem muita saída de ar.\n\nO coreano tem **três versões** de cada ponto de articulação:\n\n- **ㄱ** · sem sopro (plain) - <speak='가'>\n- **ㅋ** · com sopro (aspirado) - <speak='카'>\n- **ㄲ** · tenso, sem sopro (fortis) - <speak='까'>\n\nTente comparar os três em sequência. A diferença fica mais clara com prática!\n\nPalavras comuns: <speak='가방'> (bolsa) · <speak='고기'> (carne) · <speak='학교'> (escola)",
-      "batchim": "Como batchim, o ㄱ fecha a sílaba como uma parada velar sem explodir - você sente a garganta fechar mas não sai ar. Soa como um 'k' silencioso.\n\nAo ser seguido de vogal, o ㄱ \"salta\" para a próxima sílaba:\n<speak='학이'> pronuncia-se [하기] · <speak='국어'> pronuncia-se [구거]\n\nAntes de ㅎ, os dois se fundem em ㅋ (aspiração):\n<speak='착하다'> pronuncia-se [차카다] · <speak='좋고'> pronuncia-se [조코]"
+      "batchim": "Como batchim, o ㄱ fecha a sílaba como uma parada velar sem explodir - você sente a garganta fechar mas não sai ar. Soa como um 'k' silencioso.\n\nAo ser seguido de vogal, o ㄱ \"salta\" para a próxima sílaba:\n<speak='학이'> pronuncia-se [하기] · <speak='국어'> pronuncia-se [구거]\n\nAntes de ㅎ, os dois se fundem em ㅋ (aspiração):\n<speak='착하다'> pronuncia-se [차카다] · <speak='좋고'> pronuncia-se [조코]",
+      "double_batchim": "O coreano tem **겹받침** — dois jamos sobrepostos na posição de batchim. Quando a sílaba é fechada, apenas UM deles é pronunciado. O ㄱ recebe dois desses:\n\n**ㄳ** (ㄱ+ㅅ) · **pronuncia o primeiro jamo**\nO ㅅ desaparece e o ㄱ fecha a sílaba sozinho:\n· <speak='넋'> (alma, espírito) → [넉] · <speak='넋도'> → [넉또]\nQuando seguido de vogal **(ligação com vogal)**, o ㄱ fica e o ㅅ \"salta\" para a próxima sílaba — os dois sons vivem!:\n· <speak='넋이'> → [넉씨]\n\n**ㄺ** (ㄹ+ㄱ) · **pronuncia o segundo jamo**\nO ㄹ desaparece e o ㄱ fecha a sílaba — é o mais comum dos batchims duplos com ㄹ, aparece em verbos essenciais:\n· <speak='닭'> (galinha) → [닥]\n· <speak='맑다'> (estar claro, limpo) → [막따]\n· <speak='읽다'> (ler) → [익따]\nQuando seguido de vogal **(ligação com vogal)**, o ㄹ ressurge e o ㄱ pula — cada um vai para seu lugar:\n· <speak='닭이'> → [달기] · <speak='읽어'> → [일거]"
     },
     "ㄴ": {
       "base": "**니은** · nasal alveolar 'n'\n\nSom idêntico ao 'n' do português - <speak='나'>, <speak='누나'>, <speak='나라'>. É um dos jamos mais estáveis do coreano: pronuncia-se da mesma forma em qualquer posição.\n\nPalavras comuns:\n- <speak='나'> (eu)\n- <speak='노래'> (música)\n- <speak='나라'> (país)\n- <speak='눈'> (olho / neve)",
-      "batchim": "Como batchim, fecha a sílaba com nasal 'n'. Muito comum e fácil de identificar.\n\nAo ser seguido de vogal, o ㄴ liga-se à próxima sílaba:\n<speak='눈이'> pronuncia-se [누니] · <speak='반이'> pronuncia-se [바니]\n\nAntes de ㄹ, o ㄴ pode ser assimilado e virar ㄹ em pronúncia rápida:\n<speak='신라'> pronuncia-se [실라]"
+      "batchim": "Como batchim, fecha a sílaba com nasal 'n'. Muito comum e fácil de identificar.\n\nAo ser seguido de vogal, o ㄴ liga-se à próxima sílaba:\n<speak='눈이'> pronuncia-se [누니] · <speak='반이'> pronuncia-se [바니]\n\nAntes de ㄹ, o ㄴ pode ser assimilado e virar ㄹ em pronúncia rápida:\n<speak='신라'> pronuncia-se [실라]",
+      "double_batchim": "O ㄴ recebe dois batchims duplos — um que segue a regra padrão e outro que envolve o poderoso ㅎ:\n\n**ㄵ** (ㄴ+ㅈ) · **pronuncia o primeiro jamo**\nO ㅈ desaparece e o ㄴ fecha a sílaba:\n· <speak='앉다'> (sentar) → [안따]\n· <speak='얹다'> (colocar sobre algo) → [언따]\nQuando seguido de vogal **(ligação com vogal)**, o ㄴ fica e o ㅈ ressurge na próxima sílaba:\n· <speak='앉아'> → [안자] · <speak='앉으면'> → [안즈면]\n\n**ㄶ** (ㄴ+ㅎ) · **regra da aspiração**\nO ㅎ não some — ele age. Funde-se com a consoante seguinte e a transforma em sua versão aspirada (ㄷ→ㅌ, ㄱ→ㅋ, ㅂ→ㅍ, ㅈ→ㅊ):\n· <speak='않다'> (não fazer) → [안타] ← o ㄷ de 다 aspirado pelo ㅎ vira ㅌ\n· <speak='많다'> (muito, grande quantidade) → [만타]\n· <speak='끊다'> (cortar, desligar) → [끈타]\nQuando seguido de vogal **(ligação com vogal)**, o ㅎ evapora completamente — não deixa nenhum rastro:\n· <speak='않아'> → [아나] · <speak='많아'> → [마나]\nEste batchim aparece também no ㅎ, explicado pelos dois lados."
     },
     "ㄷ": {
       "base": "**디귿** · oclusiva alveolar, sem aspiração\n\nNo início de sílaba, soa entre 'd' e 't' - <speak='다'>, <speak='도'>. Sem muita saída de ar. Par não-aspirado de ㅌ.\n\n**Trio de oclusivas alveolares:**\n- **ㄷ** · sem sopro - <speak='다'>\n- **ㅌ** · com sopro - <speak='타'>\n- **ㄸ** · tenso, sem sopro - <speak='따'>\n\n**Palatalização** (regra importante!): Quando ㄷ ou ㄷ-batchim encontra ㅣ na sílaba seguinte, o som muda para ㅈ:\n- 굳이 → <speak='굳이'> soa [구지]\n- 같이 → <speak='같이'> soa [가치] (ㅌ → ㅊ pela mesma regra)",
@@ -1884,15 +1911,18 @@
     },
     "ㄹ": {
       "base": "**리을** · o jamo mais único do coreano!\n\nㄹ é um som que não tem equivalente direto em português - fica entre 'r' e 'l' dependendo da posição.\n\n**No início de sílaba:** tap suave, como o 'r' do espanhol em \"caro\" ou o 'r' de \"para\" no português carioca - <speak='라'>, <speak='리'>\n\n**Entre vogais:** vibra rapidamente - <speak='사람'> (pessoa), <speak='바람'> (vento)\n\n**Dobrado (ㄹㄹ):** soa como 'l' longo - <speak='달리다'> (correr)\n\nDica: não tente forçar nem 'r' nem 'l' forte - é um som intermediário, levinho!",
-      "batchim": "Como batchim, ㄹ soa claramente como 'l' - língua toca os dentes superiores: <speak='달'>, <speak='말'>, <speak='일'>\n\nLiga-se à próxima vogal como flap: <speak='달이'> pronuncia-se [다리] · <speak='말이'> pronuncia-se [마리]\n\nAntes de ㄴ, o ㄴ se assimila e vira ㄹ: <speak='일년'> pronuncia-se [일련]"
+      "batchim": "Como batchim, ㄹ soa claramente como 'l' - língua toca os dentes superiores: <speak='달'>, <speak='말'>, <speak='일'>\n\nLiga-se à próxima vogal como flap: <speak='달이'> pronuncia-se [다리] · <speak='말이'> pronuncia-se [마리]\n\nAntes de ㄴ, o ㄴ se assimila e vira ㄹ: <speak='일년'> pronuncia-se [일련]",
+      "double_batchim": "O ㄹ é campeão — sozinho recebe quatro batchims duplos! Todos pronunciam **o primeiro jamo** (o ㄹ fica), exceto o último que usa a:\n\n**ㄼ** (ㄹ+ㅂ) · **pronuncia o primeiro jamo** (com uma exceção famosa)\n· <speak='넓다'> (ser largo) → [널따] · <speak='짧다'> (ser curto) → [짤따]\n⚠️ Exceção: o verbo **밟다** (pisar) é diferente — aqui o **ㅂ** fica, não o ㄹ:\n· <speak='밟다'> → [밥따] ← memorize como exceção!\nQuando seguido de vogal **(ligação com vogal)**: <speak='넓어'> → [널버]\n\n**ㄽ** (ㄹ+ㅅ) · **pronuncia o primeiro jamo**\nRaríssimo — aparece quase só na palavra 외곬 (\"ter ideia fixa, ser cabeça-dura\"):\n· <speak='외곬'> → [외골]\nQuando seguido de vogal **(ligação com vogal)**: <speak='외곬으로'> → [외골쓰로]\n\n**ㄾ** (ㄹ+ㅌ) · **pronuncia o primeiro jamo**\n· <speak='핥다'> (lamber) → [할따]\nQuando seguido de vogal **(ligação com vogal)**, o ㅌ ressurge com força: <speak='핥아'> → [할타]\n\n**ㅀ** (ㄹ+ㅎ) · **regra da aspiração**\nO ㄹ fecha a sílaba e o ㅎ funde-se com a próxima consoante, aspirando-a:\n· <speak='끓다'> (ferver) → [끌타] ← ㄷ de 다 aspirado vira ㅌ\n· <speak='끓고'> (fervendo) → [끌코] ← ㄱ de 고 aspirado vira ㅋ\n· <speak='뚫다'> (perfurar) → [뚤타]\nQuando seguido de vogal **(ligação com vogal)**, o ㅎ desaparece completamente:\n· <speak='끓어'> → [끄러] · <speak='뚫어'> → [뚜러]\nEste batchim aparece também no ㅎ."
     },
     "ㅁ": {
       "base": "**미음** · nasal bilabial 'm'\n\nSom idêntico ao 'm' do português - <speak='마'>, <speak='미'>, <speak='모'>. Completamente estável em todas as posições. Fácil!\n\nPalavras comuns:\n- <speak='마음'> (coração, mente)\n- <speak='나무'> (árvore)\n- <speak='모두'> (todos)\n- <speak='무엇'> (o quê)",
-      "batchim": "Como batchim, fecha com nasal bilabial 'm' - os lábios se fecham ao final da sílaba: <speak='밤'> (noite), <speak='봄'> (primavera), <speak='이름'> (nome)\n\nLiga-se naturalmente à vogal seguinte:\n<speak='이름이'> pronuncia-se [이르미] · <speak='밤이'> pronuncia-se [바미]"
+      "batchim": "Como batchim, fecha com nasal bilabial 'm' - os lábios se fecham ao final da sílaba: <speak='밤'> (noite), <speak='봄'> (primavera), <speak='이름'> (nome)\n\nLiga-se naturalmente à vogal seguinte:\n<speak='이름이'> pronuncia-se [이르미] · <speak='밤이'> pronuncia-se [바미]",
+      "double_batchim": "**ㄻ** (ㄹ+ㅁ) · **pronuncia o segundo jamo**\nO ㄹ desaparece e o ㅁ fecha a sílaba — fica suave e nasal:\n· <speak='삶'> (vida) → [삼]\n· <speak='젊다'> (ser jovem) → [점따]\n· <speak='굶다'> (passar fome) → [굼따]\nQuando seguido de vogal **(ligação com vogal)**, o ㄹ ressurge e os dois sons retornam — cada um para seu lugar:\n· <speak='삶이'> → [살미] · <speak='젊어'> → [절머]\n\n💡 삶 (vida) é uma das palavras mais poéticas e filosóficas do coreano — aparece muito em músicas e literatura. Vale memorizar não só a pronúncia mas o som que ela carrega."
     },
     "ㅂ": {
       "base": "**비읍** · oclusiva bilabial, sem aspiração\n\nNo início de sílaba, soa entre 'b' e 'p' - <speak='바'>, <speak='비'>. Sem muita saída de ar. Par não-aspirado de ㅍ.\n\n**Trio bilabial:**\n- **ㅂ** · sem sopro - <speak='바'>\n- **ㅍ** · com sopro - <speak='파'>\n- **ㅃ** · tenso, sem sopro - <speak='빠'>\n\n**Atenção:** No início absoluto de frase, ㅂ tem uma leve aspiração e soa quase como 'p'. Dentro de palavras, soa mais como 'b'. Na prática, fica num ponto intermediário que não é nem 'b' nem 'p' do português!",
-      "batchim": "Como batchim, ㅂ fecha com parada bilabial sem explodir - os lábios se fecham mas não abrem com força: <speak='밥'> (arroz), <speak='입'> (boca), <speak='앞'> (frente)\n\nLiga-se à vogal seguinte como 'b': <speak='밥이'> pronuncia-se [바비] · <speak='입이'> pronuncia-se [이비]\n\nAntes de ㅎ, os dois se fundem em ㅍ: <speak='잡히다'> pronuncia-se [자피다]"
+      "batchim": "Como batchim, ㅂ fecha com parada bilabial sem explodir - os lábios se fecham mas não abrem com força: <speak='밥'> (arroz), <speak='입'> (boca), <speak='앞'> (frente)\n\nLiga-se à vogal seguinte como 'b': <speak='밥이'> pronuncia-se [바비] · <speak='입이'> pronuncia-se [이비]\n\nAntes de ㅎ, os dois se fundem em ㅍ: <speak='잡히다'> pronuncia-se [자피다]",
+      "double_batchim": "O ㅂ recebe dois batchims duplos — e o primeiro é um dos mais comuns do idioma inteiro:\n\n**ㅄ** (ㅂ+ㅅ) · **pronuncia o primeiro jamo**\nO ㅅ desaparece, o ㅂ fecha a sílaba. Aparece em verbos absolutamente essenciais:\n· <speak='없다'> (não existir, não ter) → [업따]\n· <speak='값'> (preço, valor) → [갑]\nQuando seguido de vogal **(ligação com vogal)**, o ㅂ fica e o ㅅ ressurge — mas como ㅅ inicial de sílaba fica tenso após consoante:\n· <speak='없어'> → [업써] · <speak='값이'> → [갑씨]\n\n💡 없다 é uma das palavras mais usadas do coreano — \"não ter\", \"não existir\". Você vai ouvir [업써] ou [업따] dezenas de vezes por dia em qualquer série coreana.\n\n**ㄿ** (ㄹ+ㅍ) · **pronuncia o segundo jamo — mas ㅍ em batchim soa como [ㅂ]**\nO ㄹ desaparece, o ㅍ fica — e como ㅍ em posição final perde a aspiração, o resultado soa como [ㅂ]:\n· <speak='읊다'> (recitar, declamar poesia) → [읍따]\nQuando seguido de vogal **(ligação com vogal)**, o ㄹ volta e o ㅍ soa forte:\n· <speak='읊어'> → [으퍼]\nRaríssimo — quase só aparece em 읊다 e derivados."
     },
     "ㅅ": {
       "base": "**시옷** · fricativa 's'\n\nNo início de sílaba, soa como 's' - <speak='사'>, <speak='소'>, <speak='수'>. Simples!\n\n**Exceção importante:** Antes das vogais ㅣ, ㅑ, ㅕ, ㅛ, ㅠ, ㅖ, ㅒ, ㅢ, o ㅅ torna-se \"sh\" (como em \"show\"):\n- <speak='시'> soa [시 - sh + i]\n- <speak='시작'> (começo) soa [시장 - início com sh]\n- <speak='샤워'> (chuveiro) soa [샤워 - sh + ya]\n\nEsta palatalização é automática e instintiva para coreanos!",
@@ -1907,7 +1937,7 @@
       "batchim": "Como batchim, ㅈ fecha como parada alveolar sem explodir (classe ㄷ):\n<speak='낮'> (dia), <speak='빛'> (luz)\n\nLiga-se à vogal seguinte como 'j': <speak='낮이'> pronuncia-se [나지]"
     },
     "ㅊ": {
-      "base": "**치읓** · africada 'ch', aspirada\n\nSoa como 'ch' em \"tchau\" mas com forte saída de ar - <speak='차'>, <speak='처'>, <speak='초'>. Par aspirado de ㅈ. O sopro é bem perceptível!\n\nTeste: coloque a mão na frente da boca e diga <speak='차'> - você deve sentir o ar. Depois diga <speak='자'> - quase nada de ar.\n\nPalavras comuns:\n- <speak='차'> (chá / carro)\n- <speak='책'> (livro)\n- <speak='처음'> (pela primeira vez)\n- <speak='친구'> (amigo)",
+      "base": "**치읓** · africada 'tch', aspirada\n\nSoa como 'tch' em \"tchau\" mas com forte saída de ar - <speak='차'>, <speak='처'>, <speak='초'>. Par aspirado de ㅈ. O sopro é bem perceptível!\n\nTeste: coloque a mão na frente da boca e diga <speak='차'> - você deve sentir o ar. Depois diga <speak='자'> - quase nada de ar.\n\nPalavras comuns:\n- <speak='차'> (chá / carro)\n- <speak='책'> (livro)\n- <speak='처음'> (pela primeira vez)\n- <speak='친구'> (amigo)",
       "batchim": "Como batchim, ㅊ fecha como parada alveolar (classe ㄷ): <speak='꽃'> (flor)\n\nLiga-se à próxima vogal como 'ch': <speak='꽃이'> pronuncia-se [꼬치]"
     },
     "ㅋ": {
@@ -1924,7 +1954,8 @@
     },
     "ㅎ": {
       "base": "**히읗** · fricativa glotal 'h'\n\nNo início de sílaba, soa como 'h' em \"há\" - <speak='하'>, <speak='히'>, <speak='호'>. Simples!\n\n**Comportamentos especiais:**\n\n1. **Enfraquece no meio de palavras** (entre vogais ou após nasais): 많이 → <speak='많이'> soa [마니] (o ㅎ quase desaparece)\n\n2. **Causa aspiração** quando adjacente a ㄱ, ㄷ, ㅂ, ㅈ - eles se fundem em ㅋ, ㅌ, ㅍ, ㅊ:\n- 좋다 → <speak='좋다'> soa [조타] (ㅎ + ㄷ = ㅌ)\n- 입학 → <speak='입학'> soa [이팍] (ㅂ + ㅎ = ㅍ)\n- 백화점 → <speak='백화점'> soa [배콰점] (ㄱ + ㅎ = ㅋ)",
-      "batchim": "Como batchim, ㅎ desaparece silenciosamente ao ser seguido de vogal - o ㅎ \"evapora\":\n<speak='놓아'> pronuncia-se [노아] · <speak='닿아'> pronuncia-se [다아]\n\nAntes de consoante, causa aspiração como visto acima.\n\nNota: ㅎ-batchim é um dos mais irregulares - memorizar os casos específicos é a melhor estratégia!"
+      "batchim": "Como batchim, ㅎ não soa como 'h' — ele age sobre o que vem depois.\n\n**Antes de vogal:** o ㅎ evapora completamente, sem deixar rastro:\n<speak='놓아'> → [노아] · <speak='닿아'> → [다아] · <speak='좋아'> → [조아]\n\n**Antes de consoante:** o ㅎ causa aspiração — funde-se com a próxima consoante e a transforma em sua versão aspirada:\n· ㄱ + ㅎ → ㅋ: <speak='좋고'> → [조코]\n· ㄷ + ㅎ → ㅌ: <speak='좋다'> → [조타]\n· ㅂ + ㅎ → ㅍ: <speak='입학'> → [이팍]\n· ㅈ + ㅎ → ㅊ: <speak='많지'> → [만치]\n\nA aspiração funciona nos dois sentidos: o ㅎ pode estar na sílaba anterior ou posterior à consoante que ele transforma. O resultado é sempre a versão aspirada (ㅋ, ㅌ, ㅍ, ㅊ).",
+      "double_batchim": "O ㅎ aparece em dois batchims duplos como **agente aspirador** — ele não fecha a sílaba sozinho, ele age sobre a consoante seguinte, transformando-a em sua versão aspirada.\n\n**ㄶ** (ㄴ+ㅎ) · o mesmo batchim que aparece no ㄴ\nO ㄴ fecha a sílaba; o ㅎ aspira a próxima consoante (ㄷ→ㅌ, ㄱ→ㅋ, ㅂ→ㅍ, ㅈ→ㅊ):\n· <speak='않다'> → [안타] · <speak='많다'> → [만타] · <speak='끊다'> → [끈타]\nAntes de vogal **(ligação com vogal)**, o ㅎ evapora sem deixar rastro:\n· <speak='않아'> → [아나] · <speak='많아'> → [마나]\n\n**ㅀ** (ㄹ+ㅎ) · o mesmo batchim que aparece no ㄹ\nO ㄹ fecha a sílaba; o ㅎ aspira a próxima consoante:\n· <speak='끓다'> → [끌타] · <speak='뚫다'> → [뚤타] · <speak='끓고'> → [끌코]\nAntes de vogal **(ligação com vogal)**, o ㅎ evapora e o ㄹ flui:\n· <speak='끓어'> → [끄러] · <speak='뚫어'> → [뚜러]\n\nA grande sacada do ㅎ duplo: ele sempre **amplifica** a próxima consoante — nunca simplesmente desaparece quando há uma consoante à frente."
     },
     "ㄲ": {
       "base": "**쌍기역** · ㄱ tenso (경음)\n\nO som dos tensas (경음) é único no coreano - não existe em português nem inglês! A garganta se fecha (glote tensionada), sem qualquer saída de ar - <speak='까'>, <speak='꼬'>, <speak='끼'>.\n\n**Como produzir:** Tente dizer ㄱ mas \"prenda\" o ar antes de soltar. A voz fica comprimida. Alguns descrevem como o som que se faz ao dizer \"acck!\" de surpresa.\n\n**Trio ㄱ:** ㄱ (suave) · ㅋ (com sopro) · **ㄲ** (tenso, sem sopro)\n\nPalavras comuns:\n- <speak='까다'> (descascar)\n- <speak='끝'> (fim)\n- <speak='꿈'> (sonho)",

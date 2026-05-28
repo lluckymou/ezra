@@ -9,6 +9,35 @@ import { get as i18n, wordTr } from './i18n.js';
 
 const DIR_DELTA_R = { N: [0,-1], S: [0,1], E: [1,0], W: [-1,0] };
 
+// BFS from boss room — cached per dungeon instance
+let _bossDistCache = null;
+function _getBossDistMap() {
+  if (!G.dungeon) return null;
+  if (_bossDistCache?.dungeon === G.dungeon) return _bossDistCache.map;
+  const boss = G.dungeon.grid?.find(c => c.type === 'boss');
+  if (!boss) { _bossDistCache = { dungeon: G.dungeon, map: null }; return null; }
+  const dist = new Map();
+  const queue = [boss];
+  dist.set(`${boss.col},${boss.row}`, 0);
+  while (queue.length) {
+    const cur = queue.shift();
+    const d = dist.get(`${cur.col},${cur.row}`);
+    for (const dir of cur.connections) {
+      const [dc, dr] = DIR_DELTA_R[dir];
+      const nc = ((cur.col + dc) + COLS) % COLS;
+      const nr = ((cur.row + dr) + ROWS) % ROWS;
+      const key = `${nc},${nr}`;
+      if (!dist.has(key)) {
+        dist.set(key, d + 1);
+        const nb = getCell(nc, nr);
+        if (nb) queue.push(nb);
+      }
+    }
+  }
+  _bossDistCache = { dungeon: G.dungeon, map: dist };
+  return dist;
+}
+
 let canvas, ctx, wxCanvas, wxCtx, dnCanvas, dnCtx;
 
 // Room design overrides set by the cheat menu (-1 = use room's natural value)
@@ -602,7 +631,12 @@ export function drawDoors() {
     ctx.closePath(); ctx.fill();
   }
 
-  const labelAlpha = G.doorLabelAlpha ?? 1;
+  const labelAlpha  = G.doorLabelAlpha ?? 1;
+  const roomCleared = !!cell?.cleared;
+  const _glowT      = roomCleared ? (G.last ?? 0) * 0.002 : 0;
+  const _glowPulse  = roomCleared ? (Math.sin(_glowT) + 1) / 2 : 0; // 0..1, ~3.1s period
+  const bossDistMap = _getBossDistMap();
+  const curBossDist = bossDistMap?.get(`${cell.col},${cell.row}`);
 
   for (const [dir, d] of Object.entries(DOOR_POS)) {
     if (!cell.connections.has(dir)) continue; // wall, no door
@@ -637,11 +671,25 @@ export function drawDoors() {
 
     // Cleared adjacent rooms: dim the label
     const adjCleared = adj?.cleared && adj?.visited;
+
+    // Boss-path: this door leads toward the boss room via the shortest route
+    const adjBossDist = adj ? bossDistMap?.get(`${adj.col},${adj.row}`) : undefined;
+    const onBossPath  = !isBossDoor && !adjCleared &&
+                        curBossDist != null && adjBossDist != null && adjBossDist < curBossDist;
+
     ctx.save();
     ctx.globalAlpha = labelAlpha * (adjCleared ? 0.28 : 1.0);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    // Glow effects: boss-path red takes priority; cleared-room blue is subtle
+    if (onBossPath) {
+      ctx.shadowBlur  = 5 + _glowPulse * 4;
+      ctx.shadowColor = 'rgba(220, 50, 50, 0.75)';
+    } else if (roomCleared) {
+      ctx.shadowBlur  = 2 + _glowPulse * 3;
+      ctx.shadowColor = 'rgba(160, 230, 255, 0.5)';
+    }
+    ctx.fillStyle = onBossPath ? 'rgba(255, 222, 218, 0.9)' : 'rgba(255,255,255,0.9)';
     ctx.font = `bold ${Math.floor(Math.min(wallH, wallSide) * 0.52)}px 'Noto Sans KR', 'Noto Color Emoji', sans-serif`;
     ctx.fillText(DIR_NAMES[dir], d.lx, d.ly);
     ctx.restore();
@@ -1053,7 +1101,7 @@ export function drawRoomNpc() {
   }
 
   // Word label (what player must type)
-  const labelSize = Math.max(16, Math.round((G.hangulSize || 32) * G.vH / 1080));
+  const labelSize = Math.max(20, Math.round((G.hangulSize || 38) * G.vH / 1080));
   ctx.font = `bold ${labelSize}px 'Noto Sans KR', 'Noto Color Emoji', sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
@@ -1083,10 +1131,10 @@ export function drawRoomNpc() {
       : (G.translationEnabled && entry ? wordTr(entry.text) : '');
     if (trans) {
       const transSz = Math.max(7, labelSize * 0.72);
-      ctx.font = `${transSz}px 'Noto Sans KR', 'Noto Color Emoji', sans-serif`;
+      ctx.font = `${transSz}px 'Pretendard', 'Noto Sans KR', 'Noto Color Emoji', sans-serif`;
       ctx.fillStyle = isPortal ? 'rgba(160,210,255,0.85)' : 'rgba(180,210,255,0.72)';
       ctx.textBaseline = 'top';
-      ctx.fillText(trans, x, ry + padY + labelSize + 4);
+      ctx.fillText(trans, x, ry + padY + labelSize + 10);
     }
   }
 

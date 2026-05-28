@@ -115,6 +115,7 @@ export const G = {
 export function resetRunState() {
   G.run = {
     worldIdx:        0,
+    expertMode:      false,
     worldHistory:    ['forest'], // track biome IDs for random world selection
     worldSequence:   [],         // sliding window of upcoming worlds
     worldSeqOffset:  0,          // seq[0] == absolute worldIdx worldSeqOffset

@@ -2500,8 +2500,8 @@ function showDictUnlockNotif(words) {
   const hcard = document.getElementById('hcard-wave');
   if (hcard) {
     const r = hcard.getBoundingClientRect();
-    notif.style.top  = (r.bottom + 6) + 'px';
-    notif.style.left = r.left + 'px';
+    notif.style.top   = (r.bottom + 6) + 'px';
+    notif.style.width = r.width + 'px';
   }
   notif.innerHTML = '📒 ' + words.map(w => (w.emoji ? w.emoji + ' ' : '') + w.text).join(' • ');
   notif.classList.remove('off');
@@ -2794,9 +2794,11 @@ export function drawMonsters(pass) {
     ctx.save();
     ctx.translate(m.x, m.y);
 
-    const fontFace = G.varyFonts ? LABEL_FONTS[m.id % LABEL_FONTS.length] : '"Noto Sans KR"';
+    const playerHard = G.difficulty === 'hard' || G.difficulty === 'hardcore';
+    const fontFace = (G.varyFonts && (playerHard || G.run?.expertMode || (G.run?.worldIdx ?? 0) >= 2))
+      ? LABEL_FONTS[m.id % LABEL_FONTS.length] : '"Noto Sans KR"';
     const word     = m.word || '';
-    const wordSz   = Math.max(16, Math.round((G.hangulSize || 32) * G.vH / 1080) - word.length * 0.3);
+    const wordSz   = Math.max(20, Math.round((G.hangulSize || 38) * G.vH / 1080) - word.length * 0.3);
     ctx.font        = `bold ${wordSz}px ${fontFace}, 'Noto Color Emoji', sans-serif`;
     ctx.textAlign   = 'center'; ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,1)';

@@ -28,7 +28,7 @@ export const WORD_DICT_RAW = [
   { text:'도서관',  emoji:'🏛️', category:'place',  hanja:'圖書館', rel:75 },
   { text:'시장',    emoji:'🏪', secondaryEmoji:'🛒', category:'place',     hanja:'市場', rel:75 },
   { text:'마트',    emoji:'🛒', category:'place', rel:80 },
-  { text:'카페',    emoji:'☕', secondaryEmoji:'🏪', category:'place', rel:85 },
+  { text:'카페',    emoji:'🍽️', secondaryEmoji:'☕', category:'place', rel:85 },
   { text:'영화관',  emoji:'🎬', category:'place',      hanja:'映畵館', rel:75 },
   { text:'놀이터',  emoji:'🛝', category:'place', rel:75 },
   { text:'동물원',  emoji:'🦓', secondaryEmoji:'🧱', category:'place',   hanja:'動物園', rel:70 },

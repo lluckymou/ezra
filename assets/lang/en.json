@@ -1789,6 +1789,22 @@
     "btnDojangSub": "Learn to write Hangul",
     "btnAdventure": "Start Adventure",
     "btnAdventureSub": "Jump straight in",
+    "entry": {
+      "title": "Before the First Stroke",
+      "path0": "I can't read or write Korean well",
+      "path1": "I can't type on Korean keyboards yet",
+      "path2": "I can already type on Korean keyboards",
+      "diffNone": "NO DIFFICULTY",
+      "diffMedium": "MEDIUM DIFFICULTY",
+      "diffHard": "HARD DIFFICULTY",
+      "desc0": "Learn and Practice the characters of the Korean alphabet",
+      "desc1": "Learn to type syllables and words in Korean",
+      "desc2": "Build your vocabulary by typing in Korean",
+      "descCoop": "Challenge monsters with a friend online",
+      "btnDojang": "Hangul Dojang",
+      "btnSolo": "Solo Adventure",
+      "btnCoop": "Co-op"
+    },
     "paused": "Paused",
     "resume": "▶ Resume",
     "backMenu": "Main Menu",
@@ -1816,6 +1832,15 @@
     "phaseCV": "Stage 3 · CV Syllables",
     "phase3": "Stage 4 · Batchim",
     "phase4": "Stage 5 · Words",
+    "fontBrush": "Brush",
+    "fontSerif": "Serif",
+    "labelName": "Letter name",
+    "labelSound": "Sound",
+    "leafNoSpoil": "I already know 한글",
+    "tooltipName": "letter name",
+    "tooltipRom": "romanization",
+    "batchimSection": "As final consonant · 받침",
+    "doubleBatchimSection": "Double batchim · 겹받침",
     "cheat": {
       "title": "⚡ Cheat Menu",
       "skipChallenge": "⏭ Skip Challenge",
@@ -1872,11 +1897,13 @@
   "jamo_desc": {
     "ㄱ": {
       "base": "**기역** · velar consonant, plain (unaspirated)\n\nAt syllable onset it sounds like a soft 'g' - <speak='가'>, <speak='기다리다'>. Not as strong as English 'k', and softer than English 'g'. No puff of air.\n\nKorean has **three versions** of each articulation point:\n\n- **ㄱ** · plain - <speak='가'>\n- **ㅋ** · aspirated (strong breath) - <speak='카'>\n- **ㄲ** · tense, no breath (fortis) - <speak='까'>\n\nTry comparing all three in a row - the difference becomes clearer with practice!\n\nCommon words: <speak='가방'> (bag) · <speak='고기'> (meat) · <speak='학교'> (school)",
-      "batchim": "As batchim, ㄱ closes the syllable as an unreleased velar stop - the throat closes but no air escapes. It sounds like a silent 'k'.\n\nWhen followed by a vowel, ㄱ \"moves\" to the next syllable:\n<speak='학이'> pronounced [하기] · <speak='국어'> pronounced [구거]\n\nBefore ㅎ, they merge into ㅋ (aspiration):\n<speak='착하다'> pronounced [차카다]"
+      "batchim": "As batchim, ㄱ closes the syllable as an unreleased velar stop - the throat closes but no air escapes. It sounds like a silent 'k'.\n\nWhen followed by a vowel, ㄱ \"moves\" to the next syllable:\n<speak='학이'> pronounced [하기] · <speak='국어'> pronounced [구거]\n\nBefore ㅎ, they merge into ㅋ (aspiration):\n<speak='착하다'> pronounced [차카다]",
+      "double_batchim": "Korean has **겹받침** — two jamos stacked in the batchim position. In a closed syllable, only ONE is pronounced. ㄱ receives two of these:\n\n**ㄳ** (ㄱ+ㅅ) · **pronounce first jamo**\nThe ㅅ vanishes and ㄱ closes the syllable alone:\n· <speak='넋'> (soul, spirit) → [넉] · <speak='넋도'> → [넉또]\nBefore a vowel **(vowel linking)**, ㄱ stays and ㅅ jumps to the next syllable — both sounds return:\n· <speak='넋이'> → [넉씨]\n\n**ㄺ** (ㄹ+ㄱ) · **pronounce second jamo**\nThe ㄹ vanishes and ㄱ closes the syllable — most common of the ㄹ-series double batchim, found in essential verbs:\n· <speak='닭'> (chicken) → [닥]\n· <speak='맑다'> (to be clear) → [막따]\n· <speak='읽다'> (to read) → [익따]\nBefore a vowel **(vowel linking)**, ㄹ resurfaces and ㄱ moves on:\n· <speak='닭이'> → [달기] · <speak='읽어'> → [일거]"
     },
     "ㄴ": {
       "base": "**니은** · alveolar nasal 'n'\n\nIdentical to 'n' in \"no\" - <speak='나'>, <speak='누나'>, <speak='나라'>. One of the most stable consonants in Korean - same sound in all positions.\n\nCommon words:\n- <speak='나'> (I/me)\n- <speak='노래'> (song)\n- <speak='나라'> (country)\n- <speak='눈'> (eye / snow)",
-      "batchim": "As batchim, closes with nasal 'n'. Very common and easy to identify.\n\nWhen followed by a vowel, ㄴ links to the next syllable:\n<speak='눈이'> pronounced [누니] · <speak='반이'> pronounced [바니]\n\nBefore ㄹ, ㄴ can assimilate to ㄹ in fast speech:\n<speak='신라'> pronounced [실라]"
+      "batchim": "As batchim, closes with nasal 'n'. Very common and easy to identify.\n\nWhen followed by a vowel, ㄴ links to the next syllable:\n<speak='눈이'> pronounced [누니] · <speak='반이'> pronounced [바니]\n\nBefore ㄹ, ㄴ can assimilate to ㄹ in fast speech:\n<speak='신라'> pronounced [실라]",
+      "double_batchim": "ㄴ receives two double batchim — one following the standard rule, one involving the powerful ㅎ:\n\n**ㄵ** (ㄴ+ㅈ) · **pronounce first jamo**\nThe ㅈ disappears and ㄴ closes the syllable:\n· <speak='앉다'> (to sit) → [안따]\n· <speak='얹다'> (to place on top) → [언따]\nBefore a vowel **(vowel linking)**, ㄴ stays and ㅈ resurfaces in the next syllable:\n· <speak='앉아'> → [안자] · <speak='앉으면'> → [안즈면]\n\n**ㄶ** (ㄴ+ㅎ) · **aspiration rule**\nThe ㅎ doesn't vanish — it acts. It fuses with the following consonant, turning it into its aspirated form (ㄷ→ㅌ, ㄱ→ㅋ, ㅂ→ㅍ, ㅈ→ㅊ):\n· <speak='않다'> (to not do) → [안타] ← ㄷ in 다 aspirated by ㅎ becomes ㅌ\n· <speak='많다'> (to be many/much) → [만타]\n· <speak='끊다'> (to cut, disconnect) → [끈타]\nBefore a vowel **(vowel linking)**, ㅎ evaporates completely — no trace left:\n· <speak='않아'> → [아나] · <speak='많아'> → [마나]\nThis double batchim also appears in ㅎ, explained from both sides."
     },
     "ㄷ": {
       "base": "**디귿** · alveolar stop, plain (unaspirated)\n\nAt syllable onset, sounds between 'd' and 't' - <speak='다'>, <speak='도'>. No puff of air. Plain counterpart of ㅌ.\n\n**Alveolar trio:**\n- **ㄷ** · plain - <speak='다'>\n- **ㅌ** · aspirated - <speak='타'>\n- **ㄸ** · tense - <speak='따'>\n\n**Palatalization** (important rule!): When ㄷ meets ㅣ in the next syllable, it becomes ㅈ:\n- 굳이 → <speak='굳이'> sounds like [구지]\n- 같이 → <speak='같이'> sounds like [가치] (ㅌ → ㅊ by same rule)",
@@ -1884,15 +1911,18 @@
     },
     "ㄹ": {
       "base": "**리을** · the most unique consonant in Korean!\n\nㄹ has no direct English equivalent - it's between 'r' and 'l' depending on position.\n\n**At syllable onset:** quick flap, like 'r' in Spanish \"caro\" or 'd' in English \"ladder\" - <speak='라'>, <speak='리'>\n\n**Between vowels:** vibrates quickly - <speak='사람'> (person), <speak='바람'> (wind)\n\n**Doubled (ㄹㄹ):** sounds like a long 'l' - <speak='달리다'> (to run)\n\nTip: don't force either 'r' or 'l' - it's a light, quick sound in between!",
-      "batchim": "As batchim, ㄹ clearly sounds like 'l' - tongue touches upper teeth: <speak='달'>, <speak='말'>, <speak='일'>\n\nLinks to next vowel as flap: <speak='달이'> pronounced [다리] · <speak='말이'> pronounced [마리]\n\nBefore ㄴ, the ㄴ assimilates to ㄹ: <speak='일년'> pronounced [일련]"
+      "batchim": "As batchim, ㄹ clearly sounds like 'l' - tongue touches upper teeth: <speak='달'>, <speak='말'>, <speak='일'>\n\nLinks to next vowel as flap: <speak='달이'> pronounced [다리] · <speak='말이'> pronounced [마리]\n\nBefore ㄴ, the ㄴ assimilates to ㄹ: <speak='일년'> pronounced [일련]",
+      "double_batchim": "ㄹ leads the pack — it appears in four double batchim! All pronounce **the first jamo** (ㄹ stays), except the last which uses the:\n\n**ㄼ** (ㄹ+ㅂ) · **pronounce first jamo** (with one famous exception)\n· <speak='넓다'> (to be wide) → [널따] · <speak='짧다'> (to be short) → [짤따]\n⚠️ Exception: **밟다** (to step on) — here ㅂ stays, not ㄹ:\n· <speak='밟다'> → [밥따] ← memorize as an exception!\nBefore a vowel **(vowel linking)**: <speak='넓어'> → [널버]\n\n**ㄽ** (ㄹ+ㅅ) · **pronounce first jamo**\nExtremely rare — found almost only in 외곬 (a single-minded fixation):\n· <speak='외곬'> → [외골]\nBefore a vowel **(vowel linking)**: <speak='외곬으로'> → [외골쓰로]\n\n**ㄾ** (ㄹ+ㅌ) · **pronounce first jamo**\n· <speak='핥다'> (to lick) → [할따]\nBefore a vowel **(vowel linking)**, ㅌ resurfaces with full force: <speak='핥아'> → [할타]\n\n**ㅀ** (ㄹ+ㅎ) · **aspiration rule**\nㄹ closes the syllable; ㅎ fuses with the next consonant, aspirating it:\n· <speak='끓다'> (to boil) → [끌타] ← ㄷ aspirated by ㅎ becomes ㅌ\n· <speak='끓고'> (boiling) → [끌코] ← ㄱ aspirated by ㅎ becomes ㅋ\n· <speak='뚫다'> (to pierce through) → [뚤타]\nBefore a vowel **(vowel linking)**, ㅎ completely disappears:\n· <speak='끓어'> → [끄러] · <speak='뚫어'> → [뚜러]\nThis double batchim also appears in ㅎ."
     },
     "ㅁ": {
       "base": "**미음** · bilabial nasal 'm'\n\nIdentical to 'm' in \"map\" - <speak='마'>, <speak='미'>, <speak='모'>. Completely stable in all positions. Easy!\n\nCommon words:\n- <speak='마음'> (heart, mind)\n- <speak='나무'> (tree)\n- <speak='모두'> (everyone)\n- <speak='무엇'> (what)",
-      "batchim": "As batchim, closes with bilabial nasal 'm' - lips close at syllable end: <speak='밤'> (night), <speak='봄'> (spring), <speak='이름'> (name)\n\nLinks to next vowel naturally:\n<speak='이름이'> pronounced [이르미] · <speak='밤이'> pronounced [바미]"
+      "batchim": "As batchim, closes with bilabial nasal 'm' - lips close at syllable end: <speak='밤'> (night), <speak='봄'> (spring), <speak='이름'> (name)\n\nLinks to next vowel naturally:\n<speak='이름이'> pronounced [이르미] · <speak='밤이'> pronounced [바미]",
+      "double_batchim": "**ㄻ** (ㄹ+ㅁ) · **pronounce second jamo**\nThe ㄹ disappears and ㅁ closes the syllable — soft and nasal:\n· <speak='삶'> (life) → [삼]\n· <speak='젊다'> (to be young) → [점따]\n· <speak='굶다'> (to starve) → [굼따]\nBefore a vowel **(vowel linking)**, ㄹ resurfaces and both sounds separate:\n· <speak='삶이'> → [살미] · <speak='젊어'> → [절머]\n\n💡 삶 (life) is one of the most poetic and philosophical words in Korean — it appears constantly in songs and literature. Worth memorizing not just the pronunciation but the weight it carries."
     },
     "ㅂ": {
       "base": "**비읍** · bilabial stop, plain (unaspirated)\n\nAt syllable onset, sounds between 'b' and 'p' - <speak='바'>, <speak='비'>. No puff of air. Plain counterpart of ㅍ.\n\n**Bilabial trio:**\n- **ㅂ** · plain - <speak='바'>\n- **ㅍ** · aspirated - <speak='파'>\n- **ㅃ** · tense - <speak='빠'>\n\n**Note:** At the very start of a sentence, ㅂ sounds slightly more like 'p'. Mid-sentence it sounds more like 'b'. In practice, it's between the two - neither fully 'b' nor 'p'!",
-      "batchim": "As batchim, ㅂ closes with an unreleased bilabial stop - lips close but don't pop: <speak='밥'> (rice), <speak='입'> (mouth), <speak='앞'> (front)\n\nLinks to next vowel as 'b': <speak='밥이'> pronounced [바비] · <speak='입이'> pronounced [이비]\n\nBefore ㅎ, merges to ㅍ: <speak='잡히다'> pronounced [자피다]"
+      "batchim": "As batchim, ㅂ closes with an unreleased bilabial stop - lips close but don't pop: <speak='밥'> (rice), <speak='입'> (mouth), <speak='앞'> (front)\n\nLinks to next vowel as 'b': <speak='밥이'> pronounced [바비] · <speak='입이'> pronounced [이비]\n\nBefore ㅎ, merges to ㅍ: <speak='잡히다'> pronounced [자피다]",
+      "double_batchim": "ㅂ receives two double batchim — and the first is one of the most common in the entire language:\n\n**ㅄ** (ㅂ+ㅅ) · **pronounce first jamo**\nThe ㅅ disappears, ㅂ closes the syllable. Appears in verbs you'll hear every single day:\n· <speak='없다'> (to not exist, to not have) → [업따]\n· <speak='값'> (price, value) → [갑]\nBefore a vowel **(vowel linking)**, ㅂ stays and ㅅ resurfaces — but ㅅ after a consonant becomes tense:\n· <speak='없어'> → [업써] · <speak='값이'> → [갑씨]\n\n💡 없다 is one of the most used words in Korean — \"to not have\", \"to not exist\". You'll hear [업써] or [업따] dozens of times a day watching any Korean show.\n\n**ㄿ** (ㄹ+ㅍ) · **pronounce second jamo — but ㅍ as batchim sounds like [ㅂ]**\nThe ㄹ disappears, ㅍ stays — and since ㅍ in final position loses its aspiration, it sounds like [ㅂ]:\n· <speak='읊다'> (to recite, to declaim poetry) → [읍따]\nBefore a vowel **(vowel linking)**, ㄹ returns and ㅍ sounds full:\n· <speak='읊어'> → [으퍼]\nExtremely rare — almost only appears in 읊다 and its forms."
     },
     "ㅅ": {
       "base": "**시옷** · fricative 's'\n\nAt syllable onset, sounds like 's' - <speak='사'>, <speak='소'>, <speak='수'>. Simple!\n\n**Important exception:** Before vowels ㅣ, ㅑ, ㅕ, ㅛ, ㅠ, ㅖ, ㅒ, ㅢ, ㅅ becomes \"sh\" (like in \"show\"):\n- <speak='시'> sounds [sh + i]\n- <speak='시작'> (start) sounds [시장 - sh at start]\n- <speak='샤워'> (shower) sounds [sh + ya]\n\nThis palatalization is automatic and instinctive for Korean speakers!",
@@ -1924,7 +1954,8 @@
     },
     "ㅎ": {
       "base": "**히읗** · glottal fricative 'h'\n\nAt syllable onset, sounds like 'h' in \"happy\" - <speak='하'>, <speak='히'>, <speak='호'>. Simple!\n\n**Special behaviors:**\n\n1. **Weakens between vowels or after nasals**: 많이 → <speak='많이'> sounds [마니] (ㅎ nearly disappears)\n\n2. **Causes aspiration** when next to ㄱ, ㄷ, ㅂ, ㅈ - they fuse into ㅋ, ㅌ, ㅍ, ㅊ:\n- 좋다 → <speak='좋다'> sounds [조타] (ㅎ + ㄷ = ㅌ)\n- 입학 → <speak='입학'> sounds [이팍] (ㅂ + ㅎ = ㅍ)\n- 백화점 → <speak='백화점'> sounds [배콰점] (ㄱ + ㅎ = ㅋ)",
-      "batchim": "As batchim, ㅎ silently disappears when followed by a vowel - it \"evaporates\":\n<speak='놓아'> pronounced [노아] · <speak='닿아'> pronounced [다아]\n\nBefore consonants, it causes aspiration as described above.\n\nNote: ㅎ-batchim is one of the most irregular - memorizing specific cases is the best strategy!"
+      "batchim": "As batchim, ㅎ doesn't sound like 'h' — it acts on what comes after it.\n\n**Before a vowel:** ㅎ evaporates completely, leaving no trace:\n<speak='놓아'> → [노아] · <speak='닿아'> → [다아] · <speak='좋아'> → [조아]\n\n**Before a consonant:** ㅎ triggers aspiration — it fuses with the next consonant, turning it into its aspirated form:\n· ㄱ + ㅎ → ㅋ: <speak='좋고'> → [조코]\n· ㄷ + ㅎ → ㅌ: <speak='좋다'> → [조타]\n· ㅂ + ㅎ → ㅍ: <speak='입학'> → [이팍]\n· ㅈ + ㅎ → ㅊ: <speak='많지'> → [만치]\n\nAspiration works in both directions: ㅎ can be in the syllable before or after the consonant it transforms. The result is always the aspirated version (ㅋ, ㅌ, ㅍ, ㅊ).",
+      "double_batchim": "ㅎ appears in two double batchim as the **aspiration agent** — it doesn't close the syllable alone; it acts on the following consonant, forcing it into its aspirated form.\n\n**ㄶ** (ㄴ+ㅎ) · same double batchim as in ㄴ\nㄴ closes the syllable; ㅎ aspirates the next consonant (ㄷ→ㅌ, ㄱ→ㅋ, ㅂ→ㅍ, ㅈ→ㅊ):\n· <speak='않다'> → [안타] · <speak='많다'> → [만타] · <speak='끊다'> → [끈타]\nBefore a vowel **(vowel linking)**, ㅎ evaporates without a trace:\n· <speak='않아'> → [아나] · <speak='많아'> → [마나]\n\n**ㅀ** (ㄹ+ㅎ) · same double batchim as in ㄹ\nㄹ closes the syllable; ㅎ aspirates the next consonant:\n· <speak='끓다'> → [끌타] · <speak='뚫다'> → [뚤타] · <speak='끓고'> → [끌코]\nBefore a vowel **(vowel linking)**, ㅎ evaporates and ㄹ flows:\n· <speak='끓어'> → [끄러] · <speak='뚫어'> → [뚜러]\n\nThe key insight: ㅎ in a double batchim always **amplifies** the next consonant — it never simply vanishes when there's a consonant ahead."
     },
     "ㄲ": {
       "base": "**쌍기역** · tense ㄱ (fortis)\n\nThe tense consonants (경음) are unique to Korean - no equivalent in English or most European languages! The throat tightens (glottal tension), no air release at all - <speak='까'>, <speak='꼬'>, <speak='끼'>.\n\n**How to produce:** Try saying ㄱ but \"hold back\" the air before releasing. The voice feels compressed. Some describe it as the sound of a surprised \"ack!\".\n\n**ㄱ trio:** ㄱ (plain) · ㅋ (aspirated) · **ㄲ** (tense, no breath)\n\nCommon words:\n- <speak='까다'> (to peel)\n- <speak='끝'> (end)\n- <speak='꿈'> (dream)",

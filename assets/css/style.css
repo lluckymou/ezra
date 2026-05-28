@@ -713,7 +713,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
   #pause-run-stats { width: 100%; margin-top: 4px; }
   .pstat { padding: 6px 10px; }
   .pstat-val { font-size: 1rem; }
-  #pause-mid-opts { flex: 1; min-width: 200px; gap: 4px; }
+  #pause-mid-opts { min-width: 200px; gap: 4px; }
   .pause-opt-row { padding: 4px 8px; }
   .pause-btns { flex: 0 0 160px; gap: 6px; }
   .pause-btn { padding: 8px; font-size: .85rem; }
@@ -729,7 +729,8 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 }
 .pstat-val { font-size: 1.35rem; font-weight: 700; color: #0e113a; }
 .pstat-lbl { font-size: .72rem; color: #888; text-transform: uppercase; letter-spacing: .8px; margin-top: 2px; }
-#pause-mid-opts { display: flex; flex-direction: column; gap: 6px; }
+#pause-mid-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#pause-mid-opts .pause-opt-full { grid-column: span 2; }
 .pause-opt-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 12px; border-radius: 10px;
@@ -1434,8 +1435,8 @@ body.phase-title #pl-emoji {
 /* Latin letter - bottom-right, tiny, very transparent */
 .kb-latin-char {
   position: absolute; bottom: 2px; right: 4px;
-  font-size: .62rem; line-height: 1;
-  color: rgba(255,255,255,.22);
+  font-size: .75rem; line-height: 1;
+  color: rgba(255,255,255,.4);
   font-family: 'Pretendard', sans-serif;
   transition: color .1s; letter-spacing: 0;
   text-transform: uppercase;
@@ -1493,7 +1494,7 @@ body.phase-title #pl-emoji {
 }
 #inp-wrap:focus-within { border-color: rgba(255,255,255,.7); }
 #typing {
-  flex: 1; background: none; border: none; outline: none;
+  flex: 1; min-width: 0; background: none; border: none; outline: none;
   color: #fff; font-family: 'Pretendard', 'Noto Color Emoji', sans-serif;
   font-size: 1rem; caret-color: #ff4488;
   text-align: center;
@@ -1546,16 +1547,17 @@ body.phase-title #book-panel { visibility: hidden !important; }
 /* ===== DICT UNLOCK NOTIFICATION ===== */
 #dict-unlock-notif {
   position: fixed; left: 8px; top: 90px;
-  background: rgba(255,255,255,.93);
-  color: #1a1000;
-  border-radius: 8px;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.18);
+  color: #fff;
+  border-radius: 10px;
   padding: 5px 10px;
   font-size: .78rem; font-weight: 600;
-  box-shadow: 0 2px 10px rgba(0,0,0,.22);
+  box-shadow: 0 2px 10px rgba(0,0,0,.3);
   pointer-events: none; z-index: 55;
   opacity: 0; transform: translateY(-6px);
   transition: opacity .2s ease, transform .2s ease;
-  white-space: nowrap;
 }
 #dict-unlock-notif.on { opacity: 1; transform: translateY(0); }
 #dict-unlock-notif.off { display: none; }
@@ -1821,6 +1823,32 @@ body.phase-title #dn-canvas { z-index: 211; }
 .kb-touch-special:active,
 .kb-touch-special.active { background: rgba(255,255,255,.35); border-color: rgba(255,255,255,.65); color: #fff; }
 .kb-touch-special.caps { background: rgba(100,200,255,.35); border-color: rgba(100,200,255,.6); }
+
+/* ── Keyboard hint: next-jamo guide (Dojang / World 2) ─────── */
+@keyframes kbHintPulse {
+  0%, 100% { background: rgba(50,190,90,.22); border-color: rgba(80,255,140,.5); }
+  50%       { background: rgba(50,190,90,.55); border-color: rgba(80,255,140,.85); }
+}
+@keyframes kbBspHintPulse {
+  0%, 100% { background: rgba(220,70,50,.22); border-color: rgba(255,110,80,.5); }
+  50%       { background: rgba(220,70,50,.52); border-color: rgba(255,110,80,.88); }
+}
+/* PC mode: dim all keys, highlight one */
+body.kb-hint-mode .kb-key { opacity: 0.32; transition: opacity .15s; }
+body.kb-hint-mode .kb-touch-special { opacity: 0.32; transition: opacity .15s; }
+body.kb-hint-mode .kb-key.kb-hint { opacity: 1 !important; animation: kbHintPulse .75s ease-in-out infinite; }
+body.kb-hint-mode .kb-touch-special.kb-hint { opacity: 1 !important; animation: kbHintPulse .75s ease-in-out infinite; }
+body.kb-hint-mode #kb-touch-backspace.kb-hint { animation: kbBspHintPulse .75s ease-in-out infinite; }
+/* Touch mode: no dimming, standalone pulse on the specific key */
+.kb-key.kb-hint { animation: kbHintPulse .75s ease-in-out infinite; }
+.kb-touch-special.kb-hint { animation: kbHintPulse .75s ease-in-out infinite; }
+#kb-touch-backspace.kb-hint { animation: kbBspHintPulse .75s ease-in-out infinite; }
+/* PC shift badge: hidden until kb-hint is applied */
+.kb-pc-shift-badge { display: none; }
+body.kb-hint-mode .kb-pc-shift-badge.kb-hint {
+  display: flex; opacity: 1 !important;
+  animation: kbHintPulse .75s ease-in-out infinite;
+}
 
 /* ===== SHOW/HIDE BY MODE ===== */
 .touch-only { display: none; }
@@ -2321,7 +2349,7 @@ body.touch-mode.book-open #player-area * { pointer-events: none !important; }
   border-radius: 20px; color: #dde; cursor: pointer; transition: all .15s;
 }
 .md-speak-btn:hover { background: rgba(14,17,58,.4); }
-.md-speak-word { font-weight: 700; color: #fff; }
+.md-speak-word { font-weight: 700; color: #808080; }
 
 /* ================================================================
    ADDITIONS / OVERRIDES - appended
@@ -2457,7 +2485,7 @@ body.touch-mode #map-panel:not(.off) {
   .pstat { padding: 4px 7px; }
   .pstat-val { font-size: .88rem; }
   .pstat-lbl { font-size: .58rem; }
-  #pause-mid-opts { flex: 1; min-width: 200px; gap: 3px; }
+  #pause-mid-opts { min-width: 200px; gap: 3px; }
   .pause-opt-row { padding: 4px 8px; }
   .pause-opt-label { font-size: .72rem; }
   .pause-btns { flex: 0 0 130px; gap: 5px; flex-direction: column; justify-content: center; }
@@ -3145,11 +3173,21 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
   position: relative; text-align: center;
 }
 #donate-close, #tts-modal-close {
-  position: absolute; top: 10px; right: 14px;
-  background: none; border: none; color: rgba(255,255,255,.35);
-  font-size: 1.1rem; cursor: pointer; font-family: inherit; padding: 4px 6px;
+  position: absolute; top: 12px; right: 12px;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #991b1b;
+  border: 1.5px solid rgba(255,130,130,.3);
+  color: #fff;
+  font-size: .8rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.5);
+  transition: background .15s, transform .12s;
+  padding: 0; flex-shrink: 0;
 }
-#donate-close:hover, #tts-modal-close:hover { color: rgba(255,255,255,.8); }
+#donate-close:hover, #tts-modal-close:hover {
+  background: #dc2626;
+  transform: scale(1.12);
+}
 .modal-big-emoji { font-size: 9rem; line-height: 1; }
 #donate-title { font-size: 1.75rem; font-weight: 700; color: #fff; margin: 0; }
 #donate-msg { font-size: 1.1rem; color: rgba(255,255,255,.7); margin: 0; line-height: 1.5; }
@@ -3325,7 +3363,7 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 #book-panel .dict-tabs,
 #my-dict-modal-inner .dict-tabs {
   position: absolute;
-  top: 3px;           /* just below the outer border edge */
+  top: 3.5px;           /* just below the outer border edge */
   right: 0;
   height: 34px;
   display: flex;

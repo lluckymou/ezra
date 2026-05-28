@@ -42,6 +42,7 @@ import {
   renderShopScreen, renderModifierScreen, renderTreasureScreen, renderCasinoScreen, renderTeacherScreen,
   updatePermanentBar as hudUpdatePermanentBar,
   parseLessonMarkdown,
+  jamoFontPreview,
 } from './hud.js';
 import { loadLanguages, setLanguage, getAvailableLanguages, getLangMeta, get as i18n, wordTr } from './i18n.js';
 import { HangulComposer, QWERTY_TO_JAMO } from './hangul-input.js';
@@ -655,9 +656,9 @@ function _showTTSModal() {
   const modal = document.getElementById('tts-modal');
   if (!modal) return;
   modal.classList.remove('off');
-  document.getElementById('tts-modal-close')?.addEventListener('click', () => {
-    modal.classList.add('off');
-  }, { once: true });
+  const close = () => modal.classList.add('off');
+  document.getElementById('tts-modal-close')?.addEventListener('click', close, { once: true });
+  modal.addEventListener('click', e => { if (e.target === modal) close(); }, { once: true });
 }
 
 function _checkStartupModals() {
@@ -955,11 +956,11 @@ export function init() {
   initMap(mapEl);
 
   // Wire world.js renderers
-  setShopRenderer(cell => { playMusic('gift', 0); renderShopScreen(cell); });
-  setModifierRenderer(cell => { playMusic('modifier', 0); renderModifierScreen(cell); });
-  setTreasureRenderer(cell => { playMusic('gift', 0);     renderTreasureScreen(cell); });
-  setCasinoRenderer(cell =>   { playMusic('casino', 0);   renderCasinoScreen(cell); });
-  setTeacherRenderer(cell =>  { playMusic('study', 0); renderTeacherScreen(cell); });
+  setShopRenderer(cell =>     { renderShopScreen(cell); });
+  setModifierRenderer(cell => { renderModifierScreen(cell); });
+  setTreasureRenderer(cell => { renderTreasureScreen(cell); });
+  setCasinoRenderer(cell =>   { renderCasinoScreen(cell); });
+  setTeacherRenderer(cell =>  { renderTeacherScreen(cell); });
   setCombatRef({ addToInventory, killAllEnemies });
 
   // ── Tutorial box ─────────────────────────────────────────────
@@ -1049,9 +1050,13 @@ export function init() {
   // Music hook: called by world.js enterRoom after cell type is determined
   window._onRoomEntered = (cellType) => {
     if (G.worldTransition) return; // music deferred to onComplete; don't interrupt animation
-    if (cellType === 'boss')   playMusic('boss', 0);
+    if      (cellType === 'boss')                        playMusic('boss', 0);
     else if (cellType === 'tent' || cellType === 'camp') playMusic('camp', 0);
-    else if (G.dungeon?.worldDef?.id)  playMusic(G.dungeon.worldDef.id, 0);
+    else if (cellType === 'shop' || cellType === 'treasure') playMusic('gift', 0);
+    else if (cellType === 'modifier')                    playMusic('modifier', 0);
+    else if (cellType === 'casino')                      playMusic('casino', 0);
+    else if (cellType === 'teacher')                     playMusic('study', 0);
+    else if (G.dungeon?.worldDef?.id)                    playMusic(G.dungeon.worldDef.id, 0);
   };
   window._initWeather  = initWeather;
   window._syncClock    = syncClockToGame;
@@ -1129,6 +1134,7 @@ let _blurAmount = 0;
 let _imeEnabled   = false;
 let _imeCommitted = '';
 const _imeComposer = new HangulComposer();
+let _latinAutoSeq = ''; // consecutive Latin chars typed; auto-switches to Korean after 3
 // Shift / caps state for KB display (and touch mode)
 // 'off' | 'shift' (one-shot) | 'caps'
 let _kbShift = 'off';
@@ -2476,16 +2482,12 @@ function buildTitleScreen() {
     _showDojangEntryModal();
   });
 
-  // Dojang entry modal buttons (wired once at startup)
-  document.getElementById('dojang-entry-go')?.addEventListener('click', _enterDojang);
-  document.getElementById('dojang-entry-skip')?.addEventListener('click', () => {
-    _hideDojangEntryModal();
-    playMusic('boss', 0);
-    runLoreAnimation(() => triggerMenuPlayTransition());
-  });
-  document.getElementById('dojang-entry-coop')?.addEventListener('click', () => {
-    _hideDojangEntryModal();
-    _showMultiplayerModal();
+  // Dojang entry path selection and action buttons (delegated)
+  document.addEventListener('click', e => {
+    const pathBtn = e.target.closest('.dej-path-btn');
+    if (pathBtn) { _dojangEntrySelectPath(pathBtn.dataset.path); return; }
+    const card = e.target.closest('.dej-card[data-action]');
+    if (card) { _dojangEntryAction(card.dataset.action); }
   });
 
   // Dojang in-session buttons (wired when entering dojang for first time)
@@ -2679,7 +2681,7 @@ function buildTitleScreen() {
     const world = G.dungeon.worldDef;
     const worldDisplayName = i18n('worlds.' + world.id + '.name') || world.name;
     const worldSuffix = i18n('hud.worldSuffix');
-    const worldNum = (G.run?.worldIdx ?? 0) + 1;
+    const worldNum = (G.run?.worldIdx ?? 0) + 1 - (G.run?.expertMode ? 1 : 0);
     const worldLabel = G.lang === 'ko' ? `${worldNum}${worldSuffix}` : `${worldSuffix} ${worldNum}`;
     flashAnnounce(`${world.emoji} ${worldLabel} - ${worldDisplayName}`, '#88ddff');
   });
@@ -3027,16 +3029,23 @@ function _renderStatsContent(menuOnly = false) {
     let descHtml  = '';
     if (hasDesc) {
       const baseText    = i18n(`jamo_desc.${j}.base`);
+      const firstLine   = baseText.split('\n')[0];
+      const jamoName    = (firstLine.match(/\*\*([^*]+)\*\*/) || [])[1] || (info?.name || '');
+      const jamoSound   = (firstLine.match(/·\s*(.+)/) || [])[1]?.trim() || '';
+      const bodyMd      = baseText.replace(/^[^\n]*\n*/, '');
       const showBatchim = (dictProgDisabled || count >= BATCHIM_UNLOCK_COUNT) && JAMO_HAS_BATCHIM.has(j);
       const batchimText = showBatchim ? i18n(`jamo_desc.${j}.batchim`) : '';
-      const fullMd = baseText + (batchimText ? `\n\n**받침:** ${batchimText}` : '');
-      descHtml = parseLessonMarkdown(fullMd);
+      const batchimHtml = batchimText ? `<div class="dj-batchim-section"><div class="dj-batchim-header">${i18n('dojang.batchimSection')}</div>${parseLessonMarkdown(batchimText)}</div>` : '';
+      const dblKey = `jamo_desc.${j}.double_batchim`;
+      const dblRaw = showBatchim ? i18n(dblKey) : '';
+      const dblHtml = (dblRaw && dblRaw !== dblKey) ? `<div class="dj-batchim-section dj-double-batchim-section"><div class="dj-batchim-header">${i18n('dojang.doubleBatchimSection')}</div>${parseLessonMarkdown(dblRaw)}</div>` : '';
+      descHtml = jamoFontPreview(j, jamoName, jamoSound) + parseLessonMarkdown(bodyMd) + batchimHtml + dblHtml;
     }
     return `<div class="dj-book-row${hasDesc ? ' has-desc' : ''}">
       <div class="dj-book-row-main">
         <span class="dj-book-jamo">${j}</span>
-        <span class="dj-book-name">${info?.name || ''}</span>
-        <span class="dj-book-rom">${info?.rom || ''}</span>
+        <span class="dj-book-name" data-tooltip="${i18n('dojang.tooltipName')}">${info?.name || ''}${info?.nameRom ? `<span class="dj-book-name-rom"> (${info.nameRom}${info.nameMR && info.nameMR !== info.nameRom ? ' / ' + info.nameMR : ''})</span>` : ''}</span>
+        <span class="dj-book-rom" data-tooltip="${i18n('dojang.tooltipRom')}">${info?.rom || ''}</span>
         <div class="dj-book-bar-wrap"${G.dictProgressionDisabled ? ' style="visibility:hidden"' : ''}><div class="dj-book-bar" style="width:${bar}%"></div></div>
         <span class="dj-book-count"${G.dictProgressionDisabled ? ' style="visibility:hidden"' : ''}>${count}</span>
         <span class="dj-book-strokes">${strokes}획</span>
@@ -3344,13 +3353,11 @@ function _showDojangEntryModal() {
   const modal = document.getElementById('dojang-entry-modal');
   if (!modal) return;
   modal.classList.remove('off');
-  // After stage 1 the player knows the ropes - demote the primary button style
-  const goBtn = document.getElementById('dojang-entry-go');
-  if (goBtn) {
-    const stats = loadDojangStats();
-    const stage = stats ? computeHangulStage(stats) : 0;
-    goBtn.classList.toggle('dj-btn-primary', stage < 1 && !G.dictProgressionDisabled);
-  }
+  if (!G.avatar) G.avatar = JSON.parse(localStorage.getItem('krr_avatar') || 'null') || AVA_DEFAULTS;
+  // Reset path selection state on each open
+  document.querySelectorAll('.dej-path-btn').forEach(btn => btn.classList.remove('active'));
+  const detail = document.getElementById('dej-detail');
+  if (detail) detail.classList.add('off');
   // Close on outside click (delegated, runs once per open)
   const onOutside = (e) => {
     if (!e.target.closest('#dojang-entry-inner')) {
@@ -3358,13 +3365,96 @@ function _showDojangEntryModal() {
       modal.removeEventListener('click', onOutside);
     }
   };
-  // Use setTimeout so the current click (that opened it) doesn't immediately close it
   setTimeout(() => modal.addEventListener('click', onOutside), 0);
 }
 
 function _hideDojangEntryModal() {
   const modal = document.getElementById('dojang-entry-modal');
   if (modal) modal.classList.add('off');
+}
+
+function _dojangEntrySelectPath(path) {
+  const detail = document.getElementById('dej-detail');
+  const titleEl = document.getElementById('dej-detail-title');
+  const cardsEl = document.getElementById('dej-cards');
+  if (!detail || !titleEl || !cardsEl) return;
+
+  document.querySelectorAll('.dej-path-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.path === path);
+  });
+
+  const desc = [
+    i18n('dojang.entry.desc0'),
+    i18n('dojang.entry.desc1'),
+    i18n('dojang.entry.desc2'),
+  ];
+  const descCoop  = i18n('dojang.entry.descCoop');
+  const btnDojang = i18n('dojang.entry.btnDojang');
+  const btnSolo   = i18n('dojang.entry.btnSolo');
+  const btnCoop   = i18n('dojang.entry.btnCoop');
+
+  const _soloCard = (action, d, emoji, label) => `
+    <button class="dej-card" data-action="${action}">
+      <div class="dej-card-desc">${d}</div>
+      <div class="dej-card-bottom">
+        <div class="dej-card-portrait"></div>
+        <div class="dej-card-cta">
+          <span class="dej-cta-emoji">${emoji}</span>
+          <span class="dej-cta-label">${label}</span>
+        </div>
+      </div>
+    </button>`;
+  const _coopCard = (action, d, label) => `
+    <button class="dej-card dej-card-coop" data-action="${action}">
+      <span class="dej-beta">BETA</span>
+      <div class="dej-card-desc">${d}</div>
+      <div class="dej-card-bottom">
+        <div class="dej-card-portrait dej-card-portrait-coop">🧑‍🤝‍🧑</div>
+        <div class="dej-card-cta">
+          <span class="dej-cta-emoji">⚔️</span>
+          <span class="dej-cta-label">${label}</span>
+        </div>
+      </div>
+    </button>`;
+
+  if (path === '0') {
+    titleEl.textContent = i18n('dojang.entry.diffNone');
+    cardsEl.innerHTML = _soloCard('dojang', desc[0], '🥋', btnDojang);
+  } else if (path === '1') {
+    titleEl.textContent = i18n('dojang.entry.diffMedium');
+    cardsEl.innerHTML = _soloCard('solo-normal', desc[1], '⚔️', btnSolo) + _coopCard('coop', descCoop, btnCoop);
+  } else {
+    titleEl.textContent = i18n('dojang.entry.diffHard');
+    cardsEl.innerHTML = _soloCard('solo-expert', desc[2], '⚔️', btnSolo) + _coopCard('coop-expert', descCoop, btnCoop);
+  }
+
+  cardsEl.querySelectorAll('.dej-card-portrait:not(.dej-card-portrait-coop)').forEach(el => setPlayerContent(el));
+
+  detail.dataset.path = path;
+  detail.classList.remove('off');
+}
+
+function _dojangEntryAction(action) {
+  const selDiff = document.getElementById('sel-difficulty');
+  if (action === 'dojang') {
+    _enterDojang();
+  } else if (action === 'solo-normal') {
+    _hideDojangEntryModal();
+    playMusic('boss', 0);
+    runLoreAnimation(() => triggerMenuPlayTransition());
+  } else if (action === 'solo-expert') {
+    G.skipIntroWorld = true;
+    _hideDojangEntryModal();
+    playMusic('boss', 0);
+    runLoreAnimation(() => triggerMenuPlayTransition());
+  } else if (action === 'coop') {
+    _hideDojangEntryModal();
+    _showMultiplayerModal();
+  } else if (action === 'coop-expert') {
+    G.skipIntroWorld = true;
+    _hideDojangEntryModal();
+    _showMultiplayerModal();
+  }
 }
 
 function _enterDojang() {
@@ -3389,7 +3479,6 @@ function _enterDojang() {
   // Init manager if not done yet
   if (!dojangManager.strokeCanvas) {
     dojangManager.init(dojangCanvas);
-    dojangManager.onStartAdventure = _dojangStartAdventure;
     dojangManager.onExitToMenu = _dojangExitToMenu;
 
     // Wire up in-dojang UI buttons (once only)
@@ -3402,7 +3491,6 @@ function _enterDojang() {
     document.getElementById('dojang-btn-restart')?.addEventListener('click', () => dojangManager.restartChallenge());
     document.getElementById('dojang-btn-resume')?.addEventListener('click', () => dojangManager.togglePause());
     document.getElementById('dojang-btn-menu')?.addEventListener('click', _dojangExitToMenu);
-    document.getElementById('dojang-btn-adventure')?.addEventListener('click', _dojangStartAdventure);
   }
 
   // Hide weather canvases and roguelite player-area while in dojang
@@ -3467,7 +3555,8 @@ function startNewRun() {
   G.playerMax = diff.lives;
   G.playerHP  = diff.lives;
   G.run.coinMult = diff.coinMult;
-  G.hangulSize = window.innerWidth < 768 ? 29 : window.innerWidth >= 1600 ? 42 : 32;
+  G.run.expertMode = !!G.skipIntroWorld;
+  G.hangulSize = window.innerWidth < 768 ? 34 : window.innerWidth >= 1600 ? 48 : 38;
   G.varyFonts = document.getElementById('chk-fonts')?.checked ?? true;
   G.weatherEnabled = parseFloat(document.getElementById('sel-weather')?.value ?? '1');
   G.ttsEnabled = document.getElementById('chk-tts')?.checked ?? true;
@@ -3741,6 +3830,8 @@ function goToMenu() {
   if (G.touchMode) document.body.classList.remove('touch-mode');
   _cleanupTouchExtras();
   G.menuPreview = null; // pick a new random room each time
+  if (G.run) G.run.wallet = 0;
+  updateHudWallet();
   showTitleScreen();
 }
 
@@ -3768,9 +3859,11 @@ function showGameOver(victory) {
   } else {
     document.getElementById('go-hiscore').textContent = `${i18n('gameOver.bestLabel')} ${G.hiScore}원`;
   }
-  // Save wallet
+  // Save wallet then clear so the next run's lore screen starts at 0
   G.wallet += G.run?.wallet ?? 0;
   localStorage.setItem('krr_wallet', G.wallet.toString());
+  if (G.run) G.run.wallet = 0;
+  updateHudWallet();
 }
 window._onGameOver = showGameOver;
 
@@ -3823,7 +3916,7 @@ function updateHudWorld() {
   const colLetter = String.fromCharCode(65 + col);
   const worldDisplayName = i18n('worlds.' + world.id + '.name') || world.name;
   const worldSuffix = i18n('hud.worldSuffix');
-  const worldNum = (G.run?.worldIdx ?? 0) + 1;
+  const worldNum = (G.run?.worldIdx ?? 0) + 1 - (G.run?.expertMode ? 1 : 0);
   const worldLabel = G.lang === 'ko' ? `${worldNum}${worldSuffix}` : `${worldSuffix} ${worldNum}`;
   const lblEl = document.getElementById('hud-world-lbl');
   if (lblEl) lblEl.textContent = `${worldLabel} - ${worldDisplayName}`;
@@ -4178,6 +4271,7 @@ function updateBook() {
    IME (2-beolsik Korean) TOGGLE
 ================================================================ */
 function _imeToggle() {
+  _clearKeyHint?.(); // clear hint whenever IME state changes (defined later, safe via ?)
   _imeEnabled = !_imeEnabled;
   const btn   = document.getElementById('ime-toggle');
   const lp    = document.getElementById('kb-left');
@@ -4215,6 +4309,152 @@ document.getElementById('ime-toggle')?.addEventListener('click', () => {
   _imeToggle();
   typingEl?.focus();
 });
+
+/* ================================================================
+   KEY HINT — next-jamo guide for Dojang / World 2
+================================================================ */
+const _COMP_VOWEL_DECOMP = {
+  ㅘ:['ㅗ','ㅏ'], ㅙ:['ㅗ','ㅐ'], ㅚ:['ㅗ','ㅣ'],
+  ㅝ:['ㅜ','ㅓ'], ㅞ:['ㅜ','ㅔ'], ㅟ:['ㅜ','ㅣ'], ㅢ:['ㅡ','ㅣ'],
+};
+const _COMP_FINAL_DECOMP = {
+  ㄳ:['ㄱ','ㅅ'], ㄵ:['ㄴ','ㅈ'], ㄶ:['ㄴ','ㅎ'],
+  ㄺ:['ㄹ','ㄱ'], ㄻ:['ㄹ','ㅁ'], ㄼ:['ㄹ','ㅂ'], ㄽ:['ㄹ','ㅅ'],
+  ㄾ:['ㄹ','ㅌ'], ㄿ:['ㄹ','ㅍ'], ㅀ:['ㄹ','ㅎ'], ㅄ:['ㅂ','ㅅ'],
+};
+const _KR_INITIAL = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const _KR_VOWEL   = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+const _KR_FINAL   = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+
+// jamo → { key: 'a', shift: false }  (lowercase key preferred)
+const _JAMO_TO_KEY = {};
+for (const [k, jamo] of Object.entries(QWERTY_TO_JAMO)) {
+  if (!_JAMO_TO_KEY[jamo]) _JAMO_TO_KEY[jamo] = { key: k.toLowerCase(), shift: k !== k.toLowerCase() };
+}
+
+function _wordToJamoSeq(word) {
+  const out = [];
+  for (const ch of word) {
+    const cp = ch.codePointAt(0);
+    if (cp >= 0xAC00 && cp <= 0xD7A3) {
+      const idx = cp - 0xAC00;
+      const ci  = Math.floor(idx / (21 * 28));
+      const vi  = Math.floor((idx % (21 * 28)) / 28);
+      const fi  = idx % 28;
+      out.push(_KR_INITIAL[ci]);
+      const v = _KR_VOWEL[vi];
+      out.push(...(_COMP_VOWEL_DECOMP[v] || [v]));
+      if (fi > 0) {
+        const f = _KR_FINAL[fi];
+        out.push(...(_COMP_FINAL_DECOMP[f] || [f]));
+      }
+    } else if (cp >= 0x3131 && cp <= 0x3163) {
+      out.push(ch); // bare jamo
+    }
+  }
+  return out;
+}
+
+// Returns: next jamo string, null (word complete), or undefined (input mismatch)
+function _getNextJamoForWord(word, currentTyped) {
+  const seq = _wordToJamoSeq(word);
+  if (!seq.length) return null;
+  if (!currentTyped) return seq[0];
+  const sim = new HangulComposer();
+  let committed = '';
+  for (let i = 0; i < seq.length; i++) {
+    committed += sim.input(seq[i]);
+    if (committed + sim.composing === currentTyped) {
+      return i + 1 < seq.length ? seq[i + 1] : null;
+    }
+  }
+  return undefined; // mismatch
+}
+
+let _kbHintKey = null;
+let _kbHintShift = false;
+
+function _getOrCreatePcShiftBadge() {
+  let el = document.getElementById('kb-pc-shift');
+  if (!el) {
+    const wrap = document.createElement('div');
+    wrap.className = 'kb-key-wrap';
+    el = document.createElement('div');
+    el.id = 'kb-pc-shift';
+    el.className = 'kb-key kb-touch-special kb-pc-shift-badge';
+    el.textContent = '⇧';
+    wrap.appendChild(el);
+    const rows = document.getElementById('kb-left')?.querySelectorAll('.kb-row');
+    const lastRow = rows?.[rows.length - 1];
+    lastRow?.insertBefore(wrap, lastRow.firstChild);
+  }
+  return el;
+}
+
+function _clearKeyHint() {
+  document.body.classList.remove('kb-hint-mode');
+  if (_kbHintKey) {
+    const el = _kbHintKey === 'backspace'
+      ? document.getElementById('kb-touch-backspace')
+      : _kbKeyEls[_kbHintKey];
+    el?.classList.remove('kb-hint');
+    _kbHintKey = null;
+  }
+  if (_kbHintShift) {
+    document.getElementById('kb-touch-shift')?.classList.remove('kb-hint');
+    document.getElementById('kb-pc-shift')?.classList.remove('kb-hint');
+    _kbHintShift = false;
+  }
+}
+
+function _applyKeyHint(jamoKey, isBsp) {
+  const newKey   = isBsp ? 'backspace' : (jamoKey?.key ?? null);
+  const newShift = !isBsp && (jamoKey?.shift ?? false);
+  if (newKey && newKey === _kbHintKey && newShift === _kbHintShift) return;
+  _clearKeyHint();
+  if (!newKey) return;
+  if (!G.touchMode && G.dungeon?.worldDef?.isDojangTutorial) document.body.classList.add('kb-hint-mode');
+  const el = isBsp
+    ? document.getElementById('kb-touch-backspace')
+    : _kbKeyEls[newKey];
+  if (el) { el.classList.add('kb-hint'); _kbHintKey = newKey; }
+  if (newShift) {
+    document.getElementById('kb-touch-shift')?.classList.add('kb-hint');
+    if (!G.touchMode) _getOrCreatePcShiftBadge().classList.add('kb-hint');
+    _kbHintShift = true;
+  }
+}
+
+function _updateKeyHint() {
+  if (canvas) {
+    const inCombat = G.phase === 'run' && G.mode === 'combat';
+    canvas.style.pointerEvents = inCombat ? 'auto' : '';
+    const val = (typingEl?.value || '').trim();
+    canvas.style.cursor = (!G.touchMode && inCombat && _typedIsValidInput(val)) ? 'pointer' : '';
+  }
+  if (!_imeEnabled) { _clearKeyHint(); return; }
+  const isDojang = G.dungeon?.worldDef?.isDojangTutorial;
+  const isWorld2 = !isDojang && (G.run?.worldIdx ?? 0) === 1;
+  if (G.phase !== 'run' || G.mode !== 'combat' || !(isDojang || isWorld2)) {
+    _clearKeyHint(); return;
+  }
+  const targeted = new Set((G.room?.projs || []).map(p => p.tid));
+  const monsters = (G.room?.monsters || []).filter(m => !m.dead && !m.fleeing && !targeted.has(m.id));
+  if (!monsters.length) { _clearKeyHint(); return; }
+  const px = G.W / 2, py = G.vH * 0.85;
+  let nearest = null, nd = Infinity;
+  for (const m of monsters) {
+    const d = Math.hypot(m.x - px, m.y - py);
+    if (d < nd) { nd = d; nearest = m; }
+  }
+  if (!nearest?.words?.length) { _clearKeyHint(); return; }
+  const next = _getNextJamoForWord(nearest.words[0], typingEl?.value ?? '');
+  if (next === undefined)  _applyKeyHint(null, true);
+  else if (next !== null)  _applyKeyHint(_JAMO_TO_KEY[next], false);
+  else                     _clearKeyHint();
+}
+
+setInterval(_updateKeyHint, 150);
 
 // Attach the custom HangulComposer to any auxiliary input (e.g. test write input)
 // so that 한 mode is respected outside of the main typing field.
@@ -4336,8 +4576,8 @@ let _touchKeysWired = false;
 function _updateEnterGlow() {
   const enterBtn = document.getElementById('kb-touch-enter');
   if (!enterBtn) return;
-  const hasContent = !!((_imeCommitted) || !_imeComposer.isEmpty || (typingEl?.value || '').trim());
-  enterBtn.classList.toggle('has-input', hasContent);
+  const val = (typingEl?.value || '').trim();
+  enterBtn.classList.toggle('has-input', _typedIsValidInput(val));
 }
 
 function _touchNumPress(digit) {
@@ -4710,7 +4950,7 @@ window.addEventListener('resize', () => {
   G.vH = Math.floor(window.visualViewport?.height ?? window.innerHeight);
   // Subtract titlebar height from game viewport when mobile fullscreen is active
   if (document.body.classList.contains('mobile-fs')) G.vH -= 20;
-  G.hangulSize = window.innerWidth < 768 ? 29 : window.innerWidth >= 1600 ? 42 : 32;
+  G.hangulSize = window.innerWidth < 768 ? 34 : window.innerWidth >= 1600 ? 48 : 38;
   resizeCanvas();
   _applyTouchZoom();
   if (G.ctrlPanelOpen) _applyCtrlZoom();
@@ -4754,6 +4994,24 @@ typingEl?.addEventListener('keydown', e => {
     return;
   }
 
+  // Auto-switch to Korean after 3 Latin chars in Dojang world (PC only, not cheatcode prefix)
+  if (!_imeEnabled && !G.touchMode && G.phase === 'run' && G.dungeon?.worldDef?.isDojangTutorial) {
+    if (/^[a-zA-Z]$/.test(e.key)) {
+      _latinAutoSeq = (_latinAutoSeq || '') + e.key.toLowerCase();
+      if (_latinAutoSeq.length >= 3) {
+        if (!_latinAutoSeq.startsWith('che')) {
+          _latinAutoSeq = '';
+          _imeToggle();
+          typingEl?.focus();
+        } else {
+          _latinAutoSeq = ''; // was cheatcode prefix, reset
+        }
+      }
+    } else if (e.key !== 'Shift' && e.key !== 'CapsLock') {
+      _latinAutoSeq = '';
+    }
+  }
+
   // IME: only intercept a-z letters for Korean; everything else types naturally
   if (_imeEnabled) {
     const isSystem = e.ctrlKey || e.altKey || e.metaKey ||
@@ -4791,6 +5049,7 @@ typingEl?.addEventListener('keydown', e => {
       }
     }
   }
+  _updateKeyHint();
 });
 typingEl?.addEventListener('paste', e => e.preventDefault());
 // Block browser input only when a syllable is actively composing (protects mid-composition state)
@@ -4895,6 +5154,48 @@ function speakKorean(text) {
   utt.rate = 0.85;
   speechSynthesis.speak(utt);
 }
+
+// Returns true if val is a valid submittable input: cheatcode, NPC in room, or alive monster.
+function _typedIsValidInput(val) {
+  if (!val) return false;
+  if (val.toLowerCase() === 'cheatcode' || val === '촏ㅁㅅ챙ㄷ' || val === '초ㄸㅁㅆ첑ㄸ') return true;
+  const npc = G.room?.npc;
+  if (npc?.word && (val === npc.word || val === npc.word.replace(/\s+/g, ''))) return true;
+  for (const m of (G.room?.monsters || [])) {
+    if (m.dead) continue;
+    const all = [...m.words];
+    for (const w of m.words) {
+      const entry = WORD_DICT.find(d => d.text === w);
+      if (entry?.alts) all.push(...entry.alts);
+    }
+    if (all.includes(val) || all.some(w => val.startsWith(w))) return true;
+  }
+  return false;
+}
+
+// pointerdown preventDefault keeps typingEl focused while mouse is over canvas
+// — this is what prevents the OS/browser IME composition from being cancelled.
+canvas?.addEventListener('pointerdown', e => {
+  if (G.phase !== 'run' || G.mode !== 'combat') return;
+  e.preventDefault();
+});
+
+// Clicking the game canvas submits the current word (same as Enter).
+// Touch mode: always fires. PC mode: only fires when input is valid (monster/NPC/cheatcode).
+canvas?.addEventListener('click', () => {
+  if (G.phase !== 'run' || G.mode !== 'combat') return;
+  const val = (typingEl?.value || '').trim();
+  if (!G.touchMode && !_typedIsValidInput(val)) return;
+  if (typingEl && document.activeElement !== typingEl) typingEl.focus();
+  if (_imeEnabled) {
+    _imeCommitted += _imeComposer.commitCurrent();
+    if (typingEl) typingEl.value = _imeCommitted || typingEl.value;
+    _imeCommitted = ''; _imeComposer.reset();
+  }
+  onInput();
+  if (_imeEnabled) _imeCommitted = typingEl ? typingEl.value : '';
+  _updateEnterGlow();
+});
 
 function onInput() {
   if (G.phase !== 'run') return;
@@ -5099,6 +5400,7 @@ document.addEventListener('keydown', e => {
     // Tab: toggle Korean IME mode
     if (e.key === 'Tab') {
       e.preventDefault();
+      _latinAutoSeq = '';
       _imeToggle();
     }
     const teacherOpen = !document.getElementById('scr-teacher')?.classList.contains('off');
@@ -6181,16 +6483,23 @@ function _mpHandleMessage(msg) {
       if (msg.difficulty) {
         const DIFF = { baby:50, easy:20, normal:10, hard:5, hardcore:1 };
         G.playerMax = DIFF[msg.difficulty] || 10;
+        G.difficulty = msg.difficulty;
       }
+      if (msg.expertMode) G.skipIntroWorld = true;
       // Save guest's local settings then apply host's session settings
       _mpSaveGuestSettings();
       if (msg.hanjaEnabled            !== undefined) G.hanjaEnabled            = msg.hanjaEnabled;
       if (msg.translationEnabled      !== undefined) G.translationEnabled      = msg.translationEnabled;
       if (msg.dictProgressionDisabled !== undefined) G.dictProgressionDisabled = msg.dictProgressionDisabled;
       if (msg.dungeonBlueprint) MP._blueprintPending = msg.dungeonBlueprint;
+      if (msg.skipIntroWorld) G.skipIntroWorld = true;
       _hideMultiplayerModal();
-      playMusic('boss', 0);
-      runLoreAnimation(() => triggerMenuPlayTransition());
+      if (msg.skipIntroWorld) {
+        triggerMenuPlayTransition();
+      } else {
+        playMusic('boss', 0);
+        runLoreAnimation(() => triggerMenuPlayTransition());
+      }
       break;
     }
 
@@ -6204,6 +6513,7 @@ function _mpHandleMessage(msg) {
         const DIFF = { baby:50, easy:20, normal:10, hard:5, hardcore:1 };
         G.playerMax = DIFF[msg.difficulty] || 10;
         G.playerHP  = Math.min(G.playerHP || G.playerMax, G.playerMax);
+        G.difficulty = msg.difficulty;
       }
       if (msg.blueprint) {
         G.dungeon      = reconstructDungeon(msg.blueprint);
@@ -6828,6 +7138,8 @@ function _mpStartGame() {
   const settings = _mpGetSessionSettings();
   const diffKey  = settings.difficulty;
   const snapshot = getHostPersistentSnapshot();
+  const skipIntro = !!G.skipIntroWorld;
+  const startIdx  = skipIntro ? 1 : 0;
 
   // Apply host settings locally too
   G.hanjaEnabled            = settings.hanjaEnabled;
@@ -6840,20 +7152,22 @@ function _mpStartGame() {
   const DIFF = { baby:50, easy:20, normal:10, hard:5, hardcore:1 };
   G.playerMax = DIFF[diffKey] || 10;
   G.playerHP  = G.playerMax;
-  // Seed worldSequence first so generateDungeon(0) picks the correct world (not a random fallback)
+  // Seed worldSequence first so generateDungeon picks the correct world (not a random fallback)
   G.run.worldSequence = generateWorldSequence(14);
-  const preDungeon = generateDungeon(0);
-  const dungeonBlueprint = serializeDungeon(preDungeon, 0);
+  const preDungeon = generateDungeon(startIdx);
+  const dungeonBlueprint = serializeDungeon(preDungeon, startIdx);
   MP._hostPreDungeon = preDungeon;
 
   mpSend({
     type:                    'start',
     difficulty:              diffKey,
+    expertMode:              skipIntro,
     hanjaEnabled:            settings.hanjaEnabled,
     translationEnabled:      settings.translationEnabled,
     dictProgressionDisabled: settings.dictProgressionDisabled,
     persistentState:         snapshot,
     dungeonBlueprint,
+    skipIntroWorld:          skipIntro,
   });
 
   _hideMultiplayerModal();
