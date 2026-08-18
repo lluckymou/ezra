@@ -1392,6 +1392,17 @@ body.phase-title #pl-emoji {
 }
 .kb-panel.visible { visibility: visible; opacity: 1; pointer-events: all; }
 
+/* Keep the touch keyboard readable over the game scene. */
+body.touch-mode .kb-panel.visible {
+  padding: 6px;
+  background: rgba(3, 8, 26, .88);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 10px;
+  box-shadow: 0 5px 18px rgba(0,0,0,.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
 .kb-row {
   display: flex; gap: 3px;
   flex: 1; align-items: stretch;
@@ -1408,6 +1419,9 @@ body.phase-title #pl-emoji {
   border-radius: 6px; box-sizing: border-box;
   overflow: hidden;
   transition: background .1s, border-color .1s;
+}
+body.touch-mode .kb-key {
+  background: rgba(30, 36, 62, .82);
 }
 /* Home-row bump keys (F/ㄹ and J/ㅓ) - 2× thicker bottom border */
 .kb-key.kb-home {
@@ -1869,7 +1883,10 @@ body.touch-mode #hud-backpack-btn { display: flex !important; flex-direction: co
 body.touch-mode #typing { caret-color: transparent; cursor: pointer; user-select: none; }
 body.touch-mode #hcard-score .hlbl { display: none; }
 /* kb-panels-active: layout now baked into #player-area base rule */
-body.touch-mode #player-area { justify-content: space-between !important; }
+body.touch-mode #player-area {
+  justify-content: space-between !important;
+  z-index: 58;
+}
 body.touch-mode #ime-toggle { visibility: hidden; }
 body.touch-mode #hw-room, body.touch-mode #hud-clock-time { line-height: 0; margin-top: 5px; }
 body.touch-mode .wave-ring-wrap { display: flex; }
