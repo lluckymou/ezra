@@ -8,23 +8,29 @@
 
 import { G } from './state.js';
 
-const LANG_CODES = ['en', 'pt', 'ko'];
+// This order is part of the product contract: it controls the first-launch
+// picker, the settings selector, and the language carousel before a choice is
+// saved. Files that are not present yet are simply skipped until translated.
+const LANG_CODES = ['en', 'es', 'pt', 'fr', 'ko', 'ja', 'zh', 'vi', 'fil', 'th', 'id', 'hi'];
 
 let _translations = {};
 let _currentLangCode = 'en';
 
 // Load all language files
 export async function loadLanguages() {
-  for (const code of LANG_CODES) {
+  _translations = {};
+  await Promise.all(LANG_CODES.map(async code => {
     try {
       const response = await fetch(`assets/lang/${code}.json`, { cache: 'no-cache' });
       if (response.ok) {
         _translations[code] = await response.json();
+      } else if (response.status !== 404) {
+        console.warn(`Language catalog ${code} failed with HTTP ${response.status}`);
       }
     } catch (err) {
       console.error(`Failed to load language ${code}:`, err);
     }
-  }
+  }));
 }
 
 // Set current language; returns false if not loaded
@@ -34,8 +40,10 @@ export function setLanguage(langCode) {
     G.lang = langCode;
     return true;
   }
-  // Unknown lang: keep current but set G.lang so the game knows
-  G.lang = langCode;
+  // Unknown/unavailable lang: keep both the active catalog and state aligned.
+  // This prevents a stale localStorage value from triggering language-specific
+  // branches while visible text is still coming from the previous locale.
+  G.lang = _currentLangCode;
   return false;
 }
 
@@ -90,11 +98,16 @@ export function getLangMeta(langCode = _currentLangCode) {
 
 // Get all loaded languages as [{code, name, icon}]
 export function getAvailableLanguages() {
-  return Object.entries(_translations).map(([code, data]) => ({
-    code,
-    name: data.meta?.name || code,
-    icon: data.meta?.icon || '',
-  }));
+  return LANG_CODES
+    .filter(code => _translations[code])
+    .map(code => {
+      const data = _translations[code];
+      return {
+        code,
+        name: data.meta?.name || code,
+        icon: data.meta?.icon || '',
+      };
+    });
 }
 
 // Get current language code

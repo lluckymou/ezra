@@ -9,7 +9,7 @@
     "unsupportedDesc": "EZRA não funciona no Safari. Por favor, abra no Chrome, Firefox ou Edge."
   },
   "title": {
-    "playBtn": "▶ Jogar!",
+    "playBtn": "▶ Jogar",
     "slogan": "Praticando coreano digitando",
     "subTitle": "EZRA - Digite coreano para derrotar monstros!",
     "bestScore": "Melhor pontuação"
@@ -37,6 +37,10 @@
     "diffHardcore": "Hardcore",
     "varyFonts": "🔤 Fontes Variadas",
     "weather": "🌤️ Clima",
+    "details": "🌳 Detalhes",
+    "detailsEmpty": "🚫 Desativado",
+    "detailsDecorations": "🪾 Decorações",
+    "detailsDecorationsWind": "🍃 Decorações e vento",
     "weatherHighlyDetailed": "🌪️ Alta Qualidade",
     "weatherDetailed": "⛈️ Detalhado",
     "weatherBalanced": "🌧️ Equilibrado",
@@ -50,6 +54,7 @@
     "clickableDoors": "🚪 Portas Clicáveis",
     "gameMode": "Modo de Jogo",
     "touchControls": "📱 Controles Touch",
+    "multiplayerBeta": "🧑‍🤝‍🧑 Multiplayer (beta)",
     "dictProgression": "🔓 Desativar Progressão do Dicionário",
     "touchControlsBtn": "Controles Touch",
     "keyboardControls": "Controles de Teclado",
@@ -102,6 +107,7 @@
     "statsItems": "Itens Adquiridos",
     "statsWorlds": "Mundos Explorados",
     "wikiDojang": "🥋 Dojang de Hangul",
+    "wikiHanja": "🀄 Hanja",
     "wikiWorlds": "🌏 Mundos",
     "wikiItems": "📦 Itens",
     "wikiPerms": "✨ Bônus Permanentes",
@@ -128,6 +134,7 @@
     "title": "Escolha seu idioma"
   },
   "misc": {
+    "resetProgress": "↺ Resetar Progresso",
     "confirmReset": "Resetar todo o progresso?",
     "confirmResetConfirm": "Tem certeza? Clique de novo para confirmar.",
     "fullscreenPrompt": "EZRA 타자 é jogado em tela cheia no celular. Toque acima para entrar em tela cheia.",
@@ -142,7 +149,14 @@
     "bestScore": "Melhor pontuação",
     "permanent": "Permanente",
     "consumable": "Consumível",
-    "worldSuffix": "Mundo"
+    "worldSuffix": "Mundo",
+    "worldLabel": "Mundo {{n}}",
+    "roomLabel": "{{col}}{{row}}",
+    "verbLabel": "VERBO",
+    "adjectiveLabel": "ADJ.",
+    "backpack": "Mochila",
+    "dictionary": "Dicionário",
+    "wallet": "Moedas"
   },
   "cheat": {
     "title": "⚡ Menu de Cheats",
@@ -183,6 +197,19 @@
     },
     "room": {
       "disclaimer": "Alterações não são permanentes e são visíveis apenas localmente.",
+      "trees": "Árvores",
+      "clearTrees": "Limpar",
+      "treeTheme": "Tema das árvores",
+      "treeAuto": "Automático",
+      "treeBroadleaf": "Folhosa",
+      "treePalm": "Palmeira",
+      "treePine": "Pinheiro",
+      "treeBlossom": "Florida",
+      "treeBare": "Seca",
+      "treeStreet": "Urbana",
+      "generateTrees": "Gerar",
+      "treesCleared": "Árvores removidas",
+      "treesGenerated": "Árvores geradas",
       "wall": "Tipo de Parede",
       "floor": "Tipo de Chão",
       "wallColor": "Cor da Parede",
@@ -222,6 +249,7 @@
   "casino": {
     "title": "Cassino",
     "spinHint": "Gire os slots - depois PARE!",
+    "stopBtn": "⏹ PARAR",
     "acceptBtn": "✅ ACEITAR",
     "clean_start": {
       "name": "Recomeço",
@@ -268,7 +296,8 @@
     "bookHint": "Aperte Ctrl+B para abrir o Livro"
   },
   "inventory": {
-    "emptyBackpack": "mochila vazia"
+    "emptyBackpack": "mochila vazia",
+    "use": "USAR"
   },
   "teacher": {
     "title": "🎓 Professor",
@@ -318,6 +347,7 @@
     "typeToBuy": "Digite a palavra para comprar em {{room}}",
     "pressMap": "Pressione M para ver o mapa e sua localização",
     "findBoss": "Encontre a sala do chefe para aumentar o desafio",
+    "followBossGlow": "Siga o brilho vermelho: ele aponta para o chefe.",
     "buyTent": "Você poderia comprar uma barraca na loja para dormir essa noite",
     "pickHangul": "Digite a sílaba na moeda para pegar um item",
     "pickHanja": "Digite a sílaba do hanja para pegar o item — caso possua e use um item de Dicionário, o hanja será revelado",
@@ -552,7 +582,7 @@
       "desc": "A ilha financeira de Seul no Rio Han, famosa pelo espetacular festival de cerejeiras na primavera."
     },
     "dokdo": {
-      "name": "Ilha Dokdo",
+      "name": "Dokdo",
       "desc": "Os remotos ilhéus mais orientais da Coreia no Mar do Leste, lar de pássaros marinhos raros."
     },
     "gangnam": {
@@ -1811,6 +1841,7 @@
     "startAdventure": "⚔️ Começar Aventura",
     "bookTitle": "📖 Diário de Treino",
     "inspectorTitle": "🔎 Guia de Traços",
+    "speakAgain": "Falar novamente",
     "drawJamo": "Desenhe {j}",
     "drawSyllable": "Escreva {s}ㅤ·ㅤAgora: {j}",
     "great": "Ótimo!",

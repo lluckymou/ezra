@@ -1,7 +1,7 @@
 /* ================================================================
    WORLD - dungeon generation + room management + navigation
 ================================================================ */
-import { G, resetRoomState, savePersistentState } from './state.js';
+import { G, resetRoomState, savePersistentState, recordWorldReached } from './state.js';
 import { get as i18n } from './i18n.js';
 import { genRoomEnemies, initRoomSpawner, setRoomClearedCallback, announce, dismissAnnounce, flashAnnounce, addToInventory, mkMonster, collectCoins, explodeCoins } from './combat.js';
 import { mpSend, getMpTemplates } from './multiplayer.js';
@@ -27,6 +27,7 @@ export const WORLDS = [
     bossName: '사범',
     biome: 'dojang',
     forbiddenWeathers: ['foggy','drizzle','raining','snowing','blizzard','fall','blossom'],
+    wind: 0.10,
     floorColor:     '#a93226',  floorColorAlt: '#1a6ea8',  // red + blue dojang mat
     wallColor:      '#c8bfb0',  altWallColor:  '#b5a898',  // warm grey walls
     fixedLighting: '12:00',
@@ -43,6 +44,7 @@ export const WORLDS = [
     bossName: '도깨비',
     biome: 'palace',
     forbiddenWeathers: [],
+    wind: 0.22,
     floorColor:     '#141828',  floorColorAlt: '#0e1220',
     wallColor:      '#1e3d70',  altWallColor:  '#2e58a0',  // indigo palace stone; door arch brighter
   },
@@ -56,6 +58,7 @@ export const WORLDS = [
     bossName: '돌하르방',
     biome: 'jungle',
     forbiddenWeathers: ['snowing', 'blizzard'],
+    wind: 0.58,
     floorColor:     '#101c06',  floorColorAlt: '#0c1604',
     wallColor:      '#1a2e08',  altWallColor:  '#2e4e14',  // dark volcanic rock; door lighter green-black
   },
@@ -69,6 +72,7 @@ export const WORLDS = [
     bossName: '대왕오징어',
     biome: 'beach',
     forbiddenWeathers: ['snowing', 'blizzard'],
+    wind: 0.78,
     floorColor:     '#0e2038',  floorColorAlt: '#0a1a30',
     wallColor:      '#0a2448',  altWallColor:  '#183e70',  // deep ocean wall; door shows city-glow blue
     fixedLighting: '21:00',
@@ -84,6 +88,7 @@ export const WORLDS = [
     bossName: '인공지능',
     biome: 'city',
     forbiddenWeathers: ['snowing', 'blizzard'],
+    wind: 0.30,
     floorColor:     '#1a1438',  floorColorAlt: '#12102c',
     wallColor:      '#180e40',  altWallColor:  '#2e1c70',  // dark neon-city wall; door glows purple
     fixedLighting: '22:00',
@@ -98,7 +103,8 @@ export const WORLDS = [
     bossEmoji: '🐯',       // Baekho - white tiger, legendary Korean mountain spirit
     bossName: '백호',
     biome: 'ice',
-    forbiddenWeathers: ['clear'],
+    forbiddenWeathers: ['clear', 'blossom'],
+    wind: 0.66,
     floorColor:     '#1c2830',  floorColorAlt: '#141e28',
     wallColor:      '#162035',  altWallColor:  '#263455',  // cold granite; door cracks let in icy light
   },
@@ -112,6 +118,7 @@ export const WORLDS = [
     bossName: '신룡',
     biome: 'volcano',
     forbiddenWeathers: ['clear', 'raining', 'drizzle'],
+    wind: 0.72,
     floorColor:     '#001028',  floorColorAlt: '#000c1e',
     wallColor:      '#021630',  altWallColor:  '#0a2648',  // volcanic dark; door hints at the crater lake
     fixedLighting: '02:00',
@@ -127,6 +134,7 @@ export const WORLDS = [
     bossName: '구미호',
     biome: 'ruins',
     forbiddenWeathers: [],
+    wind: 0.24,
     floorColor:     '#2a1808',  floorColorAlt: '#1e1004',
     wallColor:      '#3e2208',  altWallColor:  '#5e3818',  // dark amber wood; door lit by paper lanterns
   },
@@ -140,6 +148,7 @@ export const WORLDS = [
     bossName: '상어왕',
     biome: 'ocean',
     forbiddenWeathers: ['snowing', 'blizzard'],
+    wind: 0.88,
     floorColor:     '#001628',  floorColorAlt: '#001020',
     wallColor:      '#001c38',  altWallColor:  '#003058',  // abyssal dark; door shows faint bioluminescence
   },
@@ -153,6 +162,7 @@ export const WORLDS = [
     bossName: '탈춤왕',
     biome: 'traditional',
     forbiddenWeathers: [],
+    wind: 0.28,
     floorColor:     '#341a08',  floorColorAlt: '#281206',
     wallColor:      '#4a2608',  altWallColor:  '#703c14',  // dark clay tile; door opens to warm lantern glow
   },
@@ -166,6 +176,7 @@ export const WORLDS = [
     bossName: '신라왕',
     biome: 'ruins',
     forbiddenWeathers: ['snowing', 'blizzard'],
+    wind: 0.54,
     floorColor:     '#1a1806',  floorColorAlt: '#141204',
     wallColor:      '#1c1a06',  altWallColor:  '#363410',  // ochre stone; door glows faint gold
     fixedLighting: '00:30',
@@ -181,6 +192,7 @@ export const WORLDS = [
     bossName: '꽃뱀',
     biome: 'spring',
     forbiddenWeathers: ['snowing', 'blizzard', 'foggy'],
+    wind: 0.42,
     floorColor:     '#2c0c1a',  floorColorAlt: '#200812',
     wallColor:      '#3c0e20',  altWallColor:  '#601830',  // deep rose; door glows with pink petal light
     fixedLighting: '20:30',
@@ -196,6 +208,7 @@ export const WORLDS = [
     bossName: '독수리',
     biome: 'ocean',
     forbiddenWeathers: [],
+    wind: 0.92,
     floorColor:     '#0e1a28',  floorColorAlt: '#0a1420',
     wallColor:      '#101c2e',  altWallColor:  '#1e3048',  // dark basalt; door opens to grey pre-dawn sea
     fixedLighting: '05:00',
@@ -211,6 +224,7 @@ export const WORLDS = [
     bossName: '황금신',
     biome: 'city',
     forbiddenWeathers: ['snowing', 'blizzard', 'foggy'],
+    wind: 0.34,
     floorColor:     '#0a0a1c',  floorColorAlt: '#060612',
     wallColor:      '#0c0c28',  altWallColor:  '#1a1a48',  // near-black marble; door reveals gold-lit corridor
     fixedLighting: '23:30',
@@ -226,6 +240,7 @@ export const WORLDS = [
     bossName: '용왕',
     biome: 'ocean',
     forbiddenWeathers: ['drizzle','raining','snowing','blizzard','fall','blossom'],
+    wind: 0.52,
     floorColor:     '#003030',  floorColorAlt: '#002424',
     wallColor:      '#004040',  altWallColor:  '#007070',  // deep jade; door shimmers with jade luminescence
     fixedLighting: '02:00',
@@ -241,6 +256,7 @@ export const WORLDS = [
     bossName: '우주괴물',
     biome: 'cosmos',
     forbiddenWeathers: ['raining', 'drizzle', 'snowing', 'blizzard', 'foggy'],
+    wind: 0.18,
     floorColor:     '#060012',  floorColorAlt: '#04000c',
     wallColor:      '#080018',  altWallColor:  '#140030',  // void black; door cracks show deep space purple
     fixedLighting: '02:00',
@@ -766,6 +782,7 @@ export function serializeDungeon(dungeon, worldIdx) {
   return {
     worldIdx,
     worldDefId: dungeon.worldDef.id,
+    runSeed:   dungeon.runSeed ?? G.run?.seed ?? null,
     start:    { col: dungeon.start.col,    row: dungeon.start.row    },
     bossRoom: { col: dungeon.bossRoom.col, row: dungeon.bossRoom.row },
     maxHops:  dungeon.maxHops,
@@ -809,6 +826,7 @@ export function reconstructDungeon(blueprint) {
     bossRoom: blueprint.bossRoom,
     worldDef,
     maxHops:  blueprint.maxHops,
+    runSeed:  blueprint.runSeed ?? null,
   };
 }
 
@@ -858,6 +876,47 @@ export function deserializeTemplates(serialized) {
 
 // Direction the local player last navigated (set in navigate(), cleared after mpSend)
 let _mpLastNavDir = null;
+
+// Cached graph distance from every room to the boss. The renderer uses an
+// equivalent map for the red door glow; keeping the navigation check here
+// lets the guidance popup use the same topology without reading canvas state.
+let _bossDistanceCache = null;
+function _getBossDistanceMap() {
+  if (!G.dungeon) return null;
+  if (_bossDistanceCache?.dungeon === G.dungeon) return _bossDistanceCache.map;
+  const boss = G.dungeon.grid?.find(c => c.type === 'boss');
+  if (!boss) { _bossDistanceCache = { dungeon: G.dungeon, map: null }; return null; }
+  const dist = new Map([[`${boss.col},${boss.row}`, 0]]);
+  const queue = [boss];
+  while (queue.length) {
+    const cur = queue.shift();
+    const d = dist.get(`${cur.col},${cur.row}`);
+    for (const dir of cur.connections) {
+      const step = DIRS.find(x => x.dir === dir);
+      if (!step) continue;
+      const nc = cur.col + step.dc, nr = cur.row + step.dr;
+      if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+      const key = `${nc},${nr}`;
+      if (!dist.has(key)) { dist.set(key, d + 1); queue.push(getCell(nc, nr)); }
+    }
+  }
+  _bossDistanceCache = { dungeon: G.dungeon, map: dist };
+  return dist;
+}
+
+export function isBossPathDirection(fromCol, fromRow, dir) {
+  const from = getCell(fromCol, fromRow);
+  if (!from?.connections.has(dir)) return false;
+  const step = DIRS.find(x => x.dir === dir);
+  if (!step) return false;
+  const to = getCell(fromCol + step.dc, fromRow + step.dr);
+  if (!to) return false;
+  if (to.type === 'boss') return true;
+  const dist = _getBossDistanceMap();
+  const fromDist = dist?.get(`${from.col},${from.row}`);
+  const toDist = dist?.get(`${to.col},${to.row}`);
+  return fromDist != null && toDist != null && toDist < fromDist;
+}
 
 /* ================================================================
    GET CELL HELPER
@@ -949,17 +1008,37 @@ function _mpGetOrGenTemplates(cell) {
 /* ================================================================
    ENTER ROOM
 ================================================================ */
-export function enterRoom(col, row) {
-  dismissAnnounce(); // fade out any active room title immediately on room change
+function closeMapOnRoomChange() {
+  const panel = document.getElementById('map-panel');
+  if (panel) panel.classList.add('off');
+
+  if (typeof window !== 'undefined') {
+    window._setMapPlaceholder?.(false);
+    window._mapCloseCleanup?.();
+  }
+  document.body?.classList.remove('map-open');
+}
+
+export function enterRoom(col, row, fromDir = null) {
+  // Room changes always dismiss the map, regardless of how navigation started.
+  // The minimap click path used to do this itself, but door navigation and
+  // room-code teleports could leave the panel visible over the new room.
+  closeMapOnRoomChange();
+  // The boss-path hint is a post-combat message. Never carry it into a new
+  // combat or NPC room; it can be shown again only by the next room clear.
+  window._hideBossPathHint?.();
+  window._hideTutorial?.(true);
+  dismissAnnounce(); // close any active room popup immediately on room change
   // Dismiss first-clear banner when entering a new room
   document.getElementById('first-clear-banner')?.classList.add('off');
+  const previousRoom = G.currentRoom ? { ...G.currentRoom } : null;
   G.currentRoom = { col, row };
   G.doorLabelAlpha = 0; // fade labels in after transition completes
 
   // ── Multiplayer: broadcast room change to P2 ──────────────────
   if (G.mp?.active) {
     // Broadcast after room setup so G.mode is already set; capture nav dir before clearing
-    const _fromDir = _mpLastNavDir;
+    const _fromDir = fromDir ?? _mpLastNavDir;
     _mpLastNavDir = null;
     setTimeout(() => {
       mpSend({ type: 'room_enter', col, row, fromDir: _fromDir, inCombat: G.mode === 'combat' });
@@ -968,6 +1047,13 @@ export function enterRoom(col, row) {
 
   const cell = getCell(col, row);
   if (!cell) return;
+
+  const isNewCombatRoom = !cell.visited && (cell.type === 'normal' || cell.type === 'boss');
+  if (isNewCombatRoom && previousRoom && fromDir &&
+      isBossPathDirection(previousRoom.col, previousRoom.row, fromDir)) {
+    G.run.bossPathHintDismissed = true;
+    window._hideBossPathHint?.();
+  }
 
   // Mark as visited
   cell.visited = true;
@@ -997,6 +1083,9 @@ export function enterRoom(col, row) {
     G.mode = 'navigate';
     G.room.wPhase = 'clear';
     reopenSpecialRoom(cell);
+    if (typeof window !== 'undefined' && window._onRoomEntered) {
+      window._onRoomEntered(cell.type, true);
+    }
     return;
   }
 
@@ -1082,9 +1171,8 @@ export function enterRoom(col, row) {
       cell.cleared = true;
   }
 
-  // Tutorial box triggers on room entry
-  // Always force-close any active tip on room change (panels must close on room change)
-  window._hideTutorial?.(true);
+  // Tutorial box triggers on room entry. The previous room's tutorial was
+  // force-closed at the top of enterRoom, before any new room prompt existed.
   if (typeof window !== 'undefined' && G.run?.tutorial) {
     const tut  = G.run.tutorial;
     const wIdx = G.run.worldIdx;
@@ -1109,7 +1197,9 @@ export function enterRoom(col, row) {
   // Update minimap + HUD room code
   if (typeof window !== 'undefined' && window._mapUpdate) window._mapUpdate();
   if (typeof window !== 'undefined' && window._hudUpdate) window._hudUpdate();
-  if (typeof window !== 'undefined' && window._onRoomEntered) window._onRoomEntered(cell.type);
+  if (typeof window !== 'undefined' && window._onRoomEntered) {
+    window._onRoomEntered(cell.type, false);
+  }
 }
 
 /* ================================================================
@@ -1161,6 +1251,11 @@ function onRoomCleared(cell) {
 
   collectCoins(); // fly coins to player and commit pool to wallet
   flashAnnounce(i18n('announce.roomCleared'), '#44ff88');
+  // This is the only place that can call the hint: a normal combat room has
+  // just become fully clear, and the player has not followed the boss route.
+  if (cell?.type === 'normal' && !G.run?.bossPathHintDismissed) {
+    window._showBossPathHint?.();
+  }
 
   // Tutorial box triggers on combat room clear
   if (typeof window !== 'undefined' && G.run?.tutorial) {
@@ -1286,8 +1381,13 @@ export function navigate(dir) {
   const nc = ((cell.col + dc) + COLS) % COLS;
   const nr = ((cell.row + dr) + ROWS) % ROWS;
 
-  // Hide non-persistent tutorial when navigating
-  if (typeof window !== 'undefined') window._hideTutorial?.();
+  // All room popups belong to the room being left, including persistent tips.
+  if (typeof window !== 'undefined') {
+    window._hideTutorial?.(true);
+    window._hideBossPathHint?.();
+  }
+  dismissAnnounce();
+  document.getElementById('first-clear-banner')?.classList.add('off');
 
   // Close any open screens
   hideAllScreens();
@@ -1322,7 +1422,7 @@ export function navigate(dir) {
     t: 0,
     dur: 0.3,
     cb: () => {
-      enterRoom(nc, nr);
+      enterRoom(nc, nr, dir);
       G.transition = { phase: 'in', t: 0, dur: 0.3, cb: null };
       // Player entrance animation after transition
       if (plEl) {
@@ -1390,7 +1490,7 @@ function hideAllScreens() {
 function spawnRoomNpc(type, emoji, cell) {
   // Themed word pools per room type (thematically fitting Korean words)
   const THEMED = {
-    shop:     ['가게', '시장', '마트', '상점', '쇼핑', '상인', '물건'],
+    shop:     ['가게', '시장', '마트', '상점', '쇼핑', '상인'],
     tent:     ['텐트', '야영', '캠프'],
     modifier: ['선물', '마법', '능력', '강화', '아이템', '보상', '선택', '주문'],
     treasure: ['보물', '선물', '보석', '상금', '황금', '보따리', '상품', '수정'],
@@ -1414,6 +1514,10 @@ function spawnRoomNpc(type, emoji, cell) {
     y: G.vH * 0.42,
     active: true,
   };
+}
+
+function tentNpcEmoji() {
+  return G.dungeon?.worldDef?.biome === 'ocean' ? '🛶' : '⛺';
 }
 
 /** Called by game.js when the player types in navigate mode */
@@ -1478,7 +1582,7 @@ function reopenSpecialRoom(cell) {
     // Teacher always respawns - they never leave
     spawnRoomNpc('teacher', '🧑‍🏫', cell);
   } else if (cell.isTent) {
-    spawnRoomNpc('tent', '⛺', cell);
+    spawnRoomNpc('tent', tentNpcEmoji(), cell);
   }
   // modifier: NPC gone after first pick
 }
@@ -1490,7 +1594,7 @@ function placeTent() {
   cell.isTent = true;
   // Change cell.type to 'tent' so map/doors update
   cell.type = 'tent';
-  spawnRoomNpc('tent', '⛺', cell);
+  spawnRoomNpc('tent', tentNpcEmoji(), cell);
   flashAnnounce(i18n('world.tentPitched'), '#88ddaa');
   if (typeof window !== 'undefined' && window._mapUpdate) window._mapUpdate();
   // Multiplayer: broadcast tent placement to partner
@@ -1502,7 +1606,7 @@ if (typeof window !== 'undefined') {
   window._placeTent = placeTent;
   window._reopenTentNpc = () => {
     const cell = currentCell();
-    if (cell?.isTent) spawnRoomNpc('tent', '⛺', cell);
+    if (cell?.isTent) spawnRoomNpc('tent', tentNpcEmoji(), cell);
   };
 }
 
@@ -1526,6 +1630,7 @@ function pickWorldWeather(worldDef) {
 }
 
 export function startNewWorld(worldIdx) {
+  recordWorldReached(worldIdx);
   // Force-hide tutorial and reset per-world counters on world advance
   if (typeof window !== 'undefined') window._hideTutorial?.(true);
   if (G.run?.tutorial) {
@@ -1543,6 +1648,7 @@ export function startNewWorld(worldIdx) {
   }
 
   G.dungeon = generateDungeon(worldIdx);
+  G.dungeon.runSeed = G.run.seed;
   G.currentRoom = { ...G.dungeon.start };
 
   // Track biome history for infinite world rotation
@@ -1605,8 +1711,10 @@ export function startRun() {
   const _skipIntro = G.skipIntroWorld;
   G.skipIntroWorld = false;
   const _startIdx = _skipIntro ? 1 : 0;
+  recordWorldReached(_startIdx);
   G.run.worldIdx = _startIdx;
-  G.run.seed = Math.floor(Math.random() * 1e6); // per-run seed for deterministic room labels
+  const _preRunSeed = G.mp?.active && G.mp.isHost ? G.mp._hostPreDungeon?.runSeed : null;
+  G.run.seed = _preRunSeed ?? Math.floor(Math.random() * 1e6); // shared procedural scenery seed
   // Only generate worldSequence if not already seeded (MP host pre-seeds it before generateDungeon)
   if (!G.run.worldSequence?.length) G.run.worldSequence = generateWorldSequence(14);
   // Multiplayer host: reuse pre-generated dungeon so blueprint matches what was sent to guest
@@ -1620,6 +1728,7 @@ export function startRun() {
   } else {
     G.dungeon = generateDungeon(_startIdx);
   }
+  if (!G.dungeon.runSeed) G.dungeon.runSeed = G.run.seed;
   G.currentRoom = { ...G.dungeon.start };
   G.run.nextWorldsPreview = previewNextWorlds(7);
 

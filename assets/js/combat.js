@@ -15,192 +15,6 @@ import { play as sfx } from './sfx.js';
 import { genSinoNumber, genNativeNumber, sinoSpelling, nativeSpelling } from '../data/numbers.js';
 
 
-// ── Decor grid helpers (avoid obstacle navigation) ───────────────────
-const DG_X0 = 0.05, DG_CW = 0.18;            // 5 cols
-const DG_Y0 = 0.13, DG_CH = 0.80 / 3, DG_H = 0.80; // 3 rows
-// Physical gap padding (10% of cell size, matching the renderer's pad calc at typical aspect ratio)
-const DG_PAD_X = DG_CW * 0.10, DG_PAD_Y = DG_CH * 0.10;
-
-function _dgIsAvoid(col, row, grid) {
-  if (!grid || col < 0 || col > 4 || row < 0 || row > 2) return false;
-  return grid[row]?.[col] === 'avoid';
-}
-// Line-segment vs avoid-cell AABB test — uses the physically-drawn (padded) box so that
-// lines starting/ending in a corridor gap are not falsely reported as hitting an avoid box.
-function _dgLineHitsAvoid(nx1, ny1, nx2, ny2, grid) {
-  if (!grid) return false;
-  const dx = nx2 - nx1, dy = ny2 - ny1;
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 5; c++) {
-      if (grid[r]?.[c] !== 'avoid') continue;
-      const rx = DG_X0 + c * DG_CW + DG_PAD_X, rw = DG_CW - 2 * DG_PAD_X;
-      const ry = DG_Y0 + r * DG_CH + DG_PAD_Y, rh = DG_CH - 2 * DG_PAD_Y;
-      let tmin = 0, tmax = 1;
-      if (Math.abs(dx) > 1e-9) {
-        const t1 = (rx - nx1) / dx, t2 = (rx + rw - nx1) / dx;
-        tmin = Math.max(tmin, Math.min(t1, t2));
-        tmax = Math.min(tmax, Math.max(t1, t2));
-      } else if (nx1 < rx || nx1 > rx + rw) { continue; }
-      if (Math.abs(dy) > 1e-9) {
-        const t1 = (ry - ny1) / dy, t2 = (ry + rh - ny1) / dy;
-        tmin = Math.max(tmin, Math.min(t1, t2));
-        tmax = Math.min(tmax, Math.max(t1, t2));
-      } else if (ny1 < ry || ny1 > ry + rh) { continue; }
-      if (tmin < tmax) return true;
-    }
-  }
-  return false;
-}
-// Compute avoid-aware path (pre-computed once at spawn, never recalculated).
-// Monsters navigate through the physical gap corridors between avoid boxes — never through them.
-//
-// Corridor intersection graph: nodes (c,r) for c=0..5 and r=0..3.
-//   x = DG_X0 + c*DG_CW  (6 vertical corridor lines between/around the 5 columns)
-//   y = DG_Y0 + r*DG_CH  (4 horizontal corridor lines between/around the 3 rows)
-//   All corridor edges are always passable — the 10% padding gaps always exist.
-//
-// Phase 1: if spawn is inside an avoid cell, move straight up (top half) or down (bottom half)
-//   to reach the horizontal corridor at the near edge of that cell.
-// Phase 2: A* on the corridor graph toward the player. Path is pruned to the first node from
-//   which the player is directly visible (no avoid cells in the way), so the monster takes
-//   the shortest gap-route and then goes diagonally to the player from there.
-// Returns null (direct path fine) or [{nx,ny},...] waypoints to follow before targeting player.
-function _dgBFSPath(spawnNX, spawnNY, grid) {
-  if (!grid?.some(row => row.some(v => v === 'avoid'))) return null;
-
-  const tNX = 0.5, tNY = 0.87;
-  const spawnCellC = Math.max(0, Math.min(4, Math.floor((spawnNX - DG_X0) / DG_CW)));
-  const spawnCellR = Math.max(0, Math.min(2, Math.floor((spawnNY - DG_Y0) / DG_CH)));
-
-  // Phase 1: exit avoid cell by moving straight up/down to the nearest horizontal corridor.
-  // Corridor r sits at y = DG_Y0 + r*DG_CH (r=0: above row 0, r=3: below row 2).
-  let exitNX = spawnNX, exitNY = spawnNY, startCorrR;
-  if (_dgIsAvoid(spawnCellC, spawnCellR, grid)) {
-    const midY = DG_Y0 + spawnCellR * DG_CH + DG_CH / 2;
-    startCorrR = Math.max(0, Math.min(3, spawnNY < midY ? spawnCellR : spawnCellR + 1));
-    exitNY = DG_Y0 + startCorrR * DG_CH;
-  } else {
-    // Not in avoid: start from the corridor below the spawn cell (player is always below)
-    startCorrR = Math.min(3, spawnCellR + 1);
-  }
-
-  // If exit→player is clear, no corridor routing needed
-  if (!_dgLineHitsAvoid(exitNX, exitNY, tNX, tNY, grid)) {
-    return exitNY !== spawnNY ? [{ nx: exitNX, ny: exitNY }] : null;
-  }
-
-  // Phase 2: A* on corridor intersection graph (6 cols × 4 rows).
-  // startC: pick the corridor column in the direction of the player so the monster
-  // immediately heads toward the player rather than hugging the wall.
-  const spawnFrac = (exitNX - DG_X0) / DG_CW;
-  const startC = Math.max(0, Math.min(5,
-    exitNX <= tNX ? Math.ceil(spawnFrac) : Math.floor(spawnFrac)));
-  const endC = Math.max(0, Math.min(5, Math.round((tNX - DG_X0) / DG_CW)));
-  const endR = Math.max(0, Math.min(3, Math.round((tNY - DG_Y0) / DG_CH)));
-
-  const heur = (c, r) => Math.abs(c - endC) + Math.abs(r - endR);
-  const pq   = [[heur(startC, startCorrR), 0, startC, startCorrR, [{ c: startC, r: startCorrR }]]];
-  const gMap = new Map([[`${startC},${startCorrR}`, 0]]);
-  let found = null;
-
-  while (pq.length) {
-    let mi = 0;
-    for (let i = 1; i < pq.length; i++) if (pq[i][0] < pq[mi][0]) mi = i;
-    const [, g, c, r, path] = pq.splice(mi, 1)[0];
-    if (c === endC && r === endR) { found = path; break; }
-    for (const [dc, dr] of [[0,1],[0,-1],[1,0],[-1,0]]) {
-      const nc = c + dc, nr = r + dr;
-      if (nc < 0 || nc > 5 || nr < 0 || nr > 3) continue;
-      const ng = g + 1, key = `${nc},${nr}`;
-      if (ng < (gMap.get(key) ?? Infinity)) {
-        gMap.set(key, ng);
-        pq.push([ng + heur(nc, nr), ng, nc, nr, [...path, { c: nc, r: nr }]]);
-      }
-    }
-  }
-
-  // Prune path to the first corridor node from which the player is directly visible.
-  // The monster will go diagonally to the player from that node, no further gap-walking needed.
-  let cutLen = found ? found.length : 0;
-  if (found) {
-    for (let i = 0; i < found.length; i++) {
-      const nx = DG_X0 + found[i].c * DG_CW, ny = DG_Y0 + found[i].r * DG_CH;
-      if (!_dgLineHitsAvoid(nx, ny, tNX, tNY, grid)) { cutLen = i + 1; break; }
-    }
-  }
-
-  // Build raw waypoint list: phase-1 exit + all pruned corridor nodes (last = visible point)
-  const raw = [];
-  if (exitNY !== spawnNY) raw.push({ nx: exitNX, ny: exitNY });
-  if (found) {
-    for (const { c, r } of found.slice(0, cutLen))
-      raw.push({ nx: DG_X0 + c * DG_CW, ny: DG_Y0 + r * DG_CH });
-  }
-
-  // Collapse collinear intermediate points
-  const waypoints = [];
-  for (let i = 0; i < raw.length; i++) {
-    if (i === 0 || i === raw.length - 1) { waypoints.push(raw[i]); continue; }
-    const a = raw[i-1], b = raw[i], d = raw[i+1];
-    if (Math.abs((b.nx-a.nx)*(d.ny-a.ny) - (b.ny-a.ny)*(d.nx-a.nx)) > 1e-6) waypoints.push(raw[i]);
-  }
-
-  return waypoints.length ? waypoints : null;
-}
-// Total path length in pixels: spawn → waypoints → target.
-function _dgPathLen(m, tx, ty) {
-  if (!m.avoidPath?.length) return Math.hypot(tx - m.spawnNX * G.W, ty - m.spawnNY * G.vH) || 1;
-  let px0 = m.spawnNX * G.W, py0 = m.spawnNY * G.vH, len = 0;
-  for (const wp of m.avoidPath) {
-    const px1 = wp.nx * G.W, py1 = wp.ny * G.vH;
-    len += Math.hypot(px1 - px0, py1 - py0);
-    px0 = px1; py0 = py1;
-  }
-  len += Math.hypot(tx - px0, ty - py0);
-  return len || 1;
-}
-// Pixel position along the avoid path at normalized progress (0→1) toward target.
-function _dgPathPos(m, progress, tx, ty) {
-  if (!m.avoidPath?.length) {
-    return { x: m.spawnNX * G.W + progress * (tx - m.spawnNX * G.W), y: m.spawnNY * G.vH + progress * (ty - m.spawnNY * G.vH) };
-  }
-  const pts = [{ x: m.spawnNX * G.W, y: m.spawnNY * G.vH }];
-  for (const wp of m.avoidPath) pts.push({ x: wp.nx * G.W, y: wp.ny * G.vH });
-  pts.push({ x: tx, y: ty });
-  const cum = [0];
-  for (let i = 1; i < pts.length; i++) cum.push(cum[i-1] + Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y));
-  const total = cum[cum.length - 1] || 1;
-  const arc = Math.min(progress, 1) * total;
-  let seg = pts.length - 2;
-  for (let i = 1; i < pts.length; i++) { if (cum[i] >= arc) { seg = i - 1; break; } }
-  const segLen = cum[seg + 1] - cum[seg];
-  const t = segLen > 0 ? (arc - cum[seg]) / segLen : 1;
-  return { x: pts[seg].x + t * (pts[seg+1].x - pts[seg].x), y: pts[seg].y + t * (pts[seg+1].y - pts[seg].y) };
-}
-// Z-layer: true = monster renders in front of decor cells, false = behind.
-// pass-through: per-cell check with x-overlap (monster walks on these, so we test the specific cell).
-// avoid: global check — if monster's bottom is below any avoid cell's mid-Y it's past that obstacle.
-function _dgIsMonsterInFront(m) {
-  const grid = G.decorGrid;
-  if (!grid?.some(r => r.some(v => v === 'avoid' || v === 'pass-through'))) return true;
-  const bot = m.y + m.size * 0.5;
-
-  // Pass-through: check only the cell(s) the monster is currently overlapping in X
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
-    if (grid[r]?.[c] !== 'pass-through') continue;
-    const cx0 = (DG_X0 + c * DG_CW) * G.W, cx1 = (DG_X0 + (c + 1) * DG_CW) * G.W;
-    if (m.x >= cx0 && m.x <= cx1) {
-      return bot > (DG_Y0 + (r + 0.5) * DG_CH) * G.vH;
-    }
-  }
-
-  // Avoid: monster below mid-Y of any avoid cell → in front of it
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
-    if (grid[r]?.[c] === 'avoid' && bot > (DG_Y0 + (r + 0.5) * DG_CH) * G.vH) return true;
-  }
-  return false;
-}
-
 // Parse lesson word string, handling disambiguation like 'text:emoji'
 function parseLessonWord(str) {
   if (str.includes(':')) {
@@ -643,7 +457,8 @@ export function mkMonster(tmpl) {
 
   let emoji;
   if (isBoss) {
-    // Show the current word's emoji, not the boss icon (boss icon is in the room announce)
+    // The battle body shows the current word's emoji; the persistent boss icon
+    // is rendered separately in the upper-left badge and tether.
     const firstWord = tmpl.words?.[0];
     const firstEntry = firstWord && WORD_DICT.find(w => w.text === firstWord);
     emoji = firstEntry?.emoji || tmpl.bossEmoji || '🐉';
@@ -657,17 +472,16 @@ export function mkMonster(tmpl) {
   }
 
   const wordEmojis = tmpl.wordEmojis ? [...tmpl.wordEmojis] : [emoji];
-  const avoidPath = _dgBFSPath(spawnNX, spawnNY, G.decorGrid);
 
   return {
     id:       ++_id,
     _mpId:    tmpl._mpId ?? null,  // stable ID shared with partner for sync
     type:     tmpl.type || 'normal',
     special:  tmpl.special || null,
+    bossEmoji: tmpl.bossEmoji || null,
     emoji, wieldIcon, hpIcon, labelColor,
     x, y,
     spawnNX, spawnNY,  // normalized spawn coords - survives resize
-    avoidPath,         // null | [{nx,ny}...] corridor waypoints around avoid cells
     progress: 0,       // 0 = at spawn, 1 = at player; screen-independent movement state
     hp: tmpl.hp, maxHp: tmpl.maxHp,
     words: [...tmpl.words], wi: 0,
@@ -1706,7 +1520,7 @@ export function tickMonsters(dt) {
       if (Math.abs(m.kbVy) < 0.5) m.kbVy = 0;
       // Clamp to spawn boundary - redirect upward force sideways
       const minY = G.vH * 0.13;
-      const pathY = _dgPathPos(m, m.progress, targetX, targetY).y;
+      const pathY = m.spawnNY * G.vH + m.progress * (targetY - m.spawnNY * G.vH);
       if (pathY + m.kbY < minY && m.kbVy < 0) {
         m.kbY = minY - pathY;
         m.kbVx += (m.spawnNX * G.W) >= G.W / 2 ? Math.abs(m.kbVy) : -Math.abs(m.kbVy);
@@ -1754,8 +1568,10 @@ export function tickMonsters(dt) {
       const SPD_CAP = 230 * (G.vH / 800);
       const effSpd = Math.min(m.spd * spdMult, SPD_CAP);
 
-      // Progress-based movement along spawn→player path (bypass-aware).
-      const totalDist = _dgPathLen(m, targetX, targetY);
+      // Progress-based movement along the direct spawn→player path.
+      const spawnX = m.spawnNX * G.W;
+      const spawnY = m.spawnNY * G.vH;
+      const totalDist = Math.hypot(targetX - spawnX, targetY - spawnY) || 1;
       m.progress += effSpd * dt / totalDist;
 
       // Tutorial first monster: cap progress so it stops just before hitting
@@ -1769,12 +1585,13 @@ export function tickMonsters(dt) {
       }
     }
 
-    // Derive pixel position from progress along path (bypass-aware) + kb offset.
+    // Derive pixel position from progress along the direct path + knockback offset.
     // Recalculated every frame so resize automatically repositions the monster.
     {
-      const pos = _dgPathPos(m, m.progress, targetX, targetY);
-      m.x = pos.x + (m.kbX || 0);
-      m.y = pos.y + (m.kbY || 0);
+      const spawnX = m.spawnNX * G.W;
+      const spawnY = m.spawnNY * G.vH;
+      m.x = spawnX + m.progress * (targetX - spawnX) + (m.kbX || 0);
+      m.y = spawnY + m.progress * (targetY - spawnY) + (m.kbY || 0);
     }
 
     if (m.flash > 0) m.flash -= dt * 5;
@@ -1839,10 +1656,10 @@ export function shouldDropItem() {
 }
 
 // Hanja pools by wave tier (verbatim from typing-game.html)
-const HANJA_T1 = '人白北南小四軍水母學中外二敎金王東日木韓六西五室國火山青生民七年八三兄先女一門父萬弟寸九土長校大月十'.split('');
-const HANJA_T2 = '前電左道家午動全手正不時平農方安工物孝力答子間足江右車場後內海上下事名空姓自市話食世立男活漢每記直氣'.split('');
-const HANJA_T3 = '紙所草出育老地入便林語字里天登算秋千有數植口來住夕歌主川色村冬問同百面祖夫夏旗洞命休重邑花文然心春少'.split('');
-const HANJA_T4 = '業功作發形樂注始科藥短界分術雪幸昨代體明共才飲題線半角消運聞和第急等成勇社公弱清神堂用集高意書今會童省信對球身光放利果圖庭部班風讀各戰音表新窗反計理現'.split('');
+export const HANJA_T1 = '人白北南小四軍水母學中外二敎金王東日木韓六西五室國火山青生民七年八三兄先女一門父萬弟寸九土長校大月十'.split('');
+export const HANJA_T2 = '前電左道家午動全手正不時平農方安工物孝力答子間足江右車場後內海上下事名空姓自市話食世立男活漢每記直氣'.split('');
+export const HANJA_T3 = '紙所草出育老地入便林語字里天登算秋千有數植口來住夕歌主川色村冬問同百面祖夫夏旗洞命休重邑花文然心春少'.split('');
+export const HANJA_T4 = '業功作發形樂注始科藥短界分術雪幸昨代體明共才飲題線半角消運聞和第急等成勇社公弱清神堂用集高意書今會童省信對球身光放利果圖庭部班風讀各戰音表新窗反計理現'.split('');
 
 // Hanja → Korean reading (for dictionary-item toggle display)
 export const HANJA_TO_HANGUL = {
@@ -1939,7 +1756,7 @@ export function spawnGroundItem(x, y, precomputed = null) {
   el.style.top  = y + 'px';
   el.style.transform = 'translate(-50%,-50%)';
 
-  const svgSz = Math.max(32, Math.round(56 * G.vH / 1080));
+  const svgSz = Math.max(48, Math.round(84 * G.vH / 1080));
   el.style.width  = svgSz + 'px';
   el.style.height = svgSz + 'px';
   const r = 24, cx = 28, cy = 28, circ = 2*Math.PI*r;
@@ -2275,7 +2092,7 @@ export function applyPowerup(item) {
         G.room._hiddenFlipTimer = 0;
         G.room._hiddenFlip = false;
       }
-      const hanjaMsg = G.lang === 'ko' ? '📙 한자⟺한글!' : G.lang === 'pt' ? '📙 Hanja↔Hangul!' : '📙 Hanja↔Hangul!';
+      const hanjaMsg = i18n('announce.hanjaToggle');
       flashAnnounce(hanjaMsg, '#ffd700');
       break;
     }
@@ -2285,7 +2102,7 @@ export function applyPowerup(item) {
       if (typeof window !== 'undefined' && window._mapUpdate) window._mapUpdate();
       // Open the map panel so player can see + use it
       document.getElementById('map-panel')?.classList.remove('off');
-      const mapMsg = G.lang === 'ko' ? '🔑 맵 공개! 텔레포트 후 안개 복귀' : G.lang === 'pt' ? '🔑 Mapa revelado! Neblina retorna após teleporte' : '🔑 Map revealed! Fog returns after teleport';
+      const mapMsg = i18n('announce.mapRevealed');
       flashAnnounce(mapMsg, '#aaffff');
       break;
     case '🏯':
@@ -2514,32 +2331,55 @@ function showDictUnlockNotif(words) {
   }, 3000);
 }
 
+let _announceDomTimer = null;
+let _flashAnnounceTimer = null;
+
+function clearAnnounceTimers() {
+  if (_announceDomTimer) {
+    clearTimeout(_announceDomTimer);
+    _announceDomTimer = null;
+  }
+  if (_flashAnnounceTimer) {
+    clearTimeout(_flashAnnounceTimer);
+    _flashAnnounceTimer = null;
+  }
+}
+
 export function flashAnnounce(msg, color) {
   const el = document.getElementById('announce-txt');
   if (!el) return;
+  clearAnnounceTimers();
   el.style.color = color || '#fff';
   el.innerHTML = msg;
   el.classList.add('on');
-  setTimeout(() => { el.classList.remove('on'); el.style.color = ''; }, 1200);
+  _flashAnnounceTimer = setTimeout(() => {
+    el.classList.remove('on');
+    el.style.color = '';
+    _flashAnnounceTimer = null;
+  }, 1200);
 }
 
-// Immediately start fading out any active announcement (e.g. when entering a new room)
+// Immediately dismiss any active announcement (e.g. when leaving a room).
+// Room changes must also cancel pending DOM timers, otherwise an old popup can
+// disappear over the announcement that belongs to the newly entered room.
 export function dismissAnnounce() {
-  if (!G.announceQ || G.announceQ.fading) return;
+  clearAnnounceTimers();
   const annTxt = document.getElementById('announce-txt');
-  if (annTxt) annTxt.classList.remove('on');
-  G.announceQ.fading = true;
-  G.announceQ.fadeTimer = 0.38;
+  if (annTxt) {
+    annTxt.classList.remove('on');
+    annTxt.style.color = '';
+  }
+  G.announceQ = null;
 }
 
-let _announceDomTimer = null;
 export function announce(msg, cb) {
   const annTxt = document.getElementById('announce-txt');
   if (annTxt) {
+    clearAnnounceTimers();
+    annTxt.style.color = '';
     annTxt.innerHTML = msg.replace(/\n/g, '<br>');
     annTxt.classList.add('on');
     // DOM-level fallback: dismiss after 4s regardless of game-loop state
-    if (_announceDomTimer) clearTimeout(_announceDomTimer);
     _announceDomTimer = setTimeout(() => {
       annTxt.classList.remove('on');
       G.announceQ = null;
@@ -2604,21 +2444,144 @@ function getCtx() {
   return c ? c.getContext('2d') : null;
 }
 
-export function drawMonsters(pass) {
+function getActiveBoss() {
+  return G.room?.monsters?.find(m => m.type === 'boss' && !m.dead) || null;
+}
+
+function getBossBadgeLayout() {
+  const iconSize = Math.max(54, Math.min(94, G.vH * 0.085));
+  return {
+    x: Math.max(iconSize * 0.82, Math.min(G.W * 0.12, 170)),
+    y: Math.max(170, G.vH * 0.22),
+    iconSize,
+  };
+}
+
+function getBossTetherTarget(boss) {
+  const hpRatio = boss.maxHp > 1 ? boss.hp / boss.maxHp : 1;
+  const drawSize = boss.size * (boss.maxHp > 1 ? (0.55 + hpRatio * 0.45) : 1);
+  let y = boss.y;
+  // During the falling entrance, keep the tether attached to the landing point
+  // instead of stretching off-screen with the temporary spawn position.
+  if (boss.spawnAnim && boss.spawnAnim.t < boss.spawnAnim.dur) {
+    y = boss.spawnAnim.landNY * G.vH;
+  }
+  return { x: boss.x, y, drawSize };
+}
+
+function buildBossTetherPath(ctx, sx, sy, tx, ty, wave) {
+  const dx = tx - sx;
+  const dy = ty - sy;
+  const distance = Math.hypot(dx, dy) || 1;
+  const nx = -dy / distance;
+  const ny = dx / distance;
+  const curve = Math.min(48, Math.max(12, distance * 0.06)) * wave;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.bezierCurveTo(
+    sx + dx * 0.28 + nx * curve,
+    sy + dy * 0.28 + ny * curve,
+    sx + dx * 0.72 - nx * curve * 0.72,
+    sy + dy * 0.72 - ny * curve * 0.72,
+    tx, ty,
+  );
+}
+
+/** Draw the animated tether behind the boss monster. */
+export function drawBossTether() {
+  const ctx = getCtx();
+  const boss = getActiveBoss();
+  if (!ctx || !boss) return;
+
+  const { x: ax, y: ay, iconSize } = getBossBadgeLayout();
+  const { x: tx, y: ty, drawSize } = getBossTetherTarget(boss);
+  const time = performance.now() * 0.001;
+  const pulse = 0.78 + Math.sin(time * 3.2) * 0.22;
+  const sx = ax + iconSize * 0.48;
+  const sy = ay + iconSize * 0.14;
+  const wave = Math.sin(time * 2.5 + boss.id * 0.7);
+  const endY = ty - drawSize * 0.04;
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = pulse;
+
+  buildBossTetherPath(ctx, sx, sy, tx, endY, wave);
+  ctx.shadowColor = 'rgba(255, 180, 48, .9)';
+  ctx.shadowBlur = 18 + pulse * 8;
+  ctx.strokeStyle = 'rgba(255, 190, 55, .28)';
+  ctx.lineWidth = 9;
+  ctx.stroke();
+
+  buildBossTetherPath(ctx, sx, sy, tx, endY, wave);
+  ctx.shadowBlur = 7;
+  ctx.strokeStyle = 'rgba(255, 218, 112, .95)';
+  ctx.lineWidth = 2.6;
+  ctx.stroke();
+
+  buildBossTetherPath(ctx, sx, sy, tx, endY, wave);
+  ctx.shadowBlur = 0;
+  ctx.setLineDash([5, 11]);
+  ctx.lineDashOffset = -time * 34;
+  ctx.strokeStyle = 'rgba(255, 247, 190, .82)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Draw the boss icon above room actors so scenery cannot hide it. */
+export function drawBossBadge() {
+  const ctx = getCtx();
+  const boss = getActiveBoss();
+  if (!ctx || !boss) return;
+
+  const { x, y, iconSize } = getBossBadgeLayout();
+  const bossEmoji = boss.bossEmoji || G.dungeon?.worldDef?.bossEmoji || '🐉';
+  const bossName = G.dungeon?.worldDef?.bossName || '';
+  const radius = iconSize * 0.62;
+  const pulse = 0.78 + Math.sin(performance.now() * 0.003) * 0.22;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.shadowColor = 'rgba(255, 188, 45, .75)';
+  ctx.shadowBlur = 14 + pulse * 8;
+  ctx.fillStyle = 'rgba(23, 11, 8, .82)';
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = `rgba(255, 213, 92, ${0.58 + pulse * 0.22})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.font = `${iconSize}px 'Noto Color Emoji', serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(bossEmoji, 0, 0);
+
+  if (bossName) {
+    ctx.font = `bold ${Math.max(10, Math.floor(iconSize * 0.19))}px 'Noto Sans KR', sans-serif`;
+    ctx.fillStyle = 'rgba(255, 235, 170, .92)';
+    ctx.shadowColor = 'rgba(0, 0, 0, .9)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(bossName, 0, radius + Math.max(12, iconSize * 0.22));
+  }
+  ctx.restore();
+}
+
+export function drawMonsters({
+  bodyFilter = null,
+  labelFilter = null,
+  drawBodies = true,
+  drawLabels = true,
+} = {}) {
   const ctx = getCtx();
   if (!ctx || !G.room) return;
   const monsters = G.room.monsters;
-  const hasAvoid = G.decorGrid?.some(r => r.some(v => v === 'avoid' || v === 'pass-through'));
-  function _show(m) {
-    if (!hasAvoid) return pass !== 'behind';
-    const front = _dgIsMonsterInFront(m);
-    return pass === 'behind' ? !front : pass === 'front' ? front : true;
-  }
 
   // Pass 1: bodies
-  for (const m of monsters) {
-    if (m.dead) continue;
-    if (!_show(m)) continue;
+  if (drawBodies) for (const m of monsters) {
+    if (m.dead || (bodyFilter && !bodyFilter(m))) continue;
 
     // ── Spawn animation (falling from ceiling) ──────────────────
     if (m.spawnAnim && m.spawnAnim.t < m.spawnAnim.dur) {
@@ -2728,9 +2691,7 @@ export function drawMonsters(pass) {
 
       if (m.isVerbAdj) {
         const isVerb = m.verbAdjType === 'verb';
-        const typeName = isVerb
-          ? (G.lang === 'ko' ? '동사' : G.lang === 'pt' ? 'VERBO' : 'VERB')
-          : (G.lang === 'ko' ? '형용사' : 'ADJ.');
+        const typeName = isVerb ? i18n('hud.verbLabel') : i18n('hud.adjectiveLabel');
         const conj = m.conjugation;
         let labelText;
         if (!conj || conj.isInfinitive) {
@@ -2773,11 +2734,14 @@ export function drawMonsters(pass) {
     ctx.restore();
   }
 
+  if (!drawLabels) return;
+
   // Pass 2: word labels
   const LABEL_FONTS = ['"Pretendard"', '"Song Myung"', '"Nanum Myeongjo"'];
+  const shouldDrawLabel = labelFilter || bodyFilter;
   for (const m of monsters) {
     if (m.dead) continue;
-    if (!_show(m)) continue;
+    if (shouldDrawLabel && !shouldDrawLabel(m)) continue;
     if (m.fleeing) continue;
     // Hide label until monster lands (last 25% of spawn)
     if (m.spawnAnim && m.spawnAnim.t < m.spawnAnim.dur) {

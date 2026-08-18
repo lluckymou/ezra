@@ -280,6 +280,7 @@ body.phase-title #version-badge { pointer-events: all; }
 }
 .menu-icon-btn:hover .mic-label { opacity: 1; }
 #menu-footer {
+  display: none;
   font-size: .75rem; color: rgba(10,8,4,.35);
 }
 
@@ -1546,7 +1547,7 @@ body.phase-title #book-panel { visibility: hidden !important; }
 
 /* ===== DICT UNLOCK NOTIFICATION ===== */
 #dict-unlock-notif {
-  position: fixed; left: 8px; top: 90px;
+  position: fixed; left: 10px; top: 90px;
   background: rgba(0,0,0,.45);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,.18);
@@ -1937,7 +1938,7 @@ body.touch-mode .score-body { justify-content: center; }
   position: absolute;
   display: flex; flex-direction: column; align-items: center;
   pointer-events: none; user-select: none;
-  width: 56px; height: 56px; overflow: visible;
+  width: 84px; height: 84px; overflow: visible;
   animation: coin-bob 1.8s ease-in-out infinite alternate;
   filter: drop-shadow(3px 4px 6px rgba(0,0,0,.55));
 }
@@ -2047,20 +2048,6 @@ body.touch-mode #cheat-title { cursor: default; }
   width: 32px !important; height: 26px !important;
   padding: 1px 2px; cursor: pointer;
 }
-.cheat-decor-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px 4px;
-  margin-bottom: 8px;
-  margin-top: 4px;
-}
-.cheat-decor-sel {
-  width: 100% !important;
-  padding: 2px 1px !important;
-  font-size: .68rem !important;
-  text-align: center;
-}
-
 /* ===== TITLE FOOTER ===== */
 /* #title-footer removed - replaced by #menu-footer inside #menu-body */
 
@@ -2650,6 +2637,49 @@ body.touch-mode #map-panel:not(.off) {
 .wiki-world-music-btn.active { opacity: 1; }
 .dj-book-body-inner { display: flex; flex-direction: column; gap: 2px; width: 100%; }
 
+/* ── Hanja wiki ─────────────────────────────────────────────────── */
+.hanja-wiki { display: flex; flex-direction: column; gap: 10px; }
+.hanja-tier { display: flex; flex-direction: column; gap: 5px; }
+.hanja-tier-label {
+  color: rgba(255,255,255,.58); font-size: .72rem; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.hanja-mini-grid {
+  display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start;
+  gap: 5px;
+}
+.hanja-mini-card {
+  position: relative; flex: 0 0 82px; width: 82px; min-height: 44px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  align-items: center; justify-items: center; gap: 0; padding: 5px 3px;
+  overflow: hidden; border-radius: 7px;
+  color: #332816 !important; text-decoration: none !important;
+  background: linear-gradient(145deg, #fffefa 0%, #f8f5ed 62%, hsl(42 33% 98% / 1) 100%) !important;
+  border: 1px solid #d7cbb7 !important; border-bottom: 3px solid #b4a185 !important;
+  box-shadow: 0 2px 3px rgba(70,48,18,.2), inset 0 1px 0 rgba(255,255,255,.95);
+  transition: background .15s, border-color .15s, box-shadow .15s, transform .15s;
+}
+.hanja-mini-card:hover {
+  background: linear-gradient(145deg, #fff 0%, #fff8d9 100%) !important;
+  border-color: #c4a35e !important; box-shadow: 0 3px 6px rgba(70,48,18,.25), inset 0 1px 0 #fff;
+  transform: translateY(-2px);
+}
+.hanja-mini-card::before {
+  content: ''; position: absolute; inset: 2px 3px auto; height: 9px;
+  border-radius: 5px 5px 50% 50%; background: rgba(255,255,255,.6); pointer-events: none;
+}
+.hanja-mini-char {
+  position: relative; z-index: 1; font-size: 1.25rem; line-height: 1;
+  font-family: 'Song Myung', 'Noto Serif KR', serif; color: #292014 !important;
+}
+.hanja-mini-divider {
+  width: 1px; height: 70%; background: linear-gradient(to bottom, transparent, #b9aa91 20%, #b9aa91 80%, transparent);
+}
+.hanja-mini-reading {
+  position: relative; z-index: 1; font-size: .82rem; font-weight: 700;
+  line-height: 1; color: #765522 !important; text-align: center;
+}
+
 /* Lesson viewer text on dark bg */
 #scr-teacher .md-p,
 #scr-teacher .md-li { color: #b8ccdf; }
@@ -2929,6 +2959,48 @@ body.touch-mode .test-big-emoji { font-size: 4rem; }
 #tutorial-emoji { font-size: 1.5rem; flex-shrink: 0; line-height: 1; margin-bottom: 6px; }
 #tutorial-text  { line-height: 1.45; }
 
+/* ===== BOSS PATH HINT ===== */
+#boss-path-hint {
+  position: fixed;
+  top: var(--boss-path-top, 19%); left: 50%; transform: translateX(-50%);
+  z-index: 117;
+  display: flex; align-items: center; gap: 8px;
+  max-width: min(360px, calc(100vw - 28px));
+  padding: 8px 12px;
+  color: rgba(255, 226, 220, .9);
+  background: rgba(25, 7, 12, .78);
+  border: 1px solid rgba(255, 80, 80, .28);
+  border-radius: 18px;
+  box-shadow: 0 5px 18px rgba(0,0,0,.28), 0 0 14px rgba(210,30,30,.12);
+  backdrop-filter: blur(5px);
+  font-size: .78rem;
+  line-height: 1.25;
+  text-align: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: top .35s ease, opacity .35s ease, transform .35s ease;
+}
+#boss-path-hint.off {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px);
+  pointer-events: none !important;
+}
+.boss-path-hint-icon {
+  font-size: .75rem;
+  filter: drop-shadow(0 0 5px rgba(255,40,40,.75));
+  animation: boss-hint-pulse 1.8s ease-in-out infinite;
+}
+@keyframes boss-hint-pulse {
+  50% { transform: scale(1.18); opacity: .72; }
+}
+body.phase-title #boss-path-hint,
+body:has(#ctrl-panel:not(.off)) #boss-path-hint,
+body:has(#map-panel:not(.off)) #boss-path-hint,
+body:has(#book-panel:not(.off)) #boss-path-hint { visibility: hidden; }
+@media (max-width: 600px) {
+  #boss-path-hint { font-size: .72rem; padding: 7px 10px; }
+}
+
 /* ===== STARTUP ANIMATION ===== */
 #startup-overlay {
   position: fixed; inset: 0; z-index: 99999;
@@ -3009,7 +3081,7 @@ body.touch-mode .test-big-emoji { font-size: 4rem; }
   transition: opacity 0.3s ease;
 }
 #lang-select-btns {
-  display: flex; gap: 16px; flex-wrap: wrap;
+  display: flex; gap: 16px; flex-wrap: wrap; max-width: 500px;
 }
 .lang-btn {
   display: flex; flex-direction: column; align-items: center; gap: 10px;
@@ -3025,6 +3097,31 @@ body.touch-mode .test-big-emoji { font-size: 4rem; }
 }
 .lang-flag { font-size: 2.6rem; line-height: 1; }
 .lang-name { font-size: 0.8rem; opacity: 0.8; letter-spacing: 0.05em; }
+
+@media (max-height: 600px) {
+  #lang-select {
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0 4vw;
+  }
+  #lang-select-title {
+    font-size: 0.8rem;
+    margin-bottom: 16px;
+  }
+  #lang-select-btns {
+    gap: 10px;
+    max-width: 600px;
+    justify-content: flex-start;
+  }
+  .lang-btn {
+    width: 90px;
+    height: 90px;
+    padding: 11px 6px;
+    gap: 8px;
+  }
+  .lang-flag { font-size: 2.1rem; }
+  .lang-name { font-size: 0.72rem; letter-spacing: 0.04em; }
+}
 
 /* ===== DICTIONARY DARK MODE TEXT ===== */
 #book-panel .dict-entry { color: #e8e8f0; margin-bottom: 3px; }
@@ -3166,12 +3263,13 @@ body.touch-mode.mobile-fs #map-panel:not(.off) {
 #donate-modal-inner, #tts-modal-inner {
   background: #0f0f1c; border-radius: 20px; padding: 32px 24px 24px;
   width: min(420px, 92vw); max-height: 88vh; overflow-y: auto;
-  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
   color: rgba(255,255,255,.88);
   border: 1px solid rgba(255,255,255,.1);
   box-shadow: 0 20px 60px rgba(0,0,0,.5);
   position: relative; text-align: center;
 }
+#donate-modal-inner { gap: 32px; }
 #donate-close, #tts-modal-close {
   position: absolute; top: 12px; right: 12px;
   width: 28px; height: 28px; border-radius: 50%;
@@ -3523,6 +3621,20 @@ body.touch-mode #book-panel .dict-tab .tab-short { display: none !important; }
 #my-dict-modal-inner .wiki-card-title { color: #2a1a00; }
 #book-panel .wiki-card-sub,
 #my-dict-modal-inner .wiki-card-sub   { color: rgba(40,25,0,.6); }
+#book-panel .hanja-tier-label,
+#my-dict-modal-inner .hanja-tier-label { color: rgba(74,48,0,.62); }
+#book-panel .hanja-mini-card,
+#my-dict-modal-inner .hanja-mini-card {
+  color: #332816 !important;
+}
+#book-panel .hanja-mini-card:hover,
+#my-dict-modal-inner .hanja-mini-card:hover {
+  background: linear-gradient(145deg, #fff 0%, #fff8d9 100%) !important;
+}
+#book-panel .hanja-mini-char,
+#my-dict-modal-inner .hanja-mini-char { color: #292014 !important; }
+#book-panel .hanja-mini-reading,
+#my-dict-modal-inner .hanja-mini-reading { color: #765522 !important; }
 #book-panel .wiki-price,
 #my-dict-modal-inner .wiki-price { color: #c87000; }
 #book-panel .wiki-desc,

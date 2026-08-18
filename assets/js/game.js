@@ -17,13 +17,16 @@ import {
   spawnMissParticles, collectCoins, explodeCoins,
   initRoomSpawner, setRoomClearedCallback, setCoinsCollectedCallback, rollConjugation,
   onMonsterRemoved,
+  drawBossTether, drawBossBadge,
+  HANJA_T1, HANJA_T2, HANJA_T3, HANJA_T4, HANJA_TO_HANGUL,
 } from './combat.js';
 import {
-  drawBackground, drawDoors, drawNavPrompt, drawMenuBackground,
+  drawBackground, drawTrees, drawPuddles, drawEnvironmentObject, drawDoors, drawNavPrompt, drawMenuBackground,
   drawTransition, drawWorldTransition, drawRoomLabel, drawRoomNpc,
   tickWeather, drawWeather, drawDayNight,
   initRenderer, initWeather, startWeatherFade, getDayBrightness,
-  setRoomDesignFloorPat, setRoomDesignWallStyle, setDecorGrid, drawDecorAvoids, setWallImage,
+  setRoomDesignFloorPat, setRoomDesignWallStyle, clearRoomTrees, generateRoomTrees,
+  getTreeDepths, getEnvironmentDepths,
 } from './renderer.js';
 import { initMap, updateMap, updateMapExtras, syncClockToGame, getWeatherLabel } from './map.js';
 import {
@@ -818,6 +821,8 @@ export function init() {
   } else if (_savedTouchMode === null && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
     G.touchMode = true;
   }
+  // Multiplayer is opt-in because it adds an extra branch to the title flow.
+  G.multiplayerBeta = localStorage.getItem('krr_multiplayer_beta') === '1';
 
   // Check if device is in portrait orientation
   const isPortrait = window.innerWidth < window.innerHeight * 0.75;
@@ -969,12 +974,35 @@ export function init() {
   const _tutText  = document.getElementById('tutorial-text');
   let _tutPersist    = false;
   let _tutAutoTimer  = null; // setTimeout handle for auto-close
+  let _tutQueueTimer = null; // delayed flush handle; cancelled when leaving a room
   let _tutCurrentKey = null; // key of currently shown tip
   // Queue for tips triggered during combat (shown after combat clears)
   let _tutQueue = []; // [{emoji, msgKey, vars, opts}]
 
   function _clearTutTimer() {
     if (_tutAutoTimer) { clearTimeout(_tutAutoTimer); _tutAutoTimer = null; }
+    if (_tutQueueTimer) { clearTimeout(_tutQueueTimer); _tutQueueTimer = null; }
+  }
+
+  // Keep the red boss-path hint below the active tutorial card. When the card
+  // disappears, the CSS transition moves the hint back to its normal position.
+  let _bossHintLayoutFrame = null;
+  function _syncBossPathHintPosition() {
+    if (!_bossPathHint) return;
+    const defaultTop = window.innerWidth <= 600 ? '16%' : '19%';
+    let top = defaultTop;
+    if (_tutBox && !_tutBox.classList.contains('off')) {
+      const rect = _tutBox.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) top = `${Math.ceil(rect.bottom + 14)}px`;
+    }
+    _bossPathHint.style.setProperty('--boss-path-top', top);
+  }
+  function _scheduleBossPathHintPosition() {
+    if (_bossHintLayoutFrame) cancelAnimationFrame(_bossHintLayoutFrame);
+    _bossHintLayoutFrame = requestAnimationFrame(() => {
+      _bossHintLayoutFrame = null;
+      _syncBossPathHintPosition();
+    });
   }
 
   window._showTutorial = (emoji, msgKey, vars = null, opts = {}) => {
@@ -994,6 +1022,7 @@ export function init() {
     _tutEmoji.textContent = emoji;
     _tutText.textContent  = vars ? i18n(msgKey, vars) : i18n(msgKey);
     _tutBox.classList.remove('off');
+    _scheduleBossPathHintPosition();
     _tutPersist    = opts.persist || false;
     _tutCurrentKey = msgKey;
     if (G.run?.tutorial) G.run.tutorial.key = msgKey;
@@ -1012,6 +1041,7 @@ export function init() {
     _tutPersist    = false;
     _tutCurrentKey = null;
     if (force) _tutQueue = [];
+    _scheduleBossPathHintPosition();
   };
 
   // Called after room is cleared - flush any queued tip
@@ -1020,9 +1050,28 @@ export function init() {
       const { emoji, msgKey, vars, opts } = _tutQueue.shift();
       _tutQueue = [];
       // Small delay so the "Room cleared" announce reads first
-      setTimeout(() => window._showTutorial(emoji, msgKey, vars, opts), 600);
+      _tutQueueTimer = setTimeout(() => {
+        _tutQueueTimer = null;
+        window._showTutorial(emoji, msgKey, vars, opts);
+      }, 600);
     }
   };
+
+  // Dedicated, low-noise hint for the red boss-path doors. It is independent
+  // from the normal tutorial queue so other tips cannot accidentally dismiss it.
+  const _bossPathHint = document.getElementById('boss-path-hint');
+  window._showBossPathHint = () => {
+    if (!_bossPathHint || G.phase !== 'run' || G.run?.bossPathHintDismissed) return;
+    _bossPathHint.classList.remove('off');
+    _scheduleBossPathHintPosition();
+  };
+  window._hideBossPathHint = () => {
+    if (!_bossPathHint) return;
+    _bossPathHint.classList.add('off');
+    _scheduleBossPathHintPosition();
+  };
+
+  window.addEventListener('resize', _scheduleBossPathHintPosition);
 
   // Called when map is opened - dismiss map-related tip
   window._onMapOpen = () => {
@@ -1048,9 +1097,10 @@ export function init() {
   window._worldRef     = { enterRoom };
   window._onGameOver   = (victory) => showGameOver(victory);
   // Music hook: called by world.js enterRoom after cell type is determined
-  window._onRoomEntered = (cellType) => {
+  window._onRoomEntered = (cellType, roomCleared = false) => {
     if (G.worldTransition) return; // music deferred to onComplete; don't interrupt animation
-    if      (cellType === 'boss')                        playMusic('boss', 0);
+    if (roomCleared)                                      playMusic(G.dungeon?.worldDef?.id, 0);
+    else if (cellType === 'boss')                        playMusic('boss', 0);
     else if (cellType === 'tent' || cellType === 'camp') playMusic('camp', 0);
     else if (cellType === 'shop' || cellType === 'treasure') playMusic('gift', 0);
     else if (cellType === 'modifier')                    playMusic('modifier', 0);
@@ -1154,6 +1204,79 @@ function _setKbShift(state) {
     else                   { shiftBtn.textContent = '⇧'; shiftBtn.classList.remove('active', 'caps'); }
   }
 }
+
+// Depth is determined by the point where an object meets the floor, never by
+// the top of its sprite. Canvas Y grows downward, so a larger bottomY is
+// physically closer to the player and must be drawn later.
+function _monsterBottomY(m) {
+  const hpRatio = m.maxHp > 1 ? m.hp / m.maxHp : 1;
+  const sizeScale = m.maxHp > 1 ? (0.55 + hpRatio * 0.45) : 1;
+  const drawSize = m.size * sizeScale;
+  let bodyScale = m.scl || 1;
+  if (m.spawnAnim && m.spawnAnim.t < m.spawnAnim.dur) {
+    const progress = m.spawnAnim.t / m.spawnAnim.dur;
+    const impactProgress = Math.max(0, (progress - 0.78) / 0.22);
+    const shadowProgress = Math.min(1, progress / 0.78);
+    bodyScale *= progress < 0.78
+      ? 1.8 - shadowProgress * 0.6
+      : 1.2 - impactProgress * 0.2;
+  }
+  return m.y + drawSize * bodyScale * 0.5;
+}
+
+function _drawDepthSortedRoomObjects() {
+  const treeDepths = getTreeDepths();
+  const environmentDepths = getEnvironmentDepths();
+  if (!treeDepths.length && !environmentDepths.length) {
+    drawMonsters();
+    return;
+  }
+
+  const objects = [
+    ...treeDepths.map(tree => ({
+      kind: 'tree',
+      id: tree.id,
+      bottomY: tree.baseY,
+    })),
+    ...environmentDepths.map(object => ({
+      kind: 'environment',
+      id: object.id,
+      bottomY: object.baseY,
+    })),
+    ...(G.room?.monsters || [])
+      .filter(monster => !monster.dead)
+      .map(monster => ({
+        kind: 'monster',
+        monster,
+        bottomY: _monsterBottomY(monster),
+      })),
+  ];
+
+  // Far-to-near painter's order. The baseline is the depth-crossing rule: an
+  // object is drawn after a monster while the monster's bottom is behind the
+  // object's baseline. On an exact tie, the monster wins the overlap.
+  objects.sort((a, b) => {
+    const byY = a.bottomY - b.bottomY;
+    if (byY) return byY;
+    return a.kind === 'monster' ? 1 : -1;
+  });
+
+  for (const object of objects) {
+    if (object.kind === 'tree') {
+      // Draw the complete object at its depth, not only a lower trunk slice.
+      // This lets branches/canopy occlude monsters that are behind the tree.
+      drawTrees('back', object.id);
+    } else if (object.kind === 'environment') {
+      drawEnvironmentObject(object.id);
+    } else {
+      drawMonsters({
+        bodyFilter: monster => monster === object.monster,
+        drawLabels: true,
+      });
+    }
+  }
+}
+
 let _hudFadeAlpha = 1;   // HUD opacity during ctrl interaction (1 = visible)
 let _announceFadeAlpha = 1; // announce opacity (fades faster than HUD)
 let _panelFadeAlpha = 0; // ctrl-panel opacity (0 = hidden, fades in on open)
@@ -1304,6 +1427,8 @@ function loop(ts) {
       }
     }
     drawBackground();
+    // Puddles belong to the floor plane: they are always behind every actor.
+    drawPuddles();
     drawDoors();
     drawRoomLabel();
 
@@ -1319,9 +1444,9 @@ function loop(ts) {
       tickAnnounce(dt);
     }
 
-    drawMonsters('behind');
-    drawDecorAvoids();
-    drawMonsters('front');
+    drawBossTether();
+    _drawDepthSortedRoomObjects();
+    drawBossBadge();
     drawProjs();
     drawParts();
     drawCoins(ctx);
@@ -2342,6 +2467,10 @@ function buildTitleScreen() {
     G.weatherEnabled = parseFloat(e.target.value);
     localStorage.setItem('krr_weather', e.target.value);
   });
+  document.getElementById('sel-details')?.addEventListener('change', e => {
+    G.treeDetails = Math.max(0, Math.min(2, parseInt(e.target.value, 10) || 0));
+    localStorage.setItem('krr_tree_details', String(G.treeDetails));
+  });
   document.getElementById('chk-tts')?.addEventListener('change', e => { G.ttsEnabled = e.target.checked; });
   // Pause-screen toggles (mirror main settings)
   document.getElementById('pause-sel-weather')?.addEventListener('change', e => {
@@ -2444,6 +2573,13 @@ function buildTitleScreen() {
   const elWeather = document.getElementById('sel-weather');
   if (elWeather) elWeather.value = String(weatherVal);
 
+  const savedTreeDetails = localStorage.getItem('krr_tree_details');
+  G.treeDetails = savedTreeDetails !== null
+    ? Math.max(0, Math.min(2, parseInt(savedTreeDetails, 10) || 0))
+    : 2;
+  const elTreeDetails = document.getElementById('sel-details');
+  if (elTreeDetails) elTreeDetails.value = String(G.treeDetails);
+
   const savedDictProg = localStorage.getItem('krr_dict_prog');
   G.dictProgressionDisabled = savedDictProg === '1';
   const elDictProg = document.getElementById('chk-dict-prog');
@@ -2500,7 +2636,7 @@ function buildTitleScreen() {
 
   // Title hi score
   const hiEl = document.getElementById('title-hi');
-  if (hiEl && G.hiScore > 0) hiEl.textContent = `Best: ${G.hiScore}원`;
+  if (hiEl && G.hiScore > 0) hiEl.textContent = `${i18n('title.bestScore')}: ${G.hiScore}원`;
 
   // Logo easter egg: click randomizes menu weather (5s cooldown)
   (function() {
@@ -2565,6 +2701,14 @@ function buildTitleScreen() {
     G.touchMode = e.target.checked;
     localStorage.setItem('krr_touchMode', G.touchMode ? '1' : '0');
     if (G.phase === 'run') applyTouchMode();
+  });
+
+  const elMultiplayerBeta = document.getElementById('chk-multiplayer-beta');
+  if (elMultiplayerBeta) elMultiplayerBeta.checked = G.multiplayerBeta;
+  document.getElementById('chk-multiplayer-beta')?.addEventListener('change', e => {
+    G.multiplayerBeta = e.target.checked;
+    localStorage.setItem('krr_multiplayer_beta', G.multiplayerBeta ? '1' : '0');
+    if (!G.multiplayerBeta) document.getElementById('dej-detail')?.classList.add('off');
   });
 
   document.getElementById('sel-difficulty')?.addEventListener('change', e => {
@@ -2680,9 +2824,8 @@ function buildTitleScreen() {
     if (G.phase !== 'run' || !G.dungeon) return;
     const world = G.dungeon.worldDef;
     const worldDisplayName = i18n('worlds.' + world.id + '.name') || world.name;
-    const worldSuffix = i18n('hud.worldSuffix');
     const worldNum = (G.run?.worldIdx ?? 0) + 1 - (G.run?.expertMode ? 1 : 0);
-    const worldLabel = G.lang === 'ko' ? `${worldNum}${worldSuffix}` : `${worldSuffix} ${worldNum}`;
+    const worldLabel = i18n('hud.worldLabel', { n: worldNum });
     flashAnnounce(`${world.emoji} ${worldLabel} - ${worldDisplayName}`, '#88ddff');
   });
 
@@ -2827,6 +2970,25 @@ function showTitleScreen() {
   _weatherCycleTimer = 0;
 }
 
+const _DIFFICULTY_UI = {
+  baby:     { emoji: '🍼', key: 'options.diffBaby', hearts: 50 },
+  easy:     { emoji: '😊', key: 'options.diffEasy', hearts: 20 },
+  normal:   { emoji: '⚔️', key: 'options.diffNormal', hearts: 10 },
+  hard:     { emoji: '💪', key: 'options.diffHard', hearts: 5 },
+  hardcore: { emoji: '💀', key: 'options.diffHardcore', hearts: 1 },
+};
+
+function _applyDifficultyLabels() {
+  for (const selectId of ['sel-difficulty', 'mp-difficulty']) {
+    const select = document.getElementById(selectId);
+    if (!select) continue;
+    for (const option of select.options) {
+      const spec = _DIFFICULTY_UI[option.value];
+      if (spec) option.textContent = `${spec.emoji} ${i18n(spec.key)}: ${spec.hearts} ❤️`;
+    }
+  }
+}
+
 function applyLanguage() {
   // Apply data-i18n text content
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -2837,11 +2999,15 @@ function applyLanguage() {
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     el.placeholder = i18n(el.dataset.i18nPlaceholder);
   });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.title = i18n(el.dataset.i18nTitle);
+  });
   if (_avaActiveTab === 'weapon') _refreshAvaEditBar();
   // Rebuild weapon picker option labels in select elements (if any)
   document.querySelectorAll('[data-i18n-opt]').forEach(opt => {
     opt.textContent = i18n(opt.dataset.i18nOpt);
   });
+  _applyDifficultyLabels();
 
   // Update rotate overlay text to match current language state
   if (window._updateRotateOverlayText) window._updateRotateOverlayText();
@@ -3055,6 +3221,28 @@ function _renderStatsContent(menuOnly = false) {
     </div>`;
   }).join('');
 
+  // ── Hanja wiki rows ──────────────────────────────────────────────
+  // World indices are zero-based, matching the existing Hanja power-up unlocks:
+  // tier 2 at world 5, tier 3 at world 10, and tier 4 at world 15.
+  const hanjaTiers = [HANJA_T1, HANJA_T2, HANJA_T3, HANJA_T4];
+  const hanjaUnlocks = [0, 5, 10, 15];
+  const maxHanjaTier = dictProgDisabled
+    ? hanjaTiers.length
+    : hanjaUnlocks.filter(level => (G.maxWorldReached || 0) >= level).length;
+  const hanjaRows = `<div class="hanja-wiki">${hanjaTiers.slice(0, maxHanjaTier).map((tier, tierIdx) => `
+    <div class="hanja-tier">
+      <div class="hanja-tier-label">Tier ${tierIdx + 1}</div>
+      <div class="hanja-mini-grid">
+        ${tier.map(hanja => {
+          const hangul = HANJA_TO_HANGUL[hanja] || '';
+          const href = `https://koreanhanja.app/${encodeURIComponent(hanja)}`;
+          return `<a class="hanja-mini-card" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${hanja} ${hangul}">
+            <span class="hanja-mini-char">${hanja}</span><span class="hanja-mini-divider" aria-hidden="true"></span><span class="hanja-mini-reading">${hangul}</span>
+          </a>`;
+        }).join('')}
+      </div>
+    </div>`).join('')}</div>`;
+
   // ── Accordion ─────────────────────────────────────────────────────
   function accordion(id, labelKey, body) {
     return `<div class="wiki-section" id="wiki-sec-${id}">
@@ -3083,6 +3271,7 @@ function _renderStatsContent(menuOnly = false) {
   return `${ringsHtml}
     <div class="wiki-accordion">
       ${accordion('dojang','dict.wikiDojang', `<div class="dj-book-body-inner">${dojangRows}</div>`)}
+      ${accordion('hanja','dict.wikiHanja', hanjaRows)}
       ${accordion('worlds','dict.wikiWorlds', worldRows)}
       ${accordion('items', 'dict.wikiItems',  itemRows)}
       ${accordion('perms', 'dict.wikiPerms',  permRows)}
@@ -3374,6 +3563,13 @@ function _hideDojangEntryModal() {
 }
 
 function _dojangEntrySelectPath(path) {
+  if (!G.multiplayerBeta) {
+    // Keep the default onboarding to two clicks: Play → learning level.
+    const soloAction = { '0': 'dojang', '1': 'solo-normal', '2': 'solo-expert' }[path];
+    if (soloAction) _dojangEntryAction(soloAction);
+    return;
+  }
+
   const detail = document.getElementById('dej-detail');
   const titleEl = document.getElementById('dej-detail-title');
   const cardsEl = document.getElementById('dej-cards');
@@ -3559,6 +3755,7 @@ function startNewRun() {
   G.hangulSize = window.innerWidth < 768 ? 34 : window.innerWidth >= 1600 ? 48 : 38;
   G.varyFonts = document.getElementById('chk-fonts')?.checked ?? true;
   G.weatherEnabled = parseFloat(document.getElementById('sel-weather')?.value ?? '1');
+  G.treeDetails = parseInt(document.getElementById('sel-details')?.value ?? String(G.treeDetails ?? 2), 10);
   G.ttsEnabled = document.getElementById('chk-tts')?.checked ?? true;
   G.clickableDoors = document.getElementById('chk-clickable-doors')?.checked ?? false;
   G.touchMode = G.touchMode || (document.getElementById('chk-touch')?.checked ?? false);
@@ -3915,13 +4112,12 @@ function updateHudWorld() {
   const { col, row } = G.currentRoom || { col:0, row:0 };
   const colLetter = String.fromCharCode(65 + col);
   const worldDisplayName = i18n('worlds.' + world.id + '.name') || world.name;
-  const worldSuffix = i18n('hud.worldSuffix');
   const worldNum = (G.run?.worldIdx ?? 0) + 1 - (G.run?.expertMode ? 1 : 0);
-  const worldLabel = G.lang === 'ko' ? `${worldNum}${worldSuffix}` : `${worldSuffix} ${worldNum}`;
+  const worldLabel = i18n('hud.worldLabel', { n: worldNum });
   const lblEl = document.getElementById('hud-world-lbl');
   if (lblEl) lblEl.textContent = `${worldLabel} - ${worldDisplayName}`;
   const bossEl = document.getElementById('hw-room');
-  if (bossEl) bossEl.textContent = `${colLetter}${row + 1}방`;
+  if (bossEl) bossEl.textContent = i18n('hud.roomLabel', { col: colLetter, row: row + 1 });
   const ringIcon = document.getElementById('ring-world-icon');
   if (ringIcon) ringIcon.textContent = world.emoji;
   const weatherIco = document.getElementById('weather-icon');
@@ -3989,7 +4185,7 @@ function navigateWithAnim(dir) {
 
   sfx('roomNavigate', 0.65);
   // Fall back to instant transition if ghost element missing
-  if (!_ghost) { enterRoom(nc, nr); typingEl?.focus(); return; }
+  if (!_ghost) { enterRoom(nc, nr, dir); typingEl?.focus(); return; }
 
   G.inTransition = true;
 
@@ -4078,7 +4274,7 @@ function navigateWithAnim(dir) {
     placeGhost(entry.x, entry.y, 0.5, 0, false); // invisible+small, at entry door
     void _ghost.offsetWidth;
 
-    enterRoom(nc, nr); // direct call - skips G.transition canvas fade
+    enterRoom(nc, nr, dir); // direct call - skips G.transition canvas fade
 
     if (_overlay) { _overlay.style.transition = 'opacity 0.18s ease'; _overlay.style.opacity = '0'; }
 
@@ -5158,7 +5354,7 @@ function speakKorean(text) {
 // Returns true if val is a valid submittable input: cheatcode, NPC in room, or alive monster.
 function _typedIsValidInput(val) {
   if (!val) return false;
-  if (val.toLowerCase() === 'cheatcode' || val === '촏ㅁㅅ챙ㄷ' || val === '초ㄸㅁㅆ첑ㄸ') return true;
+  if (val.toLowerCase() === 'cheatcode' || val === 'cheat챙ㄷ' || val === '촏ㅁㅅ챙ㄷ' || val === '초ㄸㅁㅆ첑ㄸ') return true;
   const npc = G.room?.npc;
   if (npc?.word && (val === npc.word || val === npc.word.replace(/\s+/g, ''))) return true;
   for (const m of (G.room?.monsters || [])) {
@@ -5283,7 +5479,7 @@ function onInput() {
         if (!wordMatchesMonster) {
           typingEl.value = '';
           G.run.fleeCount = (G.run.fleeCount || 0) + 1;
-          const fleeMsg = G.lang === 'ko' ? '도망! 🏃' : G.lang === 'pt' ? 'Fuga! 🏃' : 'Flee! 🏃';
+          const fleeMsg = i18n('announce.flee');
           flashAnnounce(fleeMsg, '#ff8800');
           const cell = currentCell();
           if (cell) startFleeEffects(cell);
@@ -5541,7 +5737,7 @@ const _doorBtns = {};
       if (!adj) return;
       if (adj.visited && G.mode === 'combat') {
         G.run.fleeCount = (G.run.fleeCount || 0) + 1;
-        const fleeMsg = G.lang === 'ko' ? '도망! 🏃' : G.lang === 'pt' ? 'Fuga! 🏃' : 'Flee! 🏃';
+        const fleeMsg = i18n('announce.flee');
         flashAnnounce(fleeMsg, '#ff8800');
         startFleeEffects(cell);
         G.mode = 'navigate';
@@ -5568,7 +5764,6 @@ function updateDoorButtons() {
   const rect   = canvas.getBoundingClientRect();
   const cL = rect.left, cT = rect.top, cW = rect.width, cH = rect.height;
   const sx = cW / G.W, sy = cH / G.vH;
-
   const wallH    = Math.floor(G.vH * 0.13);
   const wallSide = Math.floor(G.W  * 0.05);
   const wallBot  = Math.floor(G.vH * 0.07);
@@ -5581,7 +5776,6 @@ function updateDoorButtons() {
     E: { x1: cL + (G.W-wallSide)*sx,    x2: cL + cW,                    y1: cT + (G.vH/2-doorW/2)*sy,  y2: cT + (G.vH/2+doorW/2)*sy },
     W: { x1: cL,                        x2: cL + wallSide*sx,           y1: cT + (G.vH/2-doorW/2)*sy,  y2: cT + (G.vH/2+doorW/2)*sy },
   };
-
   for (const [dir, btn] of Object.entries(_doorBtns)) {
     if (!cell?.connections.has(dir)) { btn.style.display = 'none'; continue; }
     const [dc, dr] = DIR_DELTA_G[dir];
@@ -5591,6 +5785,8 @@ function updateDoorButtons() {
     const canGo = adj && (adj.visited || G.mode === 'navigate');
     if (!canGo) { btn.style.display = 'none'; continue; }
 
+    // Open worlds hide the artwork only; the invisible hit targets remain in
+    // the same positions as every other room.
     const d = DOOR_SCREEN[dir];
     btn.style.display = (G.clickableDoors || adj?.visited) ? 'block' : 'none';
     btn.style.left   = d.x1 + 'px';
@@ -5696,15 +5892,6 @@ let _cheatOpenedWhileRunning = false;
 function openCheatMenu() {
   populateCheatItemSel();
   populateCheatModSel();
-  // Sync decor grid dropdowns from current G.decorGrid (per-room, null after room change)
-  if (G.decorGrid) {
-    for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
-      const sel = document.getElementById(`c-decor-r${r}c${c}`);
-      if (sel) sel.value = G.decorGrid[r]?.[c] || 'none';
-    }
-  } else {
-    document.querySelectorAll('.cheat-decor-sel').forEach(sel => { sel.value = 'none'; });
-  }
   document.getElementById('cheat-menu')?.classList.add('on');
   document.body.classList.add('cheat-open');
   if (G.touchMode && G.phase === 'run') {
@@ -5739,6 +5926,13 @@ window.cheatAddCoins = function() {
 };
 window.cheatSetWeather = function() {
   const wx = document.getElementById('c-wx')?.value || 'clear';
+  const worldDef = G.dungeon?.worldDef;
+  const forbidden = new Set(worldDef?.forbiddenWeathers || []);
+  if (worldDef?.biome === 'ice') forbidden.add('blossom');
+  if (forbidden.has(wx)) {
+    flashAnnounce('⚠️ Weather unavailable in this world', '#ff8888');
+    return;
+  }
   startWeatherFade(wx);
 };
 window.cheatSetTOD = function() {
@@ -5763,6 +5957,21 @@ window.cheatNextWorld = function() {
 window.cheatClearRoom = function() {
   killAllEnemies();
 };
+window.cheatClearRoomTrees = function() {
+  if (!clearRoomTrees()) {
+    flashAnnounce('⚠️ Run only', '#ff8888');
+    return;
+  }
+  flashAnnounce(i18n('cheat.room.treesCleared'), '#9fd3ff');
+};
+window.cheatGenerateRoomTrees = function() {
+  const theme = document.getElementById('c-tree-theme')?.value || 'auto';
+  if (!generateRoomTrees(theme)) {
+    flashAnnounce('⚠️ Run only', '#ff8888');
+    return;
+  }
+  flashAnnounce(i18n('cheat.room.treesGenerated'), '#9fd3ff');
+};
 window.cheatGiveAll = function() {
   import('../data/items.js').then(({ PERMANENTS, POWERUP_KEYS, POWERUP_DEFS }) => {
     if (!G.run) return;
@@ -5775,7 +5984,7 @@ window.cheatGiveAll = function() {
     const keys = POWERUP_KEYS.filter(k => POWERUP_DEFS[k].rarity > 0);
     for (const k of keys) for (let i = 0; i < 99; i++) addToInventory(k);
     updateHudAll(); refreshInventoryUI();
-    const allItemsMsg = G.lang === 'ko' ? '🎁 모든 아이템 지급!' : G.lang === 'pt' ? '🎁 Todos os itens!' : '🎁 All items!';
+    const allItemsMsg = i18n('announce.allItems');
     flashAnnounce(allItemsMsg, '#ffdd44');
   });
 };
@@ -5950,7 +6159,7 @@ function populateCheatModSel() {
 // Wall texture styles (indices match drawWallPattern in renderer.js)
 const CHEAT_WALL_STYLES = ['Fan Lines', 'Flat Lines', 'Grid', 'Wide Fan'];
 // Floor pattern types (indices match _patIdx in drawBackground in renderer.js)
-const CHEAT_FLOOR_PATS  = ['Checkerboard', 'Large Chess', 'Planks ↕', 'Planks ↔', 'Solid', 'Solid Alt', 'Pixel Art', 'Cross'];
+const CHEAT_FLOOR_PATS  = ['Large Checkerboard', 'Even Larger Chess', 'Planks ↕', 'Planks ↔', 'Solid', 'Solid Alt', 'Pixel Art', 'Cross'];
 
 let _cheatWallIdx  = -1;
 let _cheatFloorIdx = -1;
@@ -6006,68 +6215,6 @@ window.cheatResetRoomColors = function() {
   const wn = document.getElementById('c-wall-name');  if (wn) wn.textContent = '—';
   const fn = document.getElementById('c-floor-name'); if (fn) fn.textContent = '—';
   _syncRoomColorInputs();
-  document.querySelectorAll('.cheat-decor-sel').forEach(sel => { sel.value = 'none'; });
-  setDecorGrid(null);
-  ['N','S','E','W'].forEach(s => {
-    setWallImage(s, null);
-    const el = document.getElementById(`c-wall-img-${s}`);
-    if (el) el.value = 'none';
-  });
-};
-// Full-wall image preloads keyed by option value
-const _WALL_IMGS = {};
-function _getWallImg(value) {
-  if (value === 'none' || !value) return null;
-  if (!_WALL_IMGS[value]) {
-    const img = new Image();
-    img.src = `assets/img/full-wall/${value}.png`;
-    _WALL_IMGS[value] = img;
-  }
-  return _WALL_IMGS[value];
-}
-window.cheatWallImage = function(side, value) {
-  setWallImage(side, _getWallImg(value));
-};
-
-window.cheatDecorGridChange = function() {
-  const grid = [];
-  let hasOverlay = false;
-  for (let r = 0; r < 3; r++) {
-    grid[r] = [];
-    for (let c = 0; c < 5; c++) {
-      const val = document.getElementById(`c-decor-r${r}c${c}`)?.value || 'none';
-      grid[r][c] = val;
-      if (val !== 'none') hasOverlay = true;
-    }
-  }
-  setDecorGrid(hasOverlay ? grid : null);
-};
-
-// Preset layouts for quick avoid-grid testing (A=avoid, 0=none)
-const _DECOR_PRESETS = [
-  // Preset 1: top 2 rows all avoid
-  [['avoid','avoid','avoid','avoid','avoid'],
-   ['avoid','avoid','avoid','avoid','avoid'],
-   ['none', 'none', 'none', 'none', 'none']],
-  // Preset 2: middle row all avoid
-  [['none', 'none', 'none', 'none', 'none'],
-   ['avoid','avoid','avoid','avoid','avoid'],
-   ['none', 'none', 'none', 'none', 'none']],
-  // Preset 3: diagonal-ish pattern
-  [['none', 'none', 'avoid','avoid','avoid'],
-   ['avoid','avoid','avoid','none', 'none'],
-   ['avoid','none', 'none', 'none', 'avoid']],
-];
-window.cheatDecorPreset = function(idx) {
-  const preset = _DECOR_PRESETS[idx];
-  if (!preset) return;
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 5; c++) {
-      const sel = document.getElementById(`c-decor-r${r}c${c}`);
-      if (sel) sel.value = preset[r][c];
-    }
-  }
-  cheatDecorGridChange();
 };
 
 /* ================================================================
@@ -7154,7 +7301,9 @@ function _mpStartGame() {
   G.playerHP  = G.playerMax;
   // Seed worldSequence first so generateDungeon picks the correct world (not a random fallback)
   G.run.worldSequence = generateWorldSequence(14);
+  G.run.seed = Math.floor(Math.random() * 1e6);
   const preDungeon = generateDungeon(startIdx);
+  preDungeon.runSeed = G.run.seed;
   const dungeonBlueprint = serializeDungeon(preDungeon, startIdx);
   MP._hostPreDungeon = preDungeon;
 

@@ -96,7 +96,7 @@
   color: rgba(30, 10, 5, .75);
   transition: color .2s;
 }
-.dej-path-btn[data-path="0"] .dej-path-icon {
+.dej-path-btn[data-path="2"] .dej-path-icon {
   font-family: "Song Myung", "Nanum Myeongjo", serif;
   font-size: 3rem;
 }

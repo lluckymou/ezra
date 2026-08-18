@@ -15,7 +15,7 @@
 
 **EZRA 타자** is a Korean language practice platform built around typing. It started as a roguelite dungeon crawler where you defeat monsters by typing Korean words, and grew into a broader set of tools for practicing the language - vocabulary through gameplay, Hangul stroke order through drawing, and more.
 
-It was born out of a frustration: my Korean teacher showed me [Hancom Taja](https://taja.hancom.com), a classic Korean typing trainer, but I couldn't use it because my system locale wasn't set to Korean. So I built my own version - and then kept going.
+This was born out of a frustration: my Korean teacher showed me [Hancom Taja](https://taja.hancom.com), a classic Korean typing trainer, but I couldn't use it because my system locale wasn't set to Korean. So I built my own version - and then kept going.
 
 The philosophy here isn't to _gamify_ learning. It's the opposite: to *"learnify"* a game - take something genuinely fun and challenging, and weave language learning into its game design so naturally that vocabulary acquisition becomes a side effect of playing. The goal is a game worth playing on its own merits, where Korean just happens to be the mechanic.
 
@@ -29,7 +29,7 @@ A full roguelite dungeon crawler where you defeat monsters by typing Korean word
 
 The first version took roughly a month to build and ships with a full roguelite feature set alongside a serious vocabulary system.
 
-### Hangul Dojang (도장 - Stroke Practice)
+### Hangul Dojang (Stroke Practice)
 
 A dedicated mode for learning how to write Hangul from scratch — stroke by stroke, on a drawing canvas. Each jamo (letter) is taught through animated guides showing the correct stroke order, direction, and spatial relationships. Progress is tracked in a personal record book.
 

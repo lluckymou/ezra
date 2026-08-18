@@ -6,6 +6,17 @@ import { G } from './state.js';
 import { currentCell, getAvailableDirs, getCell, WORLDS, DIR_NAMES, COLS, ROWS } from './world.js';
 import { WORD_DICT } from '../data/words.js';
 import { get as i18n, wordTr } from './i18n.js';
+import {
+  drawRoomTrees as renderRoomTrees,
+  getRoomTreeDepths as getRenderTreeDepths,
+  clearRoomTrees as clearRoomTreePlan,
+  generateRoomTrees as generateRoomTreePlan,
+} from './trees.js';
+import {
+  drawRoomPuddles as renderRoomPuddles,
+  drawRoomEnvironmentObject as renderRoomEnvironmentObject,
+  getRoomEnvironmentDepths as getRenderEnvironmentDepths,
+} from './environment.js';
 
 const DIR_DELTA_R = { N: [0,-1], S: [0,1], E: [1,0], W: [-1,0] };
 
@@ -39,6 +50,8 @@ function _getBossDistMap() {
 }
 
 let canvas, ctx, wxCanvas, wxCtx, dnCanvas, dnCtx;
+const FLOOR_GRID_SIZE = 96;
+const FLOOR_LARGE_GRID_SIZE = FLOOR_GRID_SIZE * 2;
 
 // Room design overrides set by the cheat menu (-1 = use room's natural value)
 let _roomDesignFloorPat  = -1;
@@ -46,40 +59,125 @@ let _roomDesignWallStyle = -1;
 export function setRoomDesignFloorPat(v)  { _roomDesignFloorPat  = v < 0 ? -1 : v; }
 export function setRoomDesignWallStyle(v) { _roomDesignWallStyle = v < 0 ? -1 : v; }
 
-// Full-wall images (cheat menu — null = none)
-const _wallImgs = { N: null, S: null, E: null, W: null };
-export function setWallImage(side, img) { _wallImgs[side] = img || null; }
-
-// Draw an image perspective-stretched to fill a quadrilateral (p0=TL, p1=TR, p2=BR, p3=BL)
-// Uses triangle affine-transform decomposition for canvas 2D
-function _drawImgOnQuad(img, p0, p1, p2, p3) {
-  const iw = img.naturalWidth  || img.width  || 1;
-  const ih = img.naturalHeight || img.height || 1;
-  function tri(sx0,sy0, sx1,sy1, sx2,sy2, dx0,dy0, dx1,dy1, dx2,dy2) {
-    const det = sx0*(sy1-sy2) + sx1*(sy2-sy0) + sx2*(sy0-sy1);
-    if (Math.abs(det) < 1e-8) return;
-    const a = (dx0*(sy1-sy2) + dx1*(sy2-sy0) + dx2*(sy0-sy1)) / det;
-    const b = (dy0*(sy1-sy2) + dy1*(sy2-sy0) + dy2*(sy0-sy1)) / det;
-    const c = (dx0*(sx2-sx1) + dx1*(sx0-sx2) + dx2*(sx1-sx0)) / det;
-    const d = (dy0*(sx2-sx1) + dy1*(sx0-sx2) + dy2*(sx1-sx0)) / det;
-    const e = (dx0*(sx1*sy2-sx2*sy1) + dx1*(sx2*sy0-sx0*sy2) + dx2*(sx0*sy1-sx1*sy0)) / det;
-    const f = (dy0*(sx1*sy2-sx2*sy1) + dy1*(sx2*sy0-sx0*sy2) + dy2*(sx0*sy1-sx1*sy0)) / det;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(dx0,dy0); ctx.lineTo(dx1,dy1); ctx.lineTo(dx2,dy2);
-    ctx.closePath(); ctx.clip();
-    ctx.transform(a, b, c, d, e, f);
-    ctx.drawImage(img, 0, 0);
-    ctx.restore();
-  }
-  // Triangle 1: TL, TR, BR
-  tri(0,0, iw,0, iw,ih,  p0[0],p0[1], p1[0],p1[1], p2[0],p2[1]);
-  // Triangle 2: TL, BR, BL
-  tri(0,0, iw,ih, 0,ih,  p0[0],p0[1], p2[0],p2[1], p3[0],p3[1]);
+export function drawTrees(layer = 'back', onlyTreeId = null) {
+  if (!ctx || !G.dungeon || (G.treeDetails ?? 2) <= 0) return;
+  const cell = currentCell();
+  const world = G.dungeon.worldDef;
+  if (!cell || !world) return;
+  renderRoomTrees(ctx, {
+    world,
+    cell,
+    W: G.W,
+    H: G.vH,
+    seed: G.dungeon.runSeed ?? G.run?.seed ?? 0,
+    time: G.gameTime || 0,
+    light: getDayBrightness(),
+    weather: G.weather || 'clear',
+    layer,
+    details: G.treeDetails ?? 2,
+    onlyTreeId,
+  });
 }
 
-// 3×5 decoration grid set by cheat menu — stored on G.decorGrid (cleared by resetRoomState)
-export function setDecorGrid(grid) { G.decorGrid = grid; }
+function currentRoomSeed() {
+  return G.dungeon?.runSeed ?? G.run?.seed ?? 0;
+}
+
+export function drawPuddles() {
+  if (!ctx || !G.dungeon || (G.treeDetails ?? 2) <= 0) return;
+  const cell = currentCell();
+  const world = G.dungeon.worldDef;
+  if (!cell || !world) return;
+  // Puddles are floor-plane objects. Clip them to the same rectangle used by
+  // the floor pattern so a wide blob can never spill onto a side wall.
+  const wallSide = Math.floor(G.W * 0.05);
+  const floorTop = Math.floor(G.vH * 0.13);
+  const floorBot = G.vH - Math.floor(G.vH * 0.07);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(wallSide, floorTop, G.W - wallSide * 2, floorBot - floorTop);
+  ctx.clip();
+  renderRoomPuddles(ctx, {
+    world,
+    cell,
+    W: G.W,
+    H: G.vH,
+    seed: currentRoomSeed(),
+    time: G.gameTime || 0,
+    details: G.treeDetails ?? 2,
+  });
+  ctx.restore();
+}
+
+export function drawEnvironmentObject(onlyId = null) {
+  if (!ctx || !G.dungeon || (G.treeDetails ?? 2) <= 0) return;
+  const cell = currentCell();
+  const world = G.dungeon.worldDef;
+  if (!cell || !world) return;
+  renderRoomEnvironmentObject(ctx, {
+    world,
+    cell,
+    W: G.W,
+    H: G.vH,
+    seed: currentRoomSeed(),
+    time: G.gameTime || 0,
+    details: G.treeDetails ?? 2,
+    onlyId,
+  });
+}
+
+export function getTreeDepths() {
+  if (!G.dungeon || (G.treeDetails ?? 2) <= 0) return [];
+  const cell = currentCell();
+  const world = G.dungeon.worldDef;
+  if (!cell || !world) return [];
+  return getRenderTreeDepths({
+    world,
+    cell,
+    H: G.vH,
+    seed: G.dungeon.runSeed ?? G.run?.seed ?? 0,
+    details: G.treeDetails ?? 2,
+  });
+}
+
+export function getEnvironmentDepths() {
+  if (!G.dungeon || (G.treeDetails ?? 2) <= 0) return [];
+  const cell = currentCell();
+  const world = G.dungeon.worldDef;
+  if (!cell || !world) return [];
+  return getRenderEnvironmentDepths({
+    world,
+    cell,
+    H: G.vH,
+    seed: currentRoomSeed(),
+    details: G.treeDetails ?? 2,
+  });
+}
+
+export function clearRoomTrees() {
+  if (!G.dungeon) return false;
+  const cell = currentCell();
+  if (!cell) return false;
+  clearRoomTreePlan({
+    world: G.dungeon.worldDef,
+    cell,
+    seed: G.dungeon.runSeed ?? G.run?.seed ?? 0,
+  });
+  return true;
+}
+
+export function generateRoomTrees(theme = 'auto') {
+  if (!G.dungeon) return false;
+  const cell = currentCell();
+  if (!cell) return false;
+  generateRoomTreePlan({
+    world: G.dungeon.worldDef,
+    cell,
+    seed: G.dungeon.runSeed ?? G.run?.seed ?? 0,
+    theme,
+  });
+  return true;
+}
 
 // ── Day/Night Cycle ─────────────────────────────────────────────
 // Full cycle = 420 seconds (7 min). Maps to 0-24h.
@@ -138,11 +236,118 @@ export function rendererResize() {
 /* ================================================================
    DRAW ROOM BACKGROUND
 ================================================================ */
+function isOpenWorld(world) {
+  return world?.biome === 'ocean' || world?.biome === 'cosmos';
+}
+
+function drawEndlessOcean(world, cell, W, H) {
+  // This is painted before actors in the main frame, so the sea remains a
+  // true background plane while its internal bands can layer normally.
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  const time = G.gameTime || 0;
+  const roomPhase = ((cell?.col || 0) * 1.71 + (cell?.row || 0) * 2.43) % 10;
+  const wind = Math.max(0.25, Number(world.wind) || 0.6);
+
+  const base = ctx.createLinearGradient(0, 0, 0, H);
+  base.addColorStop(0, world.bgTop || '#031b35');
+  base.addColorStop(0.42, world.floorColor || '#063d66');
+  base.addColorStop(1, world.floorColorAlt || '#021b3a');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, W, H);
+
+  // The portfolio's sea uses stacked, perspective-like swells. Here every
+  // layer fills the screen, so the world reads as an endless surface instead
+  // of a room with a wall/floor seam.
+  const bands = 19;
+  for (let i = 0; i < bands; i++) {
+    const depth = i / (bands - 1);
+    const yTop = H * (-0.07 + depth * 0.96);
+    const amp = H * (0.004 + depth * 0.020) * (0.75 + wind * 0.34);
+    const wavelength = Math.max(42, W * (0.12 + depth * 0.44));
+    const phase = time * (0.18 + depth * 0.38) + roomPhase + i * 0.73;
+    const alpha = 0.10 + depth * 0.08;
+
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (let x = 0; x <= W; x += 8) {
+      const y = yTop
+        + Math.sin(x / wavelength + phase) * amp
+        + Math.sin(x / (wavelength * 0.43) + phase * 1.7) * amp * 0.28;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${depth < 0.45 ? '64,174,215' : '3,35,91'},${alpha})`;
+    ctx.fill();
+
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 8) {
+      const y = yTop
+        + Math.sin(x / wavelength + phase) * amp
+        + Math.sin(x / (wavelength * 0.43) + phase * 1.7) * amp * 0.28;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = `rgba(165,232,255,${0.06 + depth * 0.10})`;
+    ctx.lineWidth = Math.max(1, H * 0.0018);
+    ctx.stroke();
+  }
+
+  if ((G.treeDetails ?? 2) >= 2) {
+    // A few sparse surface highlights keep the sea alive without the heavy
+    // per-particle cost of the weather renderer.
+    ctx.lineWidth = Math.max(1, H * 0.0015);
+    for (let i = 0; i < 14; i++) {
+      const seed = (cell?.col || 0) * 37 + (cell?.row || 0) * 61 + i * 19;
+      const x = ((seed * 47) % 101) / 100 * W;
+      const y = (((seed * 29) % 73) / 100 * 0.82 + 0.12) * H;
+      const len = W * (0.012 + ((seed * 13) % 17) / 1000);
+      const drift = Math.sin(time * 0.65 + i) * wind * 2;
+      ctx.strokeStyle = 'rgba(196,242,255,0.19)';
+      ctx.beginPath();
+      ctx.moveTo(x + drift, y);
+      ctx.lineTo(x + len + drift, y + Math.sin(i) * 1.5);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawEndlessCosmos(world, cell, W, H) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  const time = G.gameTime || 0;
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, world.bgTop || '#000004');
+  grad.addColorStop(1, world.floorColor || '#08001c');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < 46; i++) {
+    const seed = (cell?.col || 0) * 131 + (cell?.row || 0) * 67 + i * 97;
+    const x = ((seed * 17) % 1000) / 1000 * W;
+    const y = ((seed * 43) % 1000) / 1000 * H;
+    const twinkle = 0.38 + 0.30 * Math.sin(time * 0.8 + i * 1.7);
+    ctx.fillStyle = `rgba(196,216,255,${Math.max(0.08, twinkle)})`;
+    ctx.beginPath();
+    ctx.arc(x, y, 0.8 + (seed % 3) * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 export function drawBackground() {
   if (!ctx) return;
   // Use the actual chosen world definition, not the run-depth index
   const world = G.dungeon?.worldDef || WORLDS[0];
   const W = G.W, H = G.vH;
+  const cell = currentCell();
+
+  if (isOpenWorld(world)) {
+    if (world.biome === 'ocean') drawEndlessOcean(world, cell, W, H);
+    else drawEndlessCosmos(world, cell, W, H);
+    return;
+  }
 
   // Walls
   const wallH    = Math.floor(H * 0.13);
@@ -159,7 +364,6 @@ export function drawBackground() {
   ctx.fillRect(0, 0, W, H);
 
   // Wall colors: walls with a door opening use altWallColor for visual distinction
-  const cell = currentCell();
   const cons = cell?.connections || new Set();
   const wallMain = world.wallColor;
   const wallAlt  = world.altWallColor || world.wallColor;
@@ -178,7 +382,7 @@ export function drawBackground() {
   const _rCol = cell?.col ?? 0;
   const _rRow = cell?.row ?? 0;
   const _patIdx = _roomDesignFloorPat >= 0 ? _roomDesignFloorPat : (_rCol * 7 + _rRow * 13) % 8;
-  const gs = 48;
+  const gs = FLOOR_GRID_SIZE;
   const _fw = W - wallSide * 2;
   const _fh = floorBot - floorTop;
   ctx.save();
@@ -187,7 +391,7 @@ export function drawBackground() {
   ctx.clip();
   ctx.fillStyle = floorAlt;
   if (_patIdx === 0) {
-    // Checkerboard 48px
+    // Checkerboard: large 96px grid
     for (let gx = wallSide; gx < W - wallSide; gx += gs) {
       for (let gy = floorTop; gy < floorBot; gy += gs) {
         if ((Math.floor((gx - wallSide) / gs) + Math.floor((gy - floorTop) / gs)) % 2 === 0)
@@ -195,8 +399,8 @@ export function drawBackground() {
       }
     }
   } else if (_patIdx === 1) {
-    // Large checkerboard 96px
-    const gs2 = 96;
+    // Even larger checkerboard: double the large grid
+    const gs2 = FLOOR_LARGE_GRID_SIZE;
     for (let gx = wallSide; gx < W - wallSide; gx += gs2) {
       for (let gy = floorTop; gy < floorBot; gy += gs2) {
         if ((Math.floor((gx - wallSide) / gs2) + Math.floor((gy - floorTop) / gs2)) % 2 === 0)
@@ -221,8 +425,8 @@ export function drawBackground() {
     // Monochromatic - solid floorAlt
     ctx.fillRect(wallSide, floorTop, _fw, _fh);
   } else if (_patIdx === 6) {
-    // Pixel-art: 24px "pixels" with hash pattern seeded by room coords
-    const ps = 24;
+    // Pixel-art: same 96px grid as checkerboard/planks/cross
+    const ps = FLOOR_GRID_SIZE;
     for (let gx = wallSide; gx < W - wallSide; gx += ps) {
       for (let gy = floorTop; gy < floorBot; gy += ps) {
         const px = Math.floor((gx - wallSide) / ps);
@@ -239,26 +443,6 @@ export function drawBackground() {
     ctx.fillRect(cx - gs / 2, floorTop, gs, _fh);   // vertical
   }
   ctx.restore();
-
-  // Float overlay only — avoid drawn separately (after behind-monsters, before front-monsters)
-  if (G.decorGrid) {
-    const colW = _fw / 5;
-    const rowH = _fh / 3;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(wallSide, floorTop, _fw, _fh);
-    ctx.clip();
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 5; c++) {
-        if (G.decorGrid[r]?.[c] === 'float') {
-          ctx.fillStyle = '#000000';
-          const pad = Math.round(Math.min(colW, rowH) * 0.10);
-          ctx.fillRect(wallSide + c * colW + pad, floorTop + r * rowH + pad, colW - pad * 2, rowH - pad * 2);
-        }
-      }
-    }
-    ctx.restore();
-  }
 
   // Draw walls as proper trapezoids following the perspective diagonal lines
   function fillTrap(pts, color) {
@@ -293,48 +477,12 @@ export function drawBackground() {
   const _wStyle = _roomDesignWallStyle >= 0 ? _roomDesignWallStyle : (_rCol * 11 + _rRow * 5 + Math.abs(_rCol * _rRow)) % 4;
   drawWallPattern(_wStyle, wallH, wallSide, wallBot);
 
-  // Full-wall images (stretched to each wall's trapezoid, under vignette)
-  if (_wallImgs.N) _drawImgOnQuad(_wallImgs.N, [0,0], [W,0], [W-wallSide,wallH], [wallSide,wallH]);
-  if (_wallImgs.W) _drawImgOnQuad(_wallImgs.W, [0,0], [wallSide,wallH], [wallSide,floorBot], [0,H]);
-  if (_wallImgs.E) _drawImgOnQuad(_wallImgs.E, [W,0], [W-wallSide,wallH], [W-wallSide,floorBot], [W,H]);
-  if (_wallImgs.S) _drawImgOnQuad(_wallImgs.S, [wallSide,floorBot], [W-wallSide,floorBot], [W,H], [0,H]);
-
   // Vignette
   const vig = ctx.createRadialGradient(W/2, H/2, H*0.15, W/2, H/2, H*0.8);
   vig.addColorStop(0, 'rgba(0,0,0,0)');
   vig.addColorStop(1, 'rgba(0,0,0,0.5)');
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, W, H);
-}
-
-/* Draw avoid and pass-through cells — called between behind-monsters and front-monsters */
-export function drawDecorAvoids() {
-  if (!G.decorGrid || !ctx) return;
-  const W = G.W, H = G.vH;
-  const wallH    = Math.floor(H * 0.13);
-  const wallSide = Math.floor(W * 0.05);
-  const wallBot  = Math.floor(H * 0.07);
-  const floorTop = wallH;
-  const floorBot = H - wallBot;
-  const _fw = W - wallSide * 2;
-  const _fh = floorBot - floorTop;
-  const colW = _fw / 5;
-  const rowH = _fh / 3;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(wallSide, floorTop, _fw, _fh);
-  ctx.clip();
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 5; c++) {
-      const cellType = G.decorGrid[r]?.[c];
-      if (cellType === 'avoid' || cellType === 'pass-through') {
-        ctx.fillStyle = cellType === 'avoid' ? '#ffffff' : '#ff00ff';
-        const pad = Math.round(Math.min(colW, rowH) * 0.10);
-        ctx.fillRect(wallSide + c * colW + pad, floorTop + r * rowH + pad, colW - pad * 2, rowH - pad * 2);
-      }
-    }
-  }
-  ctx.restore();
 }
 
 // Wall texture styles (deterministic per room).
@@ -471,6 +619,12 @@ export function drawMenuBackground(worldDef, openDirs = [], patIdx = 0) {
   if (!ctx) return;
   const W = G.W, H = G.vH;
 
+  if (isOpenWorld(worldDef)) {
+    if (worldDef.biome === 'ocean') drawEndlessOcean(worldDef, { col: 0, row: 0 }, W, H);
+    else drawEndlessCosmos(worldDef, { col: 0, row: 0 }, W, H);
+    return;
+  }
+
   const wallH    = Math.floor(H * 0.13);
   const wallSide = Math.floor(W * 0.05);
   const wallBot  = Math.floor(H * 0.07);
@@ -491,7 +645,7 @@ export function drawMenuBackground(worldDef, openDirs = [], patIdx = 0) {
   ctx.fillStyle = worldDef.floorColor;
   ctx.fillRect(wallSide, floorTop, W - wallSide * 2, floorBot - floorTop);
 
-  const gs = 48;
+  const gs = FLOOR_GRID_SIZE;
   const _fw = W - wallSide * 2;
   const _fh = floorBot - floorTop;
   ctx.save();
@@ -505,7 +659,7 @@ export function drawMenuBackground(worldDef, openDirs = [], patIdx = 0) {
         if ((Math.floor((gx - wallSide) / gs) + Math.floor((gy - floorTop) / gs)) % 2 === 0)
           ctx.fillRect(gx, gy, gs, gs);
   } else if (patIdx === 1) {
-    const gs2 = 96;
+    const gs2 = FLOOR_LARGE_GRID_SIZE;
     for (let gx = wallSide; gx < W - wallSide; gx += gs2)
       for (let gy = floorTop; gy < floorBot; gy += gs2)
         if ((Math.floor((gx - wallSide) / gs2) + Math.floor((gy - floorTop) / gs2)) % 2 === 0)
@@ -590,10 +744,116 @@ export function drawMenuBackground(worldDef, openDirs = [], patIdx = 0) {
 /* ================================================================
    DRAW DOORS
 ================================================================ */
+const OPEN_EDGE_STYLES = {
+  boss:     { rgb: '225, 48, 48',   alpha: 0.38 },
+  teacher:  { rgb: '38, 185, 104',  alpha: 0.30 },
+  shop:     { rgb: '218, 166, 42',  alpha: 0.28 },
+  casino:   { rgb: '153, 64, 220',  alpha: 0.30 },
+  modifier: { rgb: '44, 190, 220',  alpha: 0.24 },
+  treasure: { rgb: '248, 196, 54',  alpha: 0.28 },
+  tent:     { rgb: '158, 111, 204', alpha: 0.22 },
+};
+
+function openWorldEdgeStyle(cell, adjacent) {
+  const type = adjacent?.type;
+  if (type && OPEN_EDGE_STYLES[type]) return OPEN_EDGE_STYLES[type];
+  if (cell?.type && OPEN_EDGE_STYLES[cell.type]) return OPEN_EDGE_STYLES[cell.type];
+  return null;
+}
+
+function drawOpenWorldEdgeGradients(cell, W, H) {
+  const edgeDepth = Math.max(88, Math.min(W, H) * 0.19);
+  const roomCleared = !!cell.cleared;
+  const pulse = roomCleared ? 0.92 + Math.sin((G.last ?? 0) * 0.002) * 0.08 : 1;
+
+  for (const dir of ['N', 'E', 'S', 'W']) {
+    if (!cell.connections.has(dir)) continue;
+    const [dc, dr] = DIR_DELTA_R[dir];
+    const adjacent = getCell(((cell.col + dc) + COLS) % COLS, ((cell.row + dr) + ROWS) % ROWS);
+    const style = openWorldEdgeStyle(cell, adjacent);
+    if (!style) continue;
+
+    let gradient;
+    if (dir === 'N') gradient = ctx.createLinearGradient(0, 0, 0, edgeDepth);
+    else if (dir === 'S') gradient = ctx.createLinearGradient(0, H, 0, H - edgeDepth);
+    else if (dir === 'E') gradient = ctx.createLinearGradient(W, 0, W - edgeDepth, 0);
+    else gradient = ctx.createLinearGradient(0, 0, edgeDepth, 0);
+
+    const alpha = style.alpha * pulse;
+    gradient.addColorStop(0, `rgba(${style.rgb}, ${alpha})`);
+    gradient.addColorStop(0.48, `rgba(${style.rgb}, ${alpha * 0.34})`);
+    gradient.addColorStop(1, `rgba(${style.rgb}, 0)`);
+
+    ctx.save();
+    ctx.fillStyle = gradient;
+    if (dir === 'N') ctx.fillRect(0, 0, W, edgeDepth);
+    else if (dir === 'S') ctx.fillRect(0, H - edgeDepth, W, edgeDepth);
+    else if (dir === 'E') ctx.fillRect(W - edgeDepth, 0, edgeDepth, H);
+    else ctx.fillRect(0, 0, edgeDepth, H);
+    ctx.restore();
+  }
+}
+
+function drawOpenWorldLabels(cell, W, H) {
+  const labelAlpha = G.doorLabelAlpha ?? 1;
+  if (labelAlpha < 0.01) return;
+  // Open worlds hide the physical wall and door artwork, but their controls
+  // keep the exact old door positions so navigation still feels identical.
+  const wallH = Math.floor(H * 0.13);
+  const wallSide = Math.floor(W * 0.05);
+  const wallBot = Math.floor(H * 0.07);
+  const labelPos = {
+    N: { x: W / 2, y: wallH * 0.5 },
+    S: { x: W / 2, y: H - wallBot * 0.5 },
+    E: { x: W - wallSide * 0.5, y: H * 0.5 },
+    W: { x: wallSide * 0.5, y: H * 0.5 },
+  };
+  const bossDistMap = _getBossDistMap();
+  const curBossDist = bossDistMap?.get(`${cell.col},${cell.row}`);
+  const roomCleared = !!cell.cleared;
+  const pulse = roomCleared ? (Math.sin((G.last ?? 0) * 0.002) + 1) / 2 : 0;
+  const showLabels = G.mode === 'navigate' || cell.cleared;
+
+  for (const dir of ['N', 'E', 'S', 'W']) {
+    if (!cell.connections.has(dir) || !showLabels) continue;
+    const [dc, dr] = DIR_DELTA_R[dir];
+    const adj = getCell(((cell.col + dc) + COLS) % COLS, ((cell.row + dr) + ROWS) % ROWS);
+    if (!adj) continue;
+
+    const adjBossDist = bossDistMap?.get(`${adj.col},${adj.row}`);
+    const isBossDoor = adj.type === 'boss' || cell.type === 'boss';
+    const onBossPath = !isBossDoor && !adj.cleared && curBossDist != null
+      && adjBossDist != null && adjBossDist < curBossDist;
+    const pos = labelPos[dir];
+
+    ctx.save();
+    ctx.globalAlpha = labelAlpha * (adj.cleared && adj.visited ? 0.32 : 1);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold ${Math.floor(Math.min(wallH, wallSide) * 0.52)}px 'Noto Sans KR', 'Noto Color Emoji', sans-serif`;
+    if (onBossPath) {
+      ctx.shadowBlur = 6 + pulse * 5;
+      ctx.shadowColor = 'rgba(235, 38, 38, 0.86)';
+    } else if (roomCleared) {
+      ctx.shadowBlur = 2 + pulse * 2;
+      ctx.shadowColor = 'rgba(165, 230, 255, 0.46)';
+    }
+    ctx.fillStyle = onBossPath ? '#ffd5d2' : 'rgba(255,255,255,0.88)';
+    ctx.fillText(DIR_NAMES[dir], pos.x, pos.y);
+    ctx.restore();
+  }
+}
+
 export function drawDoors() {
   if (!ctx || !G.dungeon) return;
   const cell = currentCell();
   if (!cell) return;
+
+  if (isOpenWorld(G.dungeon.worldDef)) {
+    drawOpenWorldEdgeGradients(cell, G.W, G.vH);
+    drawOpenWorldLabels(cell, G.W, G.vH);
+    return;
+  }
 
   const W = G.W, H = G.vH;
   const wallH    = Math.floor(H * 0.13);
@@ -699,14 +959,6 @@ export function drawDoors() {
 /* ================================================================
    NAV ARROWS (navigate mode only)
 ================================================================ */
-const NAV_ARROW = { N: '↑', S: '↓', E: '→', W: '←' };
-const NAV_POS = {
-  N: (W, H) => ({ x: W / 2, y: H * 0.12 }),
-  S: (W, H) => ({ x: W / 2, y: H - H * 0.06 }),
-  E: (W, H) => ({ x: W - W * 0.06, y: H * 0.5 }),
-  W: (W, H) => ({ x: W * 0.06,     y: H * 0.5 }),
-};
-
 export function drawNavPrompt() {
   // Direction prompts are now shown directly on door openings in drawDoors()
 }

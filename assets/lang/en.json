@@ -9,7 +9,7 @@
     "unsupportedDesc": "EZRA does not run on Safari. Please open it in Chrome, Firefox, or Edge."
   },
   "title": {
-    "playBtn": "▶ Start Game!",
+    "playBtn": "▶ Play",
     "slogan": "Practicing Korean by typing",
     "subTitle": "EZRA - Type Korean to defeat monsters!",
     "bestScore": "Best score"
@@ -37,6 +37,10 @@
     "diffHardcore": "Hardcore",
     "varyFonts": "🔤 Varying Fonts",
     "weather": "🌤️ Weather",
+    "details": "🌳 Details",
+    "detailsEmpty": "🚫 Disabled",
+    "detailsDecorations": "🪾 Decorations",
+    "detailsDecorationsWind": "🍃 Decorations + wind",
     "weatherHighlyDetailed": "🌪️ Highly Detailed",
     "weatherDetailed": "⛈️ Detailed",
     "weatherBalanced": "🌧️ Balanced",
@@ -50,6 +54,7 @@
     "clickableDoors": "🚪 Clickable Doors",
     "gameMode": "Game Mode",
     "touchControls": "📱 Touch Controls",
+    "multiplayerBeta": "🧑‍🤝‍🧑 Multiplayer (beta)",
     "dictProgression": "🔓 Disable Dict. Progression",
     "touchControlsBtn": "Touch Controls",
     "keyboardControls": "Keyboard Controls",
@@ -102,6 +107,7 @@
     "statsItems": "Items Acquired",
     "statsWorlds": "Worlds Explored",
     "wikiDojang": "🥋 Hangul Dojang",
+    "wikiHanja": "🀄 Hanja",
     "wikiWorlds": "🌏 Worlds",
     "wikiItems": "📦 Items",
     "wikiPerms": "✨ Permanent Buffs",
@@ -128,6 +134,7 @@
     "title": "Choose your language"
   },
   "misc": {
+    "resetProgress": "↺ Reset Progress",
     "confirmReset": "Reset all progress?",
     "confirmResetConfirm": "Sure? Click again to confirm.",
     "fullscreenPrompt": "EZRA 타자 runs in full-screen on mobile. Tap above to go full-screen.",
@@ -142,7 +149,14 @@
     "bestScore": "Best score",
     "permanent": "Permanent",
     "consumable": "Consumable",
-    "worldSuffix": "World"
+    "worldSuffix": "World",
+    "worldLabel": "World {{n}}",
+    "roomLabel": "{{col}}{{row}}",
+    "verbLabel": "VERB",
+    "adjectiveLabel": "ADJ.",
+    "backpack": "Backpack",
+    "dictionary": "Dictionary",
+    "wallet": "Coins"
   },
   "cheat": {
     "title": "⚡ Cheat Menu",
@@ -183,6 +197,19 @@
     },
     "room": {
       "disclaimer": "Changes are local only and reset on reload.",
+      "trees": "Trees",
+      "clearTrees": "Clear",
+      "treeTheme": "Tree theme",
+      "treeAuto": "Auto",
+      "treeBroadleaf": "Broadleaf",
+      "treePalm": "Palm",
+      "treePine": "Pine",
+      "treeBlossom": "Blossom",
+      "treeBare": "Bare",
+      "treeStreet": "Street",
+      "generateTrees": "Generate",
+      "treesCleared": "Trees cleared",
+      "treesGenerated": "Trees generated",
       "wall": "Wall Type",
       "floor": "Floor Type",
       "wallColor": "Wall Color",
@@ -222,6 +249,7 @@
   "casino": {
     "title": "Casino",
     "spinHint": "Spin the slots - then STOP!",
+    "stopBtn": "⏹ STOP",
     "acceptBtn": "✅ ACCEPT",
     "clean_start": {
       "name": "Clean Start",
@@ -268,7 +296,8 @@
     "bookHint": "Press Ctrl+B to open the Book"
   },
   "inventory": {
-    "emptyBackpack": "empty backpack"
+    "emptyBackpack": "empty backpack",
+    "use": "USE"
   },
   "gameOver": {
     "victory": "🏆 Victory!",
@@ -497,7 +526,7 @@
       "desc": "Seoul's financial island on the Han River, famous for its spectacular spring cherry blossom festival."
     },
     "dokdo": {
-      "name": "Dokdo Island",
+      "name": "Dokdo",
       "desc": "Korea's remote easternmost islets in the East Sea, home to rare seabirds and rocky cliffs."
     },
     "gangnam": {
@@ -711,6 +740,7 @@
     "typeToBuy": "Type the word to buy from the {{room}}",
     "pressMap": "Press M to view the map and your location",
     "findBoss": "Find the boss room to increase the challenge",
+    "followBossGlow": "Follow the red glow: it leads to the boss.",
     "buyTent": "You could buy a tent at the shop to sleep through the night",
     "pickHangul": "Type the syllable on the coin to pick up an item",
     "pickHanja": "Type the hanja syllable to pick up an item — if you own and use a Dictionary item, the hanja will be revealed",
@@ -1811,6 +1841,7 @@
     "startAdventure": "⚔️ Start Adventure",
     "bookTitle": "📖 Practice Journal",
     "inspectorTitle": "🔎 Stroke Guide",
+    "speakAgain": "Speak again",
     "drawJamo": "Draw {j}",
     "drawSyllable": "Draw {s}ㅤ·ㅤNow: {j}",
     "great": "Great!",

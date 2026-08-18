@@ -20,6 +20,8 @@ export const G = {
   // ── Persistent wallet (cross-run, localStorage) ──────────────
   wallet: parseInt(localStorage.getItem('krr_wallet') || '0'),
   hiScore: parseInt(localStorage.getItem('krr_hi') || '0'),
+  // Highest world index reached in any run (used for Hanja wiki unlocks).
+  maxWorldReached: parseInt(localStorage.getItem('krr_max_world_reached') || '0'),
 
   // ── Run-persistent state (reset on new run) ───────────────────
   run: null, // populated by resetRunState()
@@ -46,6 +48,7 @@ export const G = {
   varyFonts:    true,
   hangulSize:   32,
   weatherEnabled: true,
+  treeDetails:  2, // 0=empty, 1=decorations, 2=decorations + wind
   ttsEnabled:   true,
   lang:         'en',
   showHanjaOnMonsters: false,
@@ -79,9 +82,6 @@ export const G = {
   wxOldWeather: null,   // weather type of wxOldParticles
   wxFogOffset: 0,
 
-  // ── Decoration grid (set by cheat menu, used by renderer + combat) ─
-  decorGrid:      null, // null | array[3][5] of 'none'|'float'|'bypass'
-
   // ── Menu preview (background room while on title screen) ─────
   menuPreview:    null, // { worldDef, openDirs, patIdx }
 
@@ -89,6 +89,7 @@ export const G = {
   ctrlPanelOpen:  false,
   clickableDoors: false,
   touchMode:      false,
+  multiplayerBeta: false,
 
   // ── Announce ─────────────────────────────────────────────────
   announceQ:   null,
@@ -121,6 +122,7 @@ export function resetRunState() {
     worldSeqOffset:  0,          // seq[0] == absolute worldIdx worldSeqOffset
     roomsCleared:    0,
     bossesKilled:    0,
+    bossPathHintDismissed: false,
     wallet:          0,   // in-run 원 earned from kills
     permanents:      [],  // array of permanent item ids
     // Permanent effect accumulators:
@@ -177,7 +179,9 @@ export function resetRunState() {
     itemsTaken:      0,
   };
   G.playerHP  = G.playerMax;
-  G.inventory = { stacks: [], sel: 0 };
+  // Every run starts with one tent as the player's starter consumable.
+  // Keep it as a normal inventory stack so the existing item-use flow applies.
+  G.inventory = { stacks: [{ item: '⛺', count: 1 }], sel: 0 };
   G.activeEffect = null;
   G.critShots    = 0;
   G.stunBubble   = false;
@@ -212,7 +216,6 @@ export function resetRoomState(waveNum) {
   G.frozen    = false;
   G.freezeTimer = 0;
   G.announceQ = null;
-  G.decorGrid = null; // per-room temporary; clears on every room change
   // Clear ground items DOM
   const gi = document.getElementById('ground-items');
   if (gi) gi.innerHTML = '';
@@ -335,6 +338,15 @@ export function savePersistentState() {
   localStorage.setItem('krr_seenWorlds', JSON.stringify(G.seenWorlds || []));
   localStorage.setItem('krr_itemsAcquired', String(G.itemsEverAcquired || 0));
   localStorage.setItem('krr_learnedItems', JSON.stringify(G.learnedItems || []));
+}
+
+// Record all-time world progression without resetting it at the start of a run.
+export function recordWorldReached(worldIdx) {
+  if (!Number.isFinite(worldIdx)) return;
+  const reached = Math.max(0, Math.floor(worldIdx));
+  if (reached <= (G.maxWorldReached || 0)) return;
+  G.maxWorldReached = reached;
+  localStorage.setItem('krr_max_world_reached', String(reached));
 }
 
 // Helper: increment word kill count and update hidden status

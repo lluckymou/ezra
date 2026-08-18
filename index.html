@@ -171,11 +171,7 @@
         </div>
         <div class="gopt-card">
           <div class="gopt-label" data-i18n="options.language">🌐 Language</div>
-          <select id="sel-lang" class="gopt-select">
-            <option value="en" selected>English</option>
-            <option value="ko">한국어</option>
-            <option value="pt">Português</option>
-          </select>
+          <select id="sel-lang" class="gopt-select"></select>
         </div>
         <div class="gopt-card">
           <div class="gopt-label" data-i18n="options.weather">🌤️ Weather</div>
@@ -186,6 +182,14 @@
             <option value="0.25" data-i18n-opt="options.weatherPerformance">Performance</option>
             <option value="0.1"  data-i18n-opt="options.weatherMinimal">Minimal</option>
             <option value="0"    data-i18n-opt="options.weatherOff">Disabled</option>
+          </select>
+        </div>
+        <div class="gopt-card">
+          <div class="gopt-label" data-i18n="options.details">🌳 Details</div>
+          <select id="sel-details" class="gopt-select">
+            <option value="0" data-i18n-opt="options.detailsEmpty">🚫 Disabled</option>
+            <option value="1" data-i18n-opt="options.detailsDecorations">🪾 Decorations</option>
+            <option value="2" data-i18n-opt="options.detailsDecorationsWind" selected>🍃 Decorations + wind</option>
           </select>
         </div>
         <div class="gopt-card">
@@ -231,6 +235,13 @@
           </label>
         </div>
         <div class="gopt-card">
+          <div class="gopt-label" data-i18n="options.multiplayerBeta">🧑‍🤝‍🧑 Multiplayer (beta)</div>
+          <label class="gopt-toggle">
+            <input type="checkbox" id="chk-multiplayer-beta">
+            <span class="gopt-track"><span class="gopt-thumb"></span></span>
+          </label>
+        </div>
+        <div class="gopt-card">
           <div class="gopt-label" data-i18n="options.dictProgression">🔓 Disable Dict. Progression</div>
           <label class="gopt-toggle">
             <input type="checkbox" id="chk-dict-prog">
@@ -269,7 +280,7 @@
         <span style="margin: 0 10px">·</span>
         <button id="import-progress-btn" data-i18n="progress.import" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:.7rem;cursor:pointer;font-family:inherit;">Import Progress</button>
         <span style="margin: 0 10px">·</span>
-        <button id="title-reset-btn" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:.7rem;cursor:pointer;font-family:inherit;">↺ Reset progress</button>
+        <button id="title-reset-btn" data-i18n="misc.resetProgress" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:.7rem;cursor:pointer;font-family:inherit;">↺ Reset progress</button>
       </div>
     </div>
   </div>
@@ -401,7 +412,7 @@
       <div class="casino-slot" id="casino-slot-2"></div>
     </div>
     <div class="casino-controls">
-      <button id="casino-stop-btn" class="casino-stop">⏹ STOP</button>
+      <button id="casino-stop-btn" class="casino-stop" data-i18n="casino.stopBtn">⏹ STOP</button>
       <button id="casino-accept-btn" class="casino-accept hidden" data-i18n="casino.acceptBtn">✅ ACCEPT</button>
     </div>
   </div>
@@ -422,6 +433,12 @@
   <span id="tutorial-text"></span>
 </div>
 
+<!-- ── BOSS PATH HINT ─────────────────────────────────────── -->
+<div id="boss-path-hint" class="off" aria-live="polite">
+  <span class="boss-path-hint-icon">🔴</span>
+  <span data-i18n="tutorial.followBossGlow">Siga o brilho vermelho: ele aponta para o chefe.</span>
+</div>
+
 <!-- ── CANVAS ─────────────────────────────────────────────── -->
 <canvas id="gc"></canvas>
 
@@ -429,7 +446,7 @@
 <div id="hud">
   <!-- Room/world info (replaces wave card) -->
   <div class="hcard" id="hcard-wave">
-    <div class="hlbl" id="hud-world-lbl">World</div>
+    <div class="hlbl" id="hud-world-lbl" data-i18n="hud.worldSuffix">World</div>
     <div class="wave-body">
       <!-- Progress ring with world icon inside -->
       <div class="wave-ring-wrap" style="position:relative">
@@ -442,14 +459,14 @@
         </svg>
       </div>
       <!-- Backpack button (touch/mobile only) -->
-      <div id="hud-backpack-btn" class="hud-nav-item" onclick="openCtrlPanel()" style="cursor:pointer;pointer-events:all;display:none;user-select:none" title="Backpack">
+      <div id="hud-backpack-btn" class="hud-nav-item" onclick="openCtrlPanel()" style="cursor:pointer;pointer-events:all;display:none;user-select:none" data-i18n-title="hud.backpack" title="Backpack">
         <div class="hud-nav-icon">🎒</div>
-        <div class="hud-nav-lbl">가방</div>
+        <div class="hud-nav-lbl" data-i18n="hud.backpack">가방</div>
       </div>
       <!-- Dictionary button -->
-      <div class="hud-nav-item" onclick="toggleBook()" style="cursor:pointer;pointer-events:all" title="Dictionary (B)">
+      <div class="hud-nav-item" onclick="toggleBook()" style="cursor:pointer;pointer-events:all" data-i18n-title="hud.dictionary" title="Dictionary (B)">
         <div class="hud-nav-icon">📒</div>
-        <div class="hud-nav-lbl">사전</div>
+        <div class="hud-nav-lbl" data-i18n="hud.dictionary">사전</div>
       </div>
       <!-- Map icon + room code below -->
       <div class="hud-nav-item" onclick="toggleMap()" style="cursor:pointer;pointer-events:all" title="Map (M)">
@@ -472,7 +489,7 @@
         <div id="inv-emoji"></div>
         <div id="inv-count"></div>
         <div id="inv-slot-hover">
-          <button id="inv-use-hover" title="Enter">USE</button>
+          <button id="inv-use-hover" data-i18n="inventory.use" data-i18n-title="inventory.use" title="Enter">USE</button>
         </div>
       </div>
       <button class="inv-nav" id="inv-next">▷</button>
@@ -482,7 +499,7 @@
 
   <!-- Wallet / pause -->
   <div class="hcard" id="hcard-score">
-    <div class="hlbl">💰 돈</div>
+    <div class="hlbl">💰 <span data-i18n="hud.wallet">돈</span></div>
     <div class="score-body">
       <div class="score-vals">
         <div id="hs-val">0</div>
@@ -701,17 +718,17 @@
     <div id="dej-modal-title" data-i18n="dojang.entry.title">Answer Your Calling</div>
     <div id="dej-paths">
       <button class="dej-path-btn" data-path="0">
-        <span class="dej-path-icon">ㅃ</span>
+        <span class="dej-path-icon">ㅇ</span>
         <span class="dej-path-label" data-i18n="dojang.entry.path0">I can't read or write Korean well</span>
       </button>
       <span class="dej-connector">·</span>
       <button class="dej-path-btn" data-path="1">
-        <span class="dej-path-icon">쀄</span>
+        <span class="dej-path-icon">일</span>
         <span class="dej-path-label" data-i18n="dojang.entry.path1">I can't type on Korean keyboards yet</span>
       </button>
       <span class="dej-connector">·</span>
       <button class="dej-path-btn" data-path="2">
-        <span class="dej-path-icon">쀏</span>
+        <span class="dej-path-icon">읽</span>
         <span class="dej-path-label" data-i18n="dojang.entry.path2">I can already type on Korean keyboards</span>
       </button>
     </div>
@@ -727,8 +744,8 @@
   <!-- Top HUD bar: [inspector] [book]  [ring]  [pause] -->
   <div id="dojang-hud">
     <div id="dojang-hud-left">
-      <button class="dj-hud-btn" id="dojang-book-btn" title="Book">📖</button>
-      <button class="dj-hud-btn" id="dojang-inspector-btn" title="Stroke Guide">🔎</button>
+      <button class="dj-hud-btn" id="dojang-book-btn" data-i18n-title="dojang.bookTitle" title="Book">📖</button>
+      <button class="dj-hud-btn" id="dojang-inspector-btn" data-i18n-title="dojang.inspectorTitle" title="Stroke Guide">🔎</button>
     </div>
     <div id="dojang-ring-wrap">
       <svg id="dojang-ring-svg" width="50" height="50" viewBox="0 0 50 50">
@@ -747,7 +764,7 @@
 
   <!-- Player sprite + action buttons -->
   <div id="dojang-player">
-    <button class="dj-player-btn" id="dojang-btn-speak" title="Speak again">🔊</button>
+    <button class="dj-player-btn" id="dojang-btn-speak" data-i18n-title="dojang.speakAgain" title="Speak again">🔊</button>
     <div id="dojang-player-sprite"></div>
     <button class="dj-player-btn" id="dojang-btn-restart" title="Restart">❌</button>
   </div>
@@ -976,6 +993,23 @@
   <div class="cheat-panel" id="cheat-panel-room">
     <p class="cheat-disclaimer" data-i18n="cheat.room.disclaimer">Changes are local only and reset on reload.</p>
     <div class="cheat-row">
+      <label data-i18n="cheat.room.trees">Trees</label>
+      <button class="cheat-btn red" onclick="cheatClearRoomTrees()" data-i18n="cheat.room.clearTrees">Clear</button>
+    </div>
+    <div class="cheat-row">
+      <label data-i18n="cheat.room.treeTheme">Tree theme</label>
+      <select class="cheat-inp" id="c-tree-theme" style="width:112px">
+        <option value="auto" data-i18n-opt="cheat.room.treeAuto">Auto</option>
+        <option value="broadleaf" data-i18n-opt="cheat.room.treeBroadleaf">Broadleaf</option>
+        <option value="palm" data-i18n-opt="cheat.room.treePalm">Palm</option>
+        <option value="pine" data-i18n-opt="cheat.room.treePine">Pine</option>
+        <option value="blossom" data-i18n-opt="cheat.room.treeBlossom">Blossom</option>
+        <option value="bare" data-i18n-opt="cheat.room.treeBare">Bare</option>
+        <option value="street" data-i18n-opt="cheat.room.treeStreet">Street</option>
+      </select>
+      <button class="cheat-btn" onclick="cheatGenerateRoomTrees()" data-i18n="cheat.room.generateTrees">Generate</button>
+    </div>
+    <div class="cheat-row">
       <label data-i18n="cheat.room.wall">Wall</label>
       <button class="cheat-btn" onclick="cheatRoomWall(-1)">←</button>
       <span id="c-wall-name" class="cheat-preset-name">—</span>
@@ -1000,63 +1034,6 @@
       <button class="cheat-btn" onclick="cheatApplyRoomColors()" data-i18n="cheat.btn.set">Set</button>
     </div>
     <div class="cheat-row">
-      <label>Floor Decor Grid</label>
-    </div>
-    <div class="cheat-row">
-      <label>Presets</label>
-      <button class="cheat-btn" onclick="cheatDecorPreset(0)" title="X X X X X&#10;X X X X X&#10;0 0 0 0 0">P1</button>
-      <button class="cheat-btn" onclick="cheatDecorPreset(1)" title="0 0 0 0 0&#10;X X X X X&#10;0 0 0 0 0">P2</button>
-      <button class="cheat-btn" onclick="cheatDecorPreset(2)" title="0 0 X X X&#10;X X X 0 0&#10;X 0 0 0 X">P3</button>
-    </div>
-    <div id="c-decor-grid" class="cheat-decor-grid">
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r0c0" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r0c1" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r0c2" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r0c3" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r0c4" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r1c0" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r1c1" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r1c2" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r1c3" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r1c4" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c0" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c1" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c2" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c3" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-      <select class="cheat-inp cheat-decor-sel" id="c-decor-r2c4" onchange="cheatDecorGridChange()"><option value="none">none</option><option value="float">float</option><option value="avoid">avoid</option><option value="pass-through">pass-through</option></select>
-    </div>
-    <div class="cheat-row">
-      <label>Full-Wall Image</label>
-    </div>
-    <div class="cheat-row">
-      <label style="min-width:2em">N</label>
-      <select class="cheat-inp" id="c-wall-img-N" onchange="cheatWallImage('N',this.value)">
-        <option value="none">none</option>
-        <option value="flag">flag</option>
-      </select>
-    </div>
-    <div class="cheat-row">
-      <label style="min-width:2em">S</label>
-      <select class="cheat-inp" id="c-wall-img-S" onchange="cheatWallImage('S',this.value)">
-        <option value="none">none</option>
-        <option value="flag">flag</option>
-      </select>
-    </div>
-    <div class="cheat-row">
-      <label style="min-width:2em">E</label>
-      <select class="cheat-inp" id="c-wall-img-E" onchange="cheatWallImage('E',this.value)">
-        <option value="none">none</option>
-        <option value="flag">flag</option>
-      </select>
-    </div>
-    <div class="cheat-row">
-      <label style="min-width:2em">W</label>
-      <select class="cheat-inp" id="c-wall-img-W" onchange="cheatWallImage('W',this.value)">
-        <option value="none">none</option>
-        <option value="flag">flag</option>
-      </select>
-    </div>
-    <div class="cheat-row">
       <label data-i18n="cheat.room.resetRoom">Reset Room</label>
       <button class="cheat-btn red" onclick="cheatResetRoomColors()" data-i18n="cheat.btn.reset">Reset</button>
     </div>
@@ -1075,7 +1052,7 @@
     <div id="lore-player-inner"></div>
   </div>
   <div id="lore-villain-outer">
-    <div id="lore-villain-inner">🧞‍♀️</div>
+    <div id="lore-villain-inner">🐉</div>
   </div>
   <div id="lore-speech"></div>
   <div id="lore-particles"></div>
