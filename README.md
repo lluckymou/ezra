@@ -25,7 +25,7 @@ The philosophy here isn't to _gamify_ learning. It's the opposite: to *"learnify
 
 ### Dungeon (Roguelite)
 
-A full roguelite dungeon crawler where you defeat monsters by typing Korean words. 15 worlds inspired by real Korean locations, a 800+ word vocabulary system, boss encounters, items, and persistent progression.
+A full roguelite dungeon crawler where you defeat monsters by typing Korean words. Explore 15 worlds inspired by Korean places, culture, mythology, and imagination, with an 800+ word vocabulary system, boss encounters, items, and persistent progression.
 
 The first version took roughly a month to build and ships with a full roguelite feature set alongside a serious vocabulary system.
 
@@ -48,7 +48,7 @@ A dedicated mode for learning how to write Hangul from scratch — stroke by str
 - **800+ Korean words** across 20+ thematic categories (places, food, animals, body, emotions, verbs, adjectives, culture, hanja...)
 - **Unambiguous word representation** - every word has their own unique icon or icon combinations
 - **Vocabulary progression** - words unlock gradually as you improve; kill counts hide mastered words from the enemy pool
-- **15 worlds** inspired by real Korean locations, each with its own biome, enemy pool, and visual theme
+- **15 worlds** inspired by Korean places, culture, mythology, and imagination, each with its own biome, enemy pool, and visual theme
 - **Boss encounters** with multiple special types: archer, ice, musician, warrior, eruptor, king
 - **Item system** - consumables, permanent upgrades, modifier rooms, treasure rooms
 - **Casino room** with slot mechanics
@@ -70,11 +70,11 @@ A dedicated mode for learning how to write Hangul from scratch — stroke by str
 - **Text-to-speech** - Korean pronunciation for every word you type
 - **Varying fonts** - randomized Korean typefaces per monster to train reading across styles
 - **Minimap** with full dungeon layout, room type indicators, and fog of war
-- **Multiple languages** - UI in English, Portuguese, and Korean
+- **Multiple languages** - UI in 12 languages: English, Spanish, Portuguese, French, Korean, Japanese, Chinese, Vietnamese, Filipino, Thai, Indonesian, and Hindi
 - **Touch support** - full on-screen Hangul keyboard with composition for mobile play
 - **Responsive layout** - works on desktop, tablet, and mobile without needing Korean locale
 - **Hanja powerup system** - optional Chinese character pickups for advanced learners
-- **P2P multiplayer** - cooperative and competitive play over peer-to-peer connections, no server required
+- **P2P multiplayer** - cooperative play over peer-to-peer connections, no server required
 
 ---
 
@@ -117,8 +117,7 @@ No build step required - this is plain ES6 modules. You just need a local HTTP s
 
 - Chrome/Edge 90+
 - Firefox 88+
-- Safari 14+
-- Mobile browsers (iOS Safari, Chrome Mobile)
+- Chrome Mobile
 
 ---
 

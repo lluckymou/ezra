@@ -1,4 +1,4 @@
-const CACHE = '1.0.1';
+const CACHE = '1.0.2';
 
 // On install: cache only the bare minimum to allow offline play
 const OFFLINE_SHELL = [

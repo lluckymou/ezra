@@ -689,7 +689,14 @@ function renderQuestion() {
         window._submitTestAnswer(window._getTestInputValue());
       }
     });
-    setTimeout(() => inp.focus(), 100);
+    if (G.touchMode) {
+      // Touch tests are fed by the game's custom keyboard, never the OS keyboard.
+      inp.setAttribute('readonly', 'readonly');
+      inp.setAttribute('inputmode', 'none');
+      inp.setAttribute('tabindex', '-1');
+    } else {
+      setTimeout(() => inp.focus(), 100);
+    }
   }
 
   // Wire write submit

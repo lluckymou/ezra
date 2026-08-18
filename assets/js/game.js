@@ -604,6 +604,77 @@ const paEl     = document.getElementById('player-area');
 const mapEl    = document.getElementById('minimap-grid');
 const hudEl    = document.getElementById('hud');
 
+// Touch mode uses the custom on-screen keyboard exclusively. Native mobile
+// keyboards must never be summoned by a text field receiving focus.
+function _isNativeKeyboardField(el) {
+  if (!el || typeof el.matches !== 'function') return false;
+  if (el.matches('textarea')) return true;
+  if (el.matches('[contenteditable]')) {
+    return el.getAttribute('contenteditable') !== 'false' || !!el.dataset.touchOriginalReadonly;
+  }
+  if (!el.matches('input')) return false;
+  return !['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(el.type);
+}
+
+function _setTouchInputLock(locked) {
+  document.querySelectorAll('input, textarea, [contenteditable]').forEach(el => {
+    if (!_isNativeKeyboardField(el)) return;
+
+    if (locked) {
+      if (!el.dataset.touchOriginalReadonly) {
+        el.dataset.touchOriginalReadonly = el.hasAttribute('readonly') ? '1' : '0';
+        el.dataset.touchOriginalInputmode = el.getAttribute('inputmode') ?? '';
+        el.dataset.touchOriginalTabindex = el.getAttribute('tabindex') ?? '';
+        el.dataset.touchOriginalHasTabindex = el.hasAttribute('tabindex') ? '1' : '0';
+        el.dataset.touchOriginalContenteditable = el.getAttribute('contenteditable') ?? '';
+        el.dataset.touchOriginalHasContenteditable = el.hasAttribute('contenteditable') ? '1' : '0';
+      }
+      el.setAttribute('readonly', 'readonly');
+      el.setAttribute('inputmode', 'none');
+      el.setAttribute('tabindex', '-1');
+      if (el.matches('[contenteditable]')) el.setAttribute('contenteditable', 'false');
+      el.blur();
+      return;
+    }
+
+    if (el.dataset.touchOriginalReadonly === '1') el.setAttribute('readonly', 'readonly');
+    else el.removeAttribute('readonly');
+    if (el.dataset.touchOriginalInputmode) el.setAttribute('inputmode', el.dataset.touchOriginalInputmode);
+    else el.removeAttribute('inputmode');
+    if (el.dataset.touchOriginalHasTabindex === '1') el.setAttribute('tabindex', el.dataset.touchOriginalTabindex);
+    else el.removeAttribute('tabindex');
+    if (el.dataset.touchOriginalHasContenteditable === '1') el.setAttribute('contenteditable', el.dataset.touchOriginalContenteditable);
+    else el.removeAttribute('contenteditable');
+    delete el.dataset.touchOriginalReadonly;
+    delete el.dataset.touchOriginalInputmode;
+    delete el.dataset.touchOriginalTabindex;
+    delete el.dataset.touchOriginalHasTabindex;
+    delete el.dataset.touchOriginalContenteditable;
+    delete el.dataset.touchOriginalHasContenteditable;
+  });
+}
+
+function _focusTypingInput() {
+  if (!typingEl || G.touchMode) {
+    typingEl?.blur();
+    return;
+  }
+  typingEl.focus();
+}
+
+// Prevent both user-initiated and programmatic focus from opening a native
+// keyboard. Tapping the central field still means “space” in touch mode.
+document.addEventListener('pointerdown', e => {
+  if (!G.touchMode || !_isNativeKeyboardField(e.target)) return;
+  e.preventDefault();
+  e.target.blur?.();
+  if (e.target === typingEl) _touchSpace();
+}, true);
+
+document.addEventListener('focusin', e => {
+  if (G.touchMode && _isNativeKeyboardField(e.target)) e.target.blur?.();
+}, true);
+
 // Fullscreen prompt cycle helpers — assigned inside loadLanguages().then()
 let _fsPromptTimer      = null;
 let _startFsPromptCycle = () => {};
@@ -2771,8 +2842,12 @@ function buildTitleScreen() {
         codeEl.readOnly = false;
       }
       modal.classList.remove('off');
-      if (mode === 'export') { codeEl.focus(); codeEl.select(); }
-      else codeEl.focus();
+      if (!G.touchMode) {
+        codeEl.focus();
+        if (mode === 'export') codeEl.select();
+      } else {
+        codeEl.blur();
+      }
     }
 
     closeBtn?.addEventListener('click', () => modal.classList.add('off'));
@@ -3794,7 +3869,7 @@ function startNewRun() {
     G.worldTransition.onComplete = () => {
       if (paEl) { paEl.style.display = 'flex'; paEl.style.opacity = '1'; }
       playMusic(G.dungeon?.worldDef?.id || 'palace', 0);
-      typingEl?.focus();
+      _focusTypingInput();
       _applyTouchZoom();
       setTimeout(_applyTouchZoom, 80);
       setTimeout(_applyTouchZoom, 250);
@@ -3816,7 +3891,7 @@ function startNewRun() {
   setTimeout(_applyTouchZoom, 250);
   if (typingEl) typingEl.value = '';
   _imeCommitted = ''; _imeComposer.reset();
-  typingEl?.focus();
+  _focusTypingInput();
   // Sync dungeon blueprint to guest if in multiplayer session
   if (window._mpOnRunStart) window._mpOnRunStart();
 }
@@ -3995,13 +4070,13 @@ function resumeGame() {
   // Co-op: close pause screen without touching ctrlPanelOpen (game was never paused)
   if (G.mp?.active && G.phase === 'run') {
     screenOff('scr-pause');
-    typingEl?.focus();
+    _focusTypingInput();
     return;
   }
   if (G.phase !== 'paused') return;
   G.phase = 'run';
   screenOff('scr-pause');
-  typingEl?.focus();
+  _focusTypingInput();
 }
 
 function goToMenu() {
@@ -4185,7 +4260,7 @@ function navigateWithAnim(dir) {
 
   sfx('roomNavigate', 0.65);
   // Fall back to instant transition if ghost element missing
-  if (!_ghost) { enterRoom(nc, nr, dir); typingEl?.focus(); return; }
+  if (!_ghost) { enterRoom(nc, nr, dir); _focusTypingInput(); return; }
 
   G.inTransition = true;
 
@@ -4298,7 +4373,7 @@ function navigateWithAnim(dir) {
             _ghost.style.display = 'none';
             G.inTransition = false;
             refreshBubbleDisplay(); // re-show stun/autokill if still active
-            typingEl?.focus();
+            _focusTypingInput();
           }, 260);
         }, 310);
       }, 280); // 200ms grow + 80ms pause
@@ -4503,7 +4578,7 @@ function _imeToggle() {
 
 document.getElementById('ime-toggle')?.addEventListener('click', () => {
   _imeToggle();
-  typingEl?.focus();
+  _focusTypingInput();
 });
 
 /* ================================================================
@@ -5011,11 +5086,6 @@ function _cleanupTouchExtras() {
   // Hide KB panels (IME toggle will re-show if re-enabled in keyboard mode)
   lp?.classList.remove('visible');
   rp?.classList.remove('visible');
-  // Restore typing field for physical keyboard
-  if (typingEl) {
-    typingEl.removeAttribute('readonly');
-    typingEl.removeAttribute('inputmode');
-  }
   // Reset cursor on KB key wrappers (touch mode sets them to pointer)
   Object.values(_kbKeyEls).forEach(el => { if (el.parentElement) el.parentElement.style.cursor = ''; });
 }
@@ -5023,23 +5093,19 @@ function _cleanupTouchExtras() {
 function applyTouchMode() {
   if (!G.touchMode) {
     document.body.classList.remove('touch-mode');
+    _setTouchInputLock(false);
     _cleanupTouchExtras();
     _applyTouchZoom();
     return;
   }
   document.body.classList.add('touch-mode');
+  _setTouchInputLock(true);
 
   // Ensure Korean IME is active on every game start (resets stale 영-mode from previous game)
   if (!_imeEnabled) _imeToggle();
 
   if (!_touchKeysWired) {
     _touchKeysWired = true;
-
-    // Typing field: prevent system keyboard
-    if (typingEl) {
-      typingEl.setAttribute('inputmode', 'none');
-      typingEl.setAttribute('readonly', 'readonly');
-    }
 
     // Wire all KB keys to touch handler (once - same DOM elements throughout session)
     Object.entries(_kbKeyEls).forEach(([k, el]) => {
@@ -5076,12 +5142,6 @@ function applyTouchMode() {
   // Always show KB panels
   document.getElementById('kb-left')?.classList.add('visible');
   document.getElementById('kb-right')?.classList.add('visible');
-
-  // Click on typing field = space (commits syllable + adds space)
-  typingEl?.addEventListener('click', () => {
-    if (!G.touchMode) return;
-    _touchSpace();
-  });
 
   // Touch space button
   document.getElementById('touch-space-btn')?.addEventListener('pointerdown', e => {
@@ -5198,7 +5258,7 @@ typingEl?.addEventListener('keydown', e => {
         if (!_latinAutoSeq.startsWith('che')) {
           _latinAutoSeq = '';
           _imeToggle();
-          typingEl?.focus();
+          _focusTypingInput();
         } else {
           _latinAutoSeq = ''; // was cheatcode prefix, reset
         }
@@ -5382,7 +5442,7 @@ canvas?.addEventListener('click', () => {
   if (G.phase !== 'run' || G.mode !== 'combat') return;
   const val = (typingEl?.value || '').trim();
   if (!G.touchMode && !_typedIsValidInput(val)) return;
-  if (typingEl && document.activeElement !== typingEl) typingEl.focus();
+  if (!G.touchMode && typingEl && document.activeElement !== typingEl) typingEl.focus();
   if (_imeEnabled) {
     _imeCommitted += _imeComposer.commitCurrent();
     if (typingEl) typingEl.value = _imeCommitted || typingEl.value;
@@ -5690,13 +5750,13 @@ document.addEventListener('keyup', e => {
 
 // Keep typing input focused while game is running
 typingEl?.addEventListener('blur', () => {
-  if (G.phase !== 'run' || G.ctrlPanelOpen) return;
+  if (G.touchMode || G.phase !== 'run' || G.ctrlPanelOpen) return;
   setTimeout(() => {
     if (G.phase !== 'run' || G.ctrlPanelOpen) return;
     const active = document.activeElement;
     // Let other inputs hold focus (dict search, cheat menu, pause, etc.)
     if (active && active !== typingEl && active.closest('#cheat-menu, #scr-pause, #book-panel, input, select, textarea')) return;
-    typingEl.focus();
+    _focusTypingInput();
   }, 50);
 });
 
@@ -5870,7 +5930,8 @@ document.addEventListener('pointerdown', e => {
   if (!typingEl || G.phase !== 'run') return;
   if (e.target === typingEl) return;
   if (e.target.closest('button, input, select, .menu-card, #cheat-menu, #map-panel, #book-panel')) return;
-  setTimeout(() => typingEl.focus(), 0);
+  if (G.touchMode) return;
+  setTimeout(_focusTypingInput, 0);
 });
 
 /* ================================================================
@@ -6686,7 +6747,7 @@ function _mpHandleMessage(msg) {
         refreshLives();
         refreshInventoryUI();
         updateHudAll();
-        typingEl?.focus();
+        _focusTypingInput();
       } else if (G.phase === 'run' || G.phase === 'paused') {
         // Already in-game: just teleport to host's room
         _hideMpDisconnectOverlay();
