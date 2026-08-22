@@ -1794,7 +1794,9 @@
   "donate": {
     "enjoyingIt": "Bạn có thích nó không?",
     "body": "Bạn đã mở trò chơi {{count}} lần… Hãy cân nhắc ủng hộ công việc của tôi - Tôi tin vào nền tảng giáo dục miễn phí và những người như bạn có thể giúp phát triển nền tảng này.",
-    "btnLabel": "Hỗ trợ về Nhà tài trợ GitHub"
+    "btnLabel": "Hỗ trợ về Nhà tài trợ GitHub",
+    "supportBody": "EZRA miễn phí và được làm bởi một người. Nếu trò chơi mang lại niềm vui hoặc giúp bạn học, sự ủng hộ của bạn sẽ giúp dự án tiếp tục phát triển.",
+    "pix": "Dành cho người Brazil: khóa Pix của tôi là email phụ:"
   },
   "ttsWarning": {
     "body": "Trình duyệt của bạn không hỗ trợ chuyển văn bản thành giọng nói tiếng Hàn. Để có trải nghiệm tốt nhất, nên sử dụng Google Chrome."

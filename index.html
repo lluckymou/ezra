@@ -291,12 +291,12 @@
     <button id="donate-close"><span class="icon-close"></span></button>
     <div class="modal-big-emoji">🥺</div>
     <p id="donate-title" data-i18n="donate.enjoyingIt"></p>
-    <p id="donate-msg"></p>
+    <p id="donate-msg" data-i18n="donate.supportBody"></p>
     <a id="donate-btn" href="https://github.com/sponsors/lluckymou?frequency=one-time" target="_blank" rel="noopener noreferrer">
       <img src="assets/img/donate-icon.svg" alt="GitHub Sponsors">
       <span data-i18n="donate.btnLabel">Support on GitHub Sponsors</span>
     </a>
-    <p id="donate-pix">Brasileiros: Minha Chave Pix é meu e-mail secundário <i style="color:rgba(255,255,255,.75)">lluckymou@gmail.com</i></p>
+    <p id="donate-pix"><span data-i18n="donate.pix">For Brazilians, my Pix key is my secondary email:</span> <i>lluckymou@gmail.com</i></p>
   </div>
 </div>
 <!-- ── TTS WARNING MODAL ───────────────────────────────────── -->
@@ -309,10 +309,24 @@
 </div>
 <!-- ── GAME OVER ──────────────────────────────────────────── -->
 <div id="scr-over" class="screen off" inert>
-  <h2 id="go-title">🪦 게임 오버</h2>
-  <div id="go-detail"></div>
-  <div id="go-hiscore"></div>
-  <button id="btn-restart" data-i18n="gameOver.mainMenu">🏠 Main Menu</button>
+  <div id="game-over-panel">
+    <h2 id="go-title">🪦 게임 오버</h2>
+    <div id="go-detail"></div>
+    <div id="go-hiscore"></div>
+    <section id="go-support" class="support-callout" aria-labelledby="go-support-title">
+      <div class="support-callout-heading">
+        <span class="support-callout-emoji" aria-hidden="true">🫰</span>
+        <strong id="go-support-title" data-i18n="donate.enjoyingIt">Are you enjoying it?</strong>
+      </div>
+      <p class="support-callout-body" data-i18n="donate.supportBody">EZRA is free and made by one person. Your support helps the project keep growing.</p>
+      <a class="support-callout-btn" href="https://github.com/sponsors/lluckymou?frequency=one-time" target="_blank" rel="noopener noreferrer">
+        <img src="assets/img/donate-icon.svg" alt="">
+        <span data-i18n="donate.btnLabel">Support on GitHub Sponsors</span>
+      </a>
+      <p class="support-callout-pix"><span data-i18n="donate.pix">For Brazilians, my Pix key is my secondary email:</span> <i>lluckymou@gmail.com</i></p>
+    </section>
+    <button id="btn-restart" data-i18n="gameOver.mainMenu">🏠 Main Menu</button>
+  </div>
 </div>
 
 <!-- ── PAUSE ──────────────────────────────────────────────── -->
@@ -333,11 +347,11 @@
         </div>
         <div class="pause-opt-row pause-opt-full pause-sfx-row">
           <span class="pause-opt-label"><span id="pause-sfx-emoji">🔉</span> SFX</span>
-          <input type="range" id="pause-sfx-vol" min="0" max="100" value="50" style="width:90px;accent-color:#4a9eff">
+          <input type="range" id="pause-sfx-vol" min="0" max="100" value="50" style="width:90px;accent-color:#9a1818">
         </div>
         <div class="pause-opt-row pause-opt-full pause-music-row">
           <span class="pause-opt-label"><span id="pause-music-emoji">🎵</span> <span data-i18n="options.ambientMusic">Ambient Music</span></span>
-          <input type="range" id="pause-music-vol" min="0" max="100" value="35" style="width:90px;accent-color:#4a9eff">
+          <input type="range" id="pause-music-vol" min="0" max="100" value="35" style="width:90px;accent-color:#9a1818">
         </div>
         <div class="pause-opt-row pause-opt-full pause-tts-row">
           <span class="pause-opt-label" data-i18n="options.speakWords">🔊 Speak Words</span>
@@ -783,11 +797,29 @@
   <div id="dojang-pause-overlay" class="off">
     <div id="dojang-pause-panel">
       <h2 data-i18n="dojang.paused">Paused</h2>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:22px;padding: 0 12px;font-size:.85rem;opacity:.75">
-        <span id="dojang-sfx-emoji">🔉</span><input type="range" id="dojang-sfx-vol" min="0" max="100" value="50" style="flex:1;accent-color:#4a9eff">
+      <div class="dojang-pause-audio">
+        <span id="dojang-sfx-emoji">🔉</span>
+        <span class="dojang-pause-audio-label" data-i18n="options.sfxVolume">Sound Effects</span>
+        <input type="range" id="dojang-sfx-vol" min="0" max="100" value="50" style="flex:1;accent-color:#9a1818">
+      </div>
+      <div class="dojang-pause-tts-row">
+        <span class="dojang-pause-tts-label" data-i18n="options.speakWords">🔊 Speak Words</span>
+        <label class="gopt-toggle"><input type="checkbox" id="dojang-chk-tts" checked><span class="gopt-track"><span class="gopt-thumb"></span></span></label>
       </div>
       <button class="dj-pause-btn dj-pause-primary" id="dojang-btn-resume" data-i18n="dojang.resume">▶ Resume</button>
       <button class="dj-pause-btn" id="dojang-btn-menu" data-i18n="dojang.backMenu">Main Menu</button>
+      <section id="dojang-support" class="support-callout" aria-labelledby="dojang-support-title">
+        <div class="support-callout-heading">
+          <span class="support-callout-emoji" aria-hidden="true">🫰</span>
+          <strong id="dojang-support-title" data-i18n="donate.enjoyingIt">Are you enjoying it?</strong>
+        </div>
+        <p class="support-callout-body" data-i18n="donate.supportBody">EZRA is free and made by one person. Your support helps the project keep growing.</p>
+        <a class="support-callout-btn" href="https://github.com/sponsors/lluckymou?frequency=one-time" target="_blank" rel="noopener noreferrer">
+          <img src="assets/img/donate-icon.svg" alt="">
+          <span data-i18n="donate.btnLabel">Support on GitHub Sponsors</span>
+        </a>
+        <p class="support-callout-pix"><span data-i18n="donate.pix">For Brazilians, my Pix key is my secondary email:</span> <i>lluckymou@gmail.com</i></p>
+      </section>
     </div>
   </div>
 

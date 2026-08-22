@@ -1794,7 +1794,9 @@
   "donate": {
     "enjoyingIt": "Apakah kamu menikmatinya?",
     "body": "Anda telah membuka game {{count}} kali… Pertimbangkan untuk mendukung pekerjaan saya - Saya percaya pada platform pendidikan gratis dan orang-orang seperti Anda dapat membantu memajukan platform ini.",
-    "btnLabel": "Dukungan pada Sponsor GitHub"
+    "btnLabel": "Dukungan pada Sponsor GitHub",
+    "supportBody": "EZRA gratis dan dibuat oleh satu orang. Jika game ini menghibur atau membantumu belajar, dukunganmu membantu proyek ini terus berkembang.",
+    "pix": "Untuk pemain Brasil, kunci Pix saya adalah email sekunder saya:"
   },
   "ttsWarning": {
     "body": "Browser Anda tidak mendukung text-to-speech bahasa Korea. Untuk pengalaman terbaik, Google Chrome direkomendasikan."

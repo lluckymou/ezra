@@ -1794,7 +1794,9 @@
   "donate": {
     "enjoyingIt": "Você tá gostando?",
     "body": "Você já abriu o jogo {{count}} vezes… Considere doar pelo meu trabalho, acredito em plataformas gratuitas de educação e gente como você pode contribuir com o avanço dessa plataforma.",
-    "btnLabel": "Apoiar no GitHub Sponsors"
+    "btnLabel": "Apoiar no GitHub Sponsors",
+    "supportBody": "EZRA é gratuito e feito por uma pessoa. Se ele te divertiu ou ajudou você a estudar, seu apoio ajuda o projeto a continuar crescendo.",
+    "pix": "Brasileiros: minha chave Pix é meu e-mail secundário:"
   },
   "ttsWarning": {
     "body": "Seu navegador não tem suporte para ditar coreano. Para uma experiência melhor, Google Chrome é recomendado."

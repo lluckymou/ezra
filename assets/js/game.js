@@ -755,6 +755,9 @@ function _disableTTSToggle() {
   if (chk) { chk.checked = false; chk.disabled = true; }
   const pauseChk = document.getElementById('pause-chk-tts');
   if (pauseChk) { pauseChk.checked = false; pauseChk.disabled = true; }
+  const dojangChk = document.getElementById('dojang-chk-tts');
+  if (dojangChk) { dojangChk.checked = false; dojangChk.disabled = true; }
+  dojangChk?.closest('.dojang-pause-tts-row')?.classList.add('tts-unsupported');
   G.ttsEnabled = false;
 }
 
@@ -780,7 +783,7 @@ function _showTTSModal() {
 
 function _checkStartupModals() {
   const lc = parseInt(localStorage.getItem('krr_launchCount') || '0');
-  const showDonate = lc > 0 && lc % 5 === 0;
+  const showDonate = lc > 0 && lc % 10 === 0;
 
   if (showDonate) _showDonateModal(lc);
 
@@ -2634,7 +2637,13 @@ function buildTitleScreen() {
     G.treeDetails = Math.max(0, Math.min(2, parseInt(e.target.value, 10) || 0));
     localStorage.setItem('krr_tree_details', String(G.treeDetails));
   });
-  document.getElementById('chk-tts')?.addEventListener('change', e => { G.ttsEnabled = e.target.checked; });
+  document.getElementById('chk-tts')?.addEventListener('change', e => {
+    G.ttsEnabled = e.target.checked;
+    const pause = document.getElementById('pause-chk-tts');
+    if (pause) pause.checked = e.target.checked;
+    const dojang = document.getElementById('dojang-chk-tts');
+    if (dojang) dojang.checked = e.target.checked;
+  });
   // Pause-screen toggles (mirror main settings)
   document.getElementById('pause-sel-weather')?.addEventListener('change', e => {
     G.weatherEnabled = parseFloat(e.target.value);
@@ -2646,6 +2655,15 @@ function buildTitleScreen() {
     G.ttsEnabled = e.target.checked;
     const main = document.getElementById('chk-tts');
     if (main) main.checked = e.target.checked;
+    const dojang = document.getElementById('dojang-chk-tts');
+    if (dojang) dojang.checked = e.target.checked;
+  });
+  document.getElementById('dojang-chk-tts')?.addEventListener('change', e => {
+    G.ttsEnabled = e.target.checked;
+    const main = document.getElementById('chk-tts');
+    if (main) main.checked = e.target.checked;
+    const pause = document.getElementById('pause-chk-tts');
+    if (pause) pause.checked = e.target.checked;
   });
   document.getElementById('pause-chk-translation')?.addEventListener('change', e => {
     G.translationEnabled = e.target.checked;

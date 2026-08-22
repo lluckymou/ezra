@@ -1442,6 +1442,7 @@ export class DojangManager {
       const canSpeak = G.ttsEnabled && typeof speechSynthesis !== 'undefined';
       speakBtn.textContent = canSpeak ? '🔊' : '🔇';
       speakBtn.style.opacity = canSpeak ? '' : '0.4';
+      speakBtn.disabled = !canSpeak;
     }
 
     this._updateRestartBtn();
@@ -1630,6 +1631,16 @@ export class DojangManager {
   _showPauseMenu(show) {
     const el = document.getElementById('dojang-pause-overlay');
     if (el) el.classList.toggle('off', !show);
+    if (!show) return;
+
+    const ttsToggle = document.getElementById('dojang-chk-tts');
+    const ttsRow = ttsToggle?.closest('.dojang-pause-tts-row');
+    const unavailable = !!document.getElementById('chk-tts')?.disabled;
+    if (ttsToggle) {
+      ttsToggle.checked = !!G.ttsEnabled;
+      ttsToggle.disabled = unavailable;
+    }
+    ttsRow?.classList.toggle('tts-unsupported', unavailable);
   }
 
   // ── Book ──────────────────────────────────────────────────

@@ -513,7 +513,7 @@ body:not(.phase-dojang) #dojang-announce { opacity: 0 !important; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(3, 8, 26, 0.75);
+  background: rgba(47, 29, 13, .68);
   backdrop-filter: blur(8px);
 
   transition: opacity .25s;
@@ -524,46 +524,97 @@ body:not(.phase-dojang) #dojang-announce { opacity: 0 !important; }
   display: none;
 }
 #dojang-pause-panel {
-  background: #0d1428;
-  border: 1px solid rgba(80,140,255,.2);
+  background: hsla(42, 28%, 95%, .98) url('../img/noise.svg') repeat;
+  background-size: 200px;
+  border: 1px solid rgba(80, 30, 10, .22);
   border-radius: 18px;
-  padding: 32px 28px;
-  width: min(340px, 90vw);
+  padding: 24px 22px 20px;
+  width: min(390px, 92vw);
+  max-height: 92vh;
+  overflow-y: auto;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,.5);
-  color: #e8eaf6;
+  box-shadow: 0 20px 60px rgba(37, 18, 5, .5);
+  color: #32170d;
 }
 #dojang-pause-panel h2 {
+  font-family: 'Nanum Myeongjo', serif;
   font-size: 1.3rem;
-  margin-bottom: 22px;
-  color: #f0f4ff;
+  margin-bottom: 14px;
+  color: #7d2119;
+}
+.dojang-pause-audio {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px; padding: 0 8px;
+  font-size: .85rem; opacity: .75;
+}
+.dojang-pause-audio-label { white-space: nowrap; }
+.dojang-pause-tts-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px; padding: 8px 10px;
+  background: rgba(96, 51, 22, .045);
+  border: 1px solid rgba(96, 51, 22, .12);
+  border-radius: 10px;
+  color: #573221;
+  font-size: .8rem;
+}
+.dojang-pause-tts-row.tts-unsupported { opacity: .3; pointer-events: none; }
+#dojang-pause-panel .gopt-track { background: rgba(89, 43, 19, .18); }
+#dojang-pause-panel .gopt-toggle input:checked ~ .gopt-track { background: #8d261c; }
+#dojang-pause-panel .support-callout {
+  width: 100%; margin-top: 14px;
 }
 .dj-pause-btn {
   display: block;
   width: 100%;
   margin: 8px 0;
   padding: 12px;
-  background: rgba(255,255,255,.06);
-  border: 1.5px solid rgba(255,255,255,.14);
-  border-radius: 10px;
-  color: #e8eaf6;
+  background: rgba(96, 51, 22, .045);
+  border: 1.5px solid rgba(96, 51, 22, .2);
+  border-radius: 11px;
+  color: #512719;
+  font-family: 'Nanum Myeongjo', serif;
   font-size: .95rem;
   font-weight: 600;
   cursor: pointer;
   transition: background .15s, border-color .15s;
 }
 .dj-pause-btn:hover {
-  background: rgba(255,255,255,.14);
-  border-color: rgba(255,255,255,.3);
+  background: rgba(96, 51, 22, .09);
+  border-color: rgba(96, 51, 22, .38);
 }
 .dj-pause-btn.dj-pause-primary {
-  background: rgba(40,100,200,.3);
-  border-color: rgba(80,160,255,.4);
-  color: #a8d4ff;
+  background: #3b3529;
+  border-color: rgba(42, 33, 23, .76);
+  color: #fffaf0;
 }
 .dj-pause-btn.dj-pause-primary:hover {
-  background: rgba(40,100,200,.5);
-  border-color: rgba(80,160,255,.7);
+  background: #30281f;
+  border-color: #30281f;
+}
+
+@media (max-height: 500px) {
+  #dojang-pause-overlay {
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 10px;
+  }
+  #dojang-pause-panel {
+    width: min(360px, 94vw);
+    max-height: none;
+    margin: auto;
+    padding: 12px 14px;
+  }
+  #dojang-pause-panel h2 { font-size: 1.05rem; margin-bottom: 9px; }
+  .dojang-pause-audio { margin-bottom: 9px; padding: 0 4px; font-size: .75rem; }
+  .dojang-pause-tts-row { margin-bottom: 7px; padding: 6px 8px; font-size: .72rem; }
+  #dojang-pause-panel .dj-pause-btn { margin: 4px 0; padding: 8px; font-size: .82rem; }
+  #dojang-pause-panel .support-callout { margin-top: 8px; padding: 7px 9px 6px; gap: 5px; }
+  #dojang-pause-panel .support-callout-heading { font-size: .75rem; gap: 5px; }
+  #dojang-pause-panel .support-callout-emoji { font-size: .96rem; }
+  #dojang-pause-panel .support-callout-body { font-size: .66rem; line-height: 1.3; }
+  #dojang-pause-panel .support-callout-btn { min-height: 29px; padding: 4px 7px; font-size: .68rem; }
+  #dojang-pause-panel .support-callout-btn img { width: 20px; height: 20px; }
+  #dojang-pause-panel .support-callout-pix { font-size: .54rem; }
 }
 
 /* ── Book Modal ──────────────────────────────────────────────── */

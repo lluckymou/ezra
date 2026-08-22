@@ -9,6 +9,21 @@ Change License: GNU General Public License, Version 3.0 (GPLv3)
 
 Additional Use Grant: Use of the software is permitted only for *non-commercial* purposes. Any clones or derivative works must prominently reference the original creator and clearly state that the version is a copy.
 
+Brand and Asset Reservation
+
+The names **EZRA** and **EZRA 타자**, their logos, wordmarks, stylized visual identity, and related branding are not licensed for use by this license. No trademark or endorsement rights are granted.
+
+The original artwork, music, sound effects, and other original project assets, including the contents of `assets/img/`, `assets/music/`, and `assets/sounds/`, are **All Rights Reserved** unless a file states otherwise. The source-code license does not grant a right to reuse, redistribute, or adapt those assets in a fork, derivative, clone, or unrelated project.
+
+You may use the bundled brand and assets only as necessary to run an unmodified copy of EZRA for non-commercial personal, educational, or evaluation use. Any fork or derivative work must:
+
+1. use a distinct name, logo, and visual identity;
+2. replace the original artwork, music, sound effects, and other reserved assets;
+3. not imply endorsement by or affiliation with the Licensor; and
+4. retain the attribution required by the Additional Use Grant above.
+
+Third-party dependencies and assets may be subject to their own licenses.
+
 Terms
 
 The Licensor hereby grants you the right to copy, modify, create derivative works, redistribute, and make non-production use of the Licensed Work. The Licensor may make an Additional Use Grant, above, permitting limited production use.

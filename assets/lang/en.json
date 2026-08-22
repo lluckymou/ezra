@@ -1794,7 +1794,9 @@
   "donate": {
     "enjoyingIt": "Are you enjoying it?",
     "body": "You've opened the game {{count}} times… Consider supporting my work - I believe in free educational platforms and people like you can help advance this platform.",
-    "btnLabel": "Support on GitHub Sponsors"
+    "btnLabel": "Support on GitHub Sponsors",
+    "supportBody": "EZRA is free and made by one person. If it entertained you or helped you study, your support helps keep the project growing.",
+    "pix": "For Brazilians, my Pix key is my secondary email:"
   },
   "ttsWarning": {
     "body": "Your browser doesn't support Korean text-to-speech. For the best experience, Google Chrome is recommended."

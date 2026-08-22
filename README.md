@@ -133,6 +133,12 @@ No build step required - this is plain ES6 modules. You just need a local HTTP s
 
 ## License
 
-This software is licensed under the **Business Source License 1.1**. See [LICENSE](LICENSE) for full terms.
+The source code is available under the **Business Source License 1.1**. This is a source-available license, not an open-source license. See [LICENSE](LICENSE) for full terms.
 
 **Non-commercial use only.** Any use for commercial purposes is prohibited until the Change Date for the respective version (commit date + 5 years). After that, the code is released under GNU GPL v3.
+
+### Brand and assets
+
+The permission to inspect, run, and non-commercially modify the source code does **not** grant permission to use the **EZRA** or **EZRA 타자** names, logo, wordmark, visual identity, original artwork, music, sound effects, or other original project assets. These are important parts of the project's identity and are **all rights reserved** unless Lucas Moura do Nascimento gives prior written permission.
+
+Forks and derivative projects permitted by the license must use a distinct name and visual identity, replace the original art/audio assets, retain the required attribution, and make it clear that they are unofficial derivatives. See the Brand and Asset Reservation in [LICENSE](LICENSE) for the complete policy.

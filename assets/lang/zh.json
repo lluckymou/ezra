@@ -1794,7 +1794,9 @@
   "donate": {
     "enjoyingIt": "你享受吗？",
     "body": "您已经打开游戏 {{count}} 次了……考虑支持我的工作 - 我相信免费的教育平台和像您这样的人可以帮助推进这个平台。",
-    "btnLabel": "GitHub 赞助商支持"
+    "btnLabel": "GitHub 赞助商支持",
+    "supportBody": "EZRA 是免费且由一人制作的。如果它让您开心或帮助您学习，您的支持会帮助这个项目继续成长。",
+    "pix": "对于巴西玩家：我的 Pix 密钥是我的备用邮箱："
   },
   "ttsWarning": {
     "body": "您的浏览器不支持韩语文本转语音。为了获得最佳体验，建议使用 Google Chrome。"
