@@ -155,6 +155,8 @@ export function resetRunState() {
     worldLessonCooldowns: {},
     // Tutorial message state (world 0 + ongoing hints)
     tutorial: {
+      runNumber:               0,
+      suppressed:              false,
       firstMonsterShown:       false,
       firstRoomClearShown:     false,
       mapHintShown:            false,
@@ -201,10 +203,23 @@ export function resetRoomState(waveNum) {
     projs:      [],
     parts:      [],
     wTemplates: [],
+    // Templates reserved while a player is finishing a correct word. Keeping
+    // them separate lets the renderer stay cinematic without making fast
+    // players wait for the generator to react after Enter.
+    wPrepared:  [],
+    wPending:   0,
+    pendingWordLoad: 0,
     wKilled:    0,
     wTotal:     0,
     wPhase:     'idle', // 'idle'|'spawning'|'wdone'|'clear'
     wdoneTimer: 0,
+    // Combat pacing is intentionally room-local. It resets at every door so
+    // a slow reader is never punished by a previous room's fast streak.
+    flow:       { level: 0, rapidStreak: 0, lastFireAt: 0 },
+    // A last hit can unlock navigation before its projectile/impact finishes.
+    // Rewards and the permanent room clear remain deferred until resolution.
+    exitUnlocked: false,
+    clearPending: false,
     wave:       waveNum || 1,
     groundItems: [],
     _groundId:   0,

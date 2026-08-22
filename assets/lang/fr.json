@@ -120,6 +120,7 @@
     "title": "En pause",
     "resume": "▶ Reprendre",
     "mainMenu": "Menu principal",
+    "uiSize": "Taille de l'interface",
     "pauseShort": "PAUSE",
     "stat": {
       "monsters": "Monstres vaincus",
@@ -700,7 +701,10 @@
     "challengeTitle": "Défi",
     "exit": "Quitter",
     "back": "← Retour",
-    "understood": "Compris !",
+    "understood": "Compris ! Faites-moi monter de niveau !",
+    "levelUp": "Montez de niveau",
+    "levelUpMonsterTypes": "Faites évoluer les types de monstres",
+    "levelUpMonsters": "Faites évoluer les monstres",
     "close": "Fermer",
     "retryNextWorld": "Réessayer au prochain monde",
     "alreadyAttempted": "Déjà tenté",
@@ -746,7 +750,8 @@
     "pickHanja": "Tapez la syllabe hanja pour ramasser un objet — si vous possédez et utilisez un dictionnaire, le hanja sera révélé",
     "typeToAdvance": "Tapez le mot pour passer au monde suivant",
     "findTeacher": "Trouver le professeur vous permet de suivre une leçon et d'augmenter le défi",
-    "casinoLuck": "Pourquoi ne pas tenter votre chance en risquant tout ?"
+    "casinoLuck": "Pourquoi ne pas tenter votre chance en risquant tout ?",
+    "hide": "Masquer"
   },
   "words": {
     "집": "maison",

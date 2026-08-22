@@ -78,6 +78,32 @@ export const PERMANENTS = [
   { id: 'punching_glove',emoji: '🥊', onAcquire: (G) => { G.run.punchingGlove = true; } },
 ];
 
+// A second simultaneous shot changes the game's target economy much more than
+// the other modifiers. Keep its price as the meaningful late-run investment,
+// but make it substantially less likely to show up in any offer source.
+const MODIFIER_OFFER_WEIGHTS = Object.freeze({
+  double_shot: 0.20,
+});
+
+function takeWeightedModifier(pool) {
+  if (!pool.length) return null;
+
+  const weightFor = (candidate) => MODIFIER_OFFER_WEIGHTS[candidate.id || candidate] || 1;
+  const totalWeight = pool.reduce((sum, candidate) => sum + weightFor(candidate), 0);
+  let roll = Math.random() * totalWeight;
+  let index = pool.length - 1;
+
+  for (let i = 0; i < pool.length; i++) {
+    roll -= weightFor(pool[i]);
+    if (roll < 0) {
+      index = i;
+      break;
+    }
+  }
+
+  return pool.splice(index, 1)[0];
+}
+
 /* ================================================================
    SHOP GENERATION
    Always: heal, dictionary, slow
@@ -131,10 +157,14 @@ export function generateShopInventory(G, worldIdx) {
     items.push(mkCon(shuffCons[i], _conPrice(worldIdx, shuffCons[i])));
   }
 
-  // 2–3 random modifiers
-  const shuffMods = [...availMods].sort(() => Math.random() - 0.5);
-  for (let i = 0; i < Math.min(3, shuffMods.length); i++) {
-    items.push(mkMod(shuffMods[i], _modPrice(worldIdx, shuffMods[i])));
+  // 2–3 random modifiers. Double Shot is deliberately weighted down here as
+  // well as in reward rooms, so shops and casinos do not bypass its rarity.
+  const remainingMods = [...availMods];
+  const modifierCount = Math.min(3, remainingMods.length);
+  for (let i = 0; i < modifierCount; i++) {
+    const id = takeWeightedModifier(remainingMods);
+    if (!id) break;
+    items.push(mkMod(id, _modPrice(worldIdx, id)));
   }
 
   // Sort by price ascending
@@ -196,10 +226,9 @@ export function rollModifierChoices(G) {
   if (roll < 0.05 && availablePerms.length >= 3) {
     // 5% (1/20): 3 permanents
     for (let i = 0; i < 3 && availablePerms.length > 0; i++) {
-      const idx = Math.floor(Math.random() * availablePerms.length);
-      const perm = availablePerms[idx];
+      const perm = takeWeightedModifier(availablePerms);
+      if (!perm) break;
       choices.push({ type: 'permanent', item: perm });
-      availablePerms.splice(idx, 1);
     }
   } else if (roll < 0.15 && availablePerms.length >= 2) {
     // 10% (1/10): 1 consumable + 2 permanents
@@ -207,16 +236,15 @@ export function rollModifierChoices(G) {
     choices.push({ type: 'consumable', itemKey: consumKey, item: POWERUP_DEFS[consumKey] });
     
     for (let i = 0; i < 2 && availablePerms.length > 0; i++) {
-      const idx = Math.floor(Math.random() * availablePerms.length);
-      const perm = availablePerms[idx];
+      const perm = takeWeightedModifier(availablePerms);
+      if (!perm) break;
       choices.push({ type: 'permanent', item: perm });
-      availablePerms.splice(idx, 1);
     }
   } else if (roll < 0.65) {
     // 50% (default): 1 permanent + 2 consumables
     if (availablePerms.length) {
-      const perm = availablePerms[Math.floor(Math.random() * availablePerms.length)];
-      choices.push({ type: 'permanent', item: perm });
+      const perm = takeWeightedModifier(availablePerms);
+      if (perm) choices.push({ type: 'permanent', item: perm });
     }
     
     while (choices.length < 3 && consumableKeys.length > 0) {

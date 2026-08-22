@@ -120,6 +120,7 @@
     "title": "Pausado",
     "resume": "▶ Continuar",
     "mainMenu": "Menu Principal",
+    "uiSize": "Tamanho da UI",
     "pauseShort": "PAUSAR",
     "stat": {
       "monsters": "Monstros Mortos",
@@ -307,7 +308,10 @@
     "challengeTitle": "Desafio",
     "exit": "Sair",
     "back": "← Voltar",
-    "understood": "Entendi!",
+    "understood": "Entendi! Pode subir de nível!",
+    "levelUp": "Suba de nível",
+    "levelUpMonsterTypes": "Evolua os tipos de monstros",
+    "levelUpMonsters": "Evolua os monstros",
     "close": "Fechar",
     "retryNextWorld": "Tentar no próximo mundo",
     "alreadyAttempted": "Já tentado",
@@ -353,7 +357,8 @@
     "pickHanja": "Digite a sílaba do hanja para pegar o item — caso possua e use um item de Dicionário, o hanja será revelado",
     "typeToAdvance": "Digite a palavra para avançar para o próximo mundo",
     "findTeacher": "Encontrar o professor pode lhe ensinar uma lição e aumentar a dificuldade",
-    "casinoLuck": "Que tal tentar sua sorte arriscando tudo?"
+    "casinoLuck": "Que tal tentar sua sorte arriscando tudo?",
+    "hide": "Ocultar"
   },
   "gameOver": {
     "victory": "🏆 Vitória!",

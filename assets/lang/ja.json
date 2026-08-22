@@ -120,6 +120,7 @@
     "title": "一時停止中",
     "resume": "▶ 履歴書",
     "mainMenu": "メインメニュー",
+    "uiSize": "UIサイズ",
     "pauseShort": "一時停止",
     "stat": {
       "monsters": "倒されたモンスター",
@@ -700,7 +701,10 @@
     "challengeTitle": "チャレンジ",
     "exit": "終了",
     "back": "← 戻る",
-    "understood": "分かった！",
+    "understood": "分かった！レベルアップお願いします！",
+    "levelUp": "レベルアップ",
+    "levelUpMonsterTypes": "モンスターの種類をレベルアップ",
+    "levelUpMonsters": "モンスターをレベルアップ",
     "close": "閉じる",
     "retryNextWorld": "次の世界でもう一度試してください",
     "alreadyAttempted": "すでに試みられています",
@@ -746,7 +750,8 @@
     "pickHanja": "漢字の音節を入力してアイテムを選択します。辞書アイテムを所有して使用している場合、漢字が表示されます。",
     "typeToAdvance": "単語を入力すると次の世界に進みます",
     "findTeacher": "先生を見つけるとレッスンを教えてもらい、課題を増やすことができます",
-    "casinoLuck": "すべてを賭けて運試ししてみませんか?"
+    "casinoLuck": "すべてを賭けて運試ししてみませんか?",
+    "hide": "非表示"
   },
   "words": {
     "집": "家",

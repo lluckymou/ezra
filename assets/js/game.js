@@ -10,7 +10,7 @@ import {
   tickAnnounce, tickFreeze,
   addToInventory, invNavigate, invUse,
   tryCollectGroundItem,
-  killAllEnemies, fire, hitMonster,
+  killAllEnemies, fire, hitMonster, primeNextSpawn, countJamoKeys,
   refreshLives, refreshInventoryUI, refreshBubbleDisplay,
   setWeaponGroup, WEAPONS, flashAnnounce,
   mkMonster, spawnGroundItem, startFleeEffects,
@@ -34,7 +34,7 @@ import {
   setCombatRef,
   getAvailableDirs, DIR_NAMES,
   currentCell, getCell, enterRoom, navigate,
-  startRun, startNewWorld, collectTreasure,
+  startRun, startNewWorld, collectTreasure, pickModifierItem, shopBuy,
   tryNpcInteract, openAllConnections,
   peekNextWorldDef,
   WORLDS, ALL_WEATHERS, COLS, ROWS,
@@ -51,7 +51,7 @@ import { loadLanguages, setLanguage, getAvailableLanguages, getLangMeta, get as 
 import { HangulComposer, QWERTY_TO_JAMO } from './hangul-input.js';
 import { WORD_DICT } from '../data/words.js';
 import { POWERUP_DEFS, POWERUP_KEYS, PERMANENTS, formatKoreanNumber } from '../data/items.js';
-import { LESSONS_BASE } from '../data/lessons.js';
+import { LESSONS_BASE, getNextLesson } from '../data/lessons.js';
 import { dojangManager, loadDojangStats } from './dojang.js';
 import {
   MP, mpSend, startHost, startGuest, leaveMultiplayer, genRoomCode,
@@ -81,6 +81,49 @@ fetch('sw.js').then(r => r.text()).then(t => {
   if (badge) badge.innerHTML = _versionBadgeHTML(APP_VERSION);
   document.querySelectorAll('.version-inline').forEach(el => el.textContent = 'v' + APP_VERSION);
 }).catch(() => {});
+
+// The HUD has a responsive base zoom in CSS. This preference is deliberately a
+// multiplier, so a player's chosen size never replaces that responsive layout.
+const HUD_UI_SIZE_STORAGE_KEY = 'krr_hud_ui_size';
+const HUD_UI_SIZE_DEFAULT = 1;
+const HUD_UI_SIZE_MIN = 0.75;
+const HUD_UI_SIZE_MAX = 1.3;
+let _hudUiSize = HUD_UI_SIZE_DEFAULT;
+
+function _normaliseHudUiSize(value, fallback = HUD_UI_SIZE_DEFAULT) {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed < HUD_UI_SIZE_MIN || parsed > HUD_UI_SIZE_MAX) return fallback;
+  return Math.round(parsed * 20) / 20;
+}
+
+function _formatHudUiSize(value) {
+  const rounded = Math.round(value * 100) / 100;
+  return `${Number(rounded.toFixed(2))}×`;
+}
+
+function _applyHudUiSize() {
+  const hud = document.getElementById('hud');
+  if (hud) {
+    const baseZoom = Number.parseFloat(getComputedStyle(hud).getPropertyValue('--hud-base-zoom')) || 1.25;
+    hud.style.zoom = String(Math.round(baseZoom * _hudUiSize * 1000) / 1000);
+  }
+
+  const slider = document.getElementById('pause-ui-size');
+  if (slider) slider.value = String(Math.round(_hudUiSize * 100));
+  const value = document.getElementById('pause-ui-size-value');
+  if (value) value.textContent = _formatHudUiSize(_hudUiSize);
+}
+
+function _setHudUiSize(value, persist = false) {
+  _hudUiSize = _normaliseHudUiSize(value, _hudUiSize);
+  if (persist) localStorage.setItem(HUD_UI_SIZE_STORAGE_KEY, String(_hudUiSize));
+  _applyHudUiSize();
+}
+
+function _restoreHudUiSize() {
+  _hudUiSize = _normaliseHudUiSize(localStorage.getItem(HUD_UI_SIZE_STORAGE_KEY));
+  _applyHudUiSize();
+}
 
 // Parse lesson word string, handling disambiguation like 'text:emoji'
 function parseLessonWord(str) {
@@ -885,6 +928,8 @@ function runStartupAnimation(onPrepare, onDone) {
 export function init() {
   // Load persistent cross-run state (word kills, lessons, vocab unlocks)
   loadPersistentState();
+  _restoreHudUiSize();
+  window.addEventListener('resize', _applyHudUiSize);
   // Restore touch mode preference; default ON for touch devices
   const _savedTouchMode = localStorage.getItem('krr_touchMode');
   if (_savedTouchMode === '1') {
@@ -1078,6 +1123,10 @@ export function init() {
 
   window._showTutorial = (emoji, msgKey, vars = null, opts = {}) => {
     if (!_tutBox) return;
+    if (G.run?.tutorial?.suppressed) {
+      _tutQueue = [];
+      return;
+    }
     if (G.phase !== 'run') return;
     // If in combat, queue it instead (unless it's allowed during combat)
     if (G.mode === 'combat' && !opts.allowDuringCombat) {
@@ -1115,6 +1164,20 @@ export function init() {
     _scheduleBossPathHintPosition();
   };
 
+  // This is intentionally scoped to G.run: the player can mute guidance for
+  // a busy attempt without opting out of it forever.
+  window._hideTutorialsForRun = () => {
+    if (G.run?.tutorial) {
+      G.run.tutorial.suppressed = true;
+      G.run.tutorial.key = null;
+    }
+    if (G.run) G.run.bossPathHintDismissed = true;
+    _tutQueue = [];
+    window._hideTutorial(true);
+    if (_bossPathHint) _bossPathHint.classList.add('off');
+    _scheduleBossPathHintPosition();
+  };
+
   // Called after room is cleared - flush any queued tip
   window._flushTutQueue = () => {
     if (_tutQueue.length > 0) {
@@ -1132,7 +1195,7 @@ export function init() {
   // from the normal tutorial queue so other tips cannot accidentally dismiss it.
   const _bossPathHint = document.getElementById('boss-path-hint');
   window._showBossPathHint = () => {
-    if (!_bossPathHint || G.phase !== 'run' || G.run?.bossPathHintDismissed) return;
+    if (!_bossPathHint || G.phase !== 'run' || G.run?.tutorial?.suppressed || G.run?.bossPathHintDismissed) return;
     _bossPathHint.classList.remove('off');
     _scheduleBossPathHintPosition();
   };
@@ -1514,6 +1577,9 @@ function loop(ts) {
       checkBubbleCollisions();
       tickAnnounce(dt);
     }
+    // The bot still needs to advance its own backpack workflow while the
+    // Ctrl panel pauses the simulation.
+    _tickBot(dt);
 
     drawBossTether();
     _drawDepthSortedRoomObjects();
@@ -1571,7 +1637,7 @@ function loop(ts) {
         const px = G.W / 2;
         const paH = document.getElementById('player-area')?.offsetHeight + 10 || 90;
         const py = G.vH - paH;
-        const alive = G.room?.monsters?.filter(m => !m.dead) || [];
+        const alive = G.room?.monsters?.filter(_isTargetableMonster) || [];
         // Filter out monsters that already have projectiles bound to them
         const available = alive.filter(m => !G.room.projs.some(p => p.tid === m.id));
         // Target the closest available monster (no existing projectiles)
@@ -1632,6 +1698,7 @@ function triggerWorldTransition(worldIdx, guestEmoji) {
   G.room.monsters = [];
   G.room.projs    = [];
   G.inTransition  = true;
+  _setEffectBubbleUnderTransition(true);
   G.mode          = 'navigate';
   // Fade out player area and weather canvas for duration of animation
   paEl.style.transition = 'opacity 0.4s';
@@ -1825,13 +1892,18 @@ function runLoreAnimation(onComplete) {
   // Show overlay + HUD (boost HUD z-index to float above overlay)
   overlay.style.display = 'block';
   const hudEl = document.getElementById('hud');
-  if (hudEl) { hudEl.style.display = 'flex'; hudEl.style.zIndex = '6000'; hudEl.inert = true; }
+  if (hudEl) {
+    hudEl.style.display = 'flex';
+    hudEl.style.zIndex = '6000';
+    hudEl.inert = false;
+    hudEl.classList.add('lore-hud');
+  }
 
   // Hide wave card during cutscene (and score card on mobile)
   const hcardWave  = document.getElementById('hcard-wave');
   const hcardScore = document.getElementById('hcard-score');
   if (hcardWave) hcardWave.style.opacity = '0';
-  if (hcardScore && window.innerHeight < 500) hcardScore.style.opacity = '0';
+  if (hcardScore && window.innerHeight < 500) hcardScore.classList.add('lore-pause-only');
 
   // Hide title screen behind overlay
   screenOff('scr-title');
@@ -2100,9 +2172,17 @@ function runLoreAnimation(onComplete) {
   // ── Finish / cleanup ─────────────────────────────────────────
   function _hideOverlay() {
     overlay.style.display = 'none';
-    if (hudEl) { hudEl.style.display = 'none'; hudEl.style.zIndex = ''; hudEl.inert = false; }
+    if (hudEl) {
+      hudEl.style.display = 'none';
+      hudEl.style.zIndex = '';
+      hudEl.inert = false;
+      hudEl.classList.remove('lore-hud');
+    }
     if (hcardWave) hcardWave.style.opacity = '';
-    if (hcardScore) hcardScore.style.opacity = '';
+    if (hcardScore) {
+      hcardScore.style.opacity = '';
+      hcardScore.classList.remove('lore-pause-only');
+    }
   }
 
   function _cleanup() {
@@ -2120,9 +2200,16 @@ function runLoreAnimation(onComplete) {
     if (villainSpeechEl) { villainSpeechEl.remove(); villainSpeechEl = null; }
     if (villainLaughEl)  { villainLaughEl.remove();  villainLaughEl  = null; }
     if (_skipBtn) { _skipBtn.remove(); _skipBtn = null; }
-    if (hudEl) hudEl.style.zIndex = '';
+    if (hudEl) {
+      hudEl.style.zIndex = '';
+      hudEl.inert = false;
+      hudEl.classList.remove('lore-hud');
+    }
     if (hcardWave) hcardWave.style.opacity = '';
-    if (hcardScore) hcardScore.style.opacity = '';
+    if (hcardScore) {
+      hcardScore.style.opacity = '';
+      hcardScore.classList.remove('lore-pause-only');
+    }
     _loreCancel = null;
   }
 
@@ -2406,6 +2493,7 @@ function triggerSleepAnimation(partnerSide = false) {
     },
   };
   G.inTransition = true;
+  _setEffectBubbleUnderTransition(true);
 }
 window._triggerSleepAnimation = triggerSleepAnimation;
 
@@ -2445,11 +2533,15 @@ function tickWorldTransition(dt) {
       const deferredTemplates = G.room?._deferredTemplates;
       G.worldTransition = null;
       G.inTransition    = false;
+      _setEffectBubbleUnderTransition(false);
       // Restore player area and weather canvas (clear transition to avoid interfering with tickWeather crossfades)
       paEl.style.transition  = '';
       paEl.style.opacity     = '1';
       wxCanvas.style.transition = '';
       wxCanvas.style.opacity    = '1';
+      // Effects persist across worlds; re-anchor the bubble after the wipe so
+      // an active Auto Kill/Stun is visibly active in the new room as well.
+      refreshBubbleDisplay();
       // Init weather for new world
       if (pendingWeather && window._initWeather) window._initWeather(pendingWeather);
       // Spawn monsters (deferred to avoid spawning during animation)
@@ -2566,6 +2658,9 @@ function buildTitleScreen() {
     localStorage.setItem('krr_hanja_mon', e.target.checked ? '1' : '0');
     const main = document.getElementById('chk-hanja-monsters');
     if (main) main.checked = e.target.checked;
+  });
+  document.getElementById('pause-ui-size')?.addEventListener('input', e => {
+    _setHudUiSize(Number(e.target.value) / 100, true);
   });
   // SFX volume sliders (settings, pause, dojang-pause) - all in sync
   function _syncSfxSliders(v) {
@@ -3020,6 +3115,7 @@ function showTitleScreen() {
   if (hudEl) { hudEl.style.display = 'none'; hudEl.style.opacity = ''; }
   if (paEl) paEl.style.display = 'none';
   G.phase = 'title';
+  _syncCheatRunShortcut();
   document.body.classList.add('phase-title');
   G.gameTime = 210; // reset to midday so menu is always bright
   drawDayNight();   // immediately clear the night overlay canvas (was left dark if returning from a night run)
@@ -3088,6 +3184,8 @@ function applyLanguage() {
   if (window._updateRotateOverlayText) window._updateRotateOverlayText();
   // Update avatar tab tooltips
   _updateAvaTabTooltips();
+  // Dynamic HUD strings are not data-i18n nodes, so repaint them too.
+  updateHudAll();
 }
 
 // Rebuild the language selector dropdown from available JSON languages
@@ -3819,8 +3917,22 @@ function _dojangStartAdventure() {
   runLoreAnimation(() => triggerMenuPlayTransition());
 }
 
+const TUTORIAL_POPUP_FINAL_RUN = 5;
+
+function _beginTutorialRun() {
+  const savedCount = Number.parseInt(localStorage.getItem('krr_adventureRunCount') || '0', 10);
+  const runNumber = (Number.isFinite(savedCount) ? savedCount : 0) + 1;
+  localStorage.setItem('krr_adventureRunCount', String(runNumber));
+  if (G.run?.tutorial) {
+    G.run.tutorial.runNumber = runNumber;
+    G.run.tutorial.suppressed = runNumber >= TUTORIAL_POPUP_FINAL_RUN;
+  }
+}
+
 function startNewRun() {
   resetRunState();
+  _resetCheatRunState();
+  _beginTutorialRun();
   const selectedDifficulty = document.getElementById('sel-difficulty')?.value || G.difficulty || localStorage.getItem('krr_difficulty') || 'normal';
   const diff = DIFFICULTY[selectedDifficulty] || DIFFICULTY.normal;
   G.playerMax = diff.lives;
@@ -3852,9 +3964,9 @@ function startNewRun() {
   }
 
   setPlayerContent(document.getElementById('pl-emoji'));
-  document.getElementById('hs-best').textContent = '0원';
 
   G.phase = 'run';
+  _syncCheatRunShortcut();
   document.body.classList.remove('phase-title');
   startRun();
   // Update transition emoji to the actual first world's transport (known only after startRun)
@@ -3890,6 +4002,7 @@ function startNewRun() {
   setTimeout(_applyTouchZoom, 80);
   setTimeout(_applyTouchZoom, 250);
   if (typingEl) typingEl.value = '';
+  _resetWordTypingTimer();
   _imeCommitted = ''; _imeComposer.reset();
   _focusTypingInput();
   // Sync dungeon blueprint to guest if in multiplayer session
@@ -4036,6 +4149,7 @@ function _syncPauseToggles() {
   const pt = document.getElementById('pause-chk-tts');
   const ptr = document.getElementById('pause-chk-translation');
   const ph = document.getElementById('pause-chk-hanja-monsters');
+  _applyHudUiSize();
   if (pw) pw.value = String(G.weatherEnabled ?? 1);
   if (pt) {
     pt.checked = G.ttsEnabled;
@@ -4097,6 +4211,7 @@ function goToMenu() {
   if (_imeEnabled) _imeToggle();
   // Always clear typing field so old characters don't bleed into the next run
   if (typingEl) typingEl.value = '';
+  _resetWordTypingTimer();
   _imeCommitted = ''; _imeComposer.reset();
   // Remove touch-mode class for menu UI but keep G.touchMode preference intact
   if (G.touchMode) document.body.classList.remove('touch-mode');
@@ -4112,6 +4227,7 @@ function goToMenu() {
 ================================================================ */
 function showGameOver(victory) {
   window._hideTutorial?.(true);
+  _syncCheatRunShortcut();
   screenOff('scr-modifier'); screenOff('scr-shop'); screenOff('scr-treasure');
   screenOn('scr-over');
 
@@ -4178,7 +4294,15 @@ function updateHudAll() {
 
 function updateHudWallet() {
   const el = document.getElementById('hs-val');
-  if (el) el.textContent = (G.run?.wallet ?? 0);
+  const wallet = G.run?.wallet ?? 0;
+  const pending = G.room?.roomPool || 0;
+  if (el) el.textContent = `${formatKoreanNumber(wallet)}원`;
+  const lbl = document.getElementById('hs-best-lbl');
+  if (lbl) lbl.textContent = `${i18n('hud.pending')}: `;
+  const pendingEl = document.getElementById('hs-best');
+  if (pendingEl) pendingEl.textContent = pending > 0 ? formatKoreanNumber(pending) : '';
+  const pendingRow = document.getElementById('hs-best-row');
+  if (pendingRow) pendingRow.hidden = pending <= 0;
 }
 
 function updateHudWorld() {
@@ -4257,6 +4381,7 @@ function navigateWithAnim(dir) {
 
   // Clear typing input to prevent cheating across rooms
   if (typingEl) typingEl.value = '';
+  _resetWordTypingTimer();
 
   sfx('roomNavigate', 0.65);
   // Fall back to instant transition if ghost element missing
@@ -4710,7 +4835,7 @@ function _updateKeyHint() {
     _clearKeyHint(); return;
   }
   const targeted = new Set((G.room?.projs || []).map(p => p.tid));
-  const monsters = (G.room?.monsters || []).filter(m => !m.dead && !m.fleeing && !targeted.has(m.id));
+  const monsters = (G.room?.monsters || []).filter(m => _isTargetableMonster(m) && !targeted.has(m.id));
   if (!monsters.length) { _clearKeyHint(); return; }
   const px = G.W / 2, py = G.vH * 0.85;
   let nearest = null, nd = Infinity;
@@ -4843,11 +4968,44 @@ const _kbKeyEls = {}; // lowercase letter → .kb-key element
 ================================================================ */
 let _bspRepeatTimer = null, _bspRepeatInterval = null;
 let _touchKeysWired = false;
+let _wordTypingStartedAt = null;
+let _wordTypingRoom = null;
+
+// This measures the typing attempt itself (first character after an empty
+// field → Enter), rather than the player's reaction time before typing.
+function _resetWordTypingTimer() {
+  _wordTypingStartedAt = null;
+  _wordTypingRoom = null;
+}
+
+function _trackWordTyping(rawValue = typingEl?.value) {
+  const value = (rawValue || '').trim();
+  if (!value) {
+    _resetWordTypingTimer();
+    return;
+  }
+  if (_wordTypingStartedAt == null || _wordTypingRoom !== G.room) {
+    _wordTypingStartedAt = performance.now();
+    _wordTypingRoom = G.room;
+  }
+}
+
+function _consumeWordTypingDuration() {
+  const startedAt = _wordTypingStartedAt;
+  _resetWordTypingTimer();
+  return startedAt == null ? null : Math.max(0, performance.now() - startedAt);
+}
+
+function _setEffectBubbleUnderTransition(underTransition) {
+  document.getElementById('effect-bubble')?.classList.toggle('under-transition', !!underTransition);
+}
 
 function _updateEnterGlow() {
+  const val = (typingEl?.value || '').trim();
+  _trackWordTyping(val);
+  _primeSpawnForCompletedInput(val);
   const enterBtn = document.getElementById('kb-touch-enter');
   if (!enterBtn) return;
-  const val = (typingEl?.value || '').trim();
   enterBtn.classList.toggle('has-input', _typedIsValidInput(val));
 }
 
@@ -5306,6 +5464,7 @@ typingEl?.addEventListener('keydown', e => {
     }
   }
   _updateKeyHint();
+  _updateEnterGlow();
 });
 typingEl?.addEventListener('paste', e => e.preventDefault());
 // Block browser input only when a syllable is actively composing (protects mid-composition state)
@@ -5327,6 +5486,8 @@ typingEl?.addEventListener('input', () => {
     flashAnnounce(i18n('announce.tabHint'), '#aaaaff');
     _tabHintShown = true;
   }
+  _primeSpawnForCompletedInput(typingEl.value);
+  _updateEnterGlow();
 });
 // Clear one-shot shift on keyup (caps persists until CapsLock pressed again)
 typingEl?.addEventListener('keyup', e => {
@@ -5418,7 +5579,7 @@ function _typedIsValidInput(val) {
   const npc = G.room?.npc;
   if (npc?.word && (val === npc.word || val === npc.word.replace(/\s+/g, ''))) return true;
   for (const m of (G.room?.monsters || [])) {
-    if (m.dead) continue;
+    if (!_isTargetableMonster(m)) continue;
     const all = [...m.words];
     for (const w of m.words) {
       const entry = WORD_DICT.find(d => d.text === w);
@@ -5427,6 +5588,30 @@ function _typedIsValidInput(val) {
     if (all.includes(val) || all.some(w => val.startsWith(w))) return true;
   }
   return false;
+}
+
+function _isTargetableMonster(m) {
+  return !!m && !m.dead && !m.fleeing && !m.firedAt && !m.defeatCommitted;
+}
+
+// A completed word can reserve the next template before Enter. Only exact
+// matches qualify: typing a common prefix must never create an enemy early.
+function _primeSpawnForCompletedInput(rawValue) {
+  if (G.phase !== 'run' || G.mode !== 'combat') return;
+  const val = (rawValue || '').trim();
+  if (!val) return;
+  for (const m of (G.room?.monsters || [])) {
+    if (!_isTargetableMonster(m)) continue;
+    const all = [...(m.words || [])];
+    for (const w of (m.words || [])) {
+      const entry = WORD_DICT.find(d => d.text === w);
+      if (entry?.alts) all.push(...entry.alts);
+    }
+    if (all.includes(val)) {
+      primeNextSpawn();
+      return;
+    }
+  }
 }
 
 // pointerdown preventDefault keeps typingEl focused while mouse is over canvas
@@ -5456,17 +5641,20 @@ canvas?.addEventListener('click', () => {
 function onInput() {
   if (G.phase !== 'run') return;
   _tabHintShown = false; // Re-arm the Latin character detection hint
-  if (G.inTransition) { typingEl.value = ''; return; }
-  if (G.frozen) { typingEl.value = ''; return; }
+  if (G.inTransition) { _resetWordTypingTimer(); typingEl.value = ''; return; }
+  if (G.frozen) { _resetWordTypingTimer(); typingEl.value = ''; return; }
   const val = typingEl.value.trim();
   if (!val) {
     // Whitespace-only input - just clear the field
+    _resetWordTypingTimer();
     typingEl.value = '';
     _imeCommitted = '';
     _imeComposer.reset();
     _updateEnterGlow();
     return;
   }
+  const typingDurationMs = _consumeWordTypingDuration();
+  const typedJamo = countJamoKeys(val);
 
   // Speak what was typed - queued, fires even on wrong input
   const _ttsVal = (val.toLowerCase() === 'cheatcode' || val === '촏ㅁㅅ챙ㄷ' || val === '초ㄸㅁㅆ첑ㄸ') ? '치트 코드' : val;
@@ -5527,7 +5715,7 @@ function onInput() {
       const fAdj = getCell(((fleeFromCell?.col ?? 0) + fdc + COLS) % COLS, ((fleeFromCell?.row ?? 0) + fdr + ROWS) % ROWS);
       if (fAdj?.visited) {
         // Only flee if no monster has this word - killing always takes priority
-        const monsters = G.room?.monsters?.filter(m => !m.dead) || [];
+        const monsters = G.room?.monsters?.filter(m => !m.dead && !m.fleeing) || [];
         const wordMatchesMonster = monsters.some(m => {
           const all = [...m.words];
           for (const w of m.words) {
@@ -5587,7 +5775,7 @@ function onInput() {
 
   // Combat: fire at best-matching monster
   {
-    const monsters = G.room?.monsters?.filter(m => !m.dead) || [];
+    const monsters = G.room?.monsters?.filter(_isTargetableMonster) || [];
     if (monsters.length) {
       // Build full candidate word list (main words + alts) for each monster
       function monsterWords(m) {
@@ -5611,7 +5799,7 @@ function onInput() {
         }
       }
       if (best) {
-        fire(best);
+        fire(best, { typedJamo, typingDurationMs });
       } else {
         // Wrong word flash + letters scatter
         typingEl.style.color = '#ff4466';
@@ -5937,7 +6125,1159 @@ document.addEventListener('pointerdown', e => {
 /* ================================================================
    CHEAT MENU
 ================================================================ */
+// The benchmark bot deliberately uses the same visible input and onInput()
+// route as a human. It is a pacing test, not an alternate cheat kill path.
+const _bot = {
+  enabled: false,
+  wpm: 100,
+  autoMove: false,
+  autoWorld: false,
+  useItems: false,
+  pickUpDrops: false,
+  task: null,
+  itemTask: null,
+  uiTask: null,
+  forcedDestination: null,
+  hanjaPickupDecisions: new Map(),
+  nextDecisionAt: 0,
+  lastMode: null,
+  lastRoomKey: '',
+  stats: {
+    startedAt: 0,
+    jamoTyped: 0,
+    wordsTyped: 0,
+    idleMs: 0,
+  },
+  lastStatsPaintAt: 0,
+};
+
+// Deliberately centralized so playtesters can tune the bot's personality
+// without having to chase conditionals through its decision loop.
+const BOT_ITEM_THRESHOLDS = Object.freeze({
+  critToughMonsters: 2,
+  slowCrowd: 3,
+  freezeCrowd: 4,
+  cleaveCrowd: 4,
+  greedyCrowd: 3,
+  projectileInterruptSeconds: 3.25,
+});
+
+// Interface input is limited by perception and motor reaction, not just
+// keyboard speed. Values are [fast 250 WPM, slow 20 WPM] in milliseconds.
+const BOT_INTERFACE_TIMING = Object.freeze({
+  openReaction: [300, 550],
+  selectionScan: [230, 420],
+  navigationStep: [160, 330],
+  confirmUse: [220, 370],
+  postUse: [220, 340],
+  mapReview: [500, 850],
+  screenOpenReaction: [360, 650],
+  screenRead: [320, 600],
+  screenClick: [180, 320],
+  screenResult: [260, 480],
+  screenClose: [180, 320],
+  casinoSpin: [900, 1500],
+  lessonRead: [1000, 1900],
+  doorScan: [260, 480],
+  nextDecision: [160, 280],
+});
+
+const BOT_ITEM_VALUE = Object.freeze({
+  '🔑': 100, '📖': 96, '🏯': 94, '⚔️': 90, '🎯': 87,
+  '⛺': 84, '💛': 82, '⏰': 78, '🔥': 75, '🛡️': 72,
+  '❤️‍🩹': 70, '⏱️': 67, '🕳️': 64, '🤑': 61, '🎁': 59,
+  '💣': 56, '⚡': 53, '🔇': 50, '🎲': 45, '📙': 0,
+});
+
+const BOT_PERMANENT_VALUE = Object.freeze({
+  crystal_ball: 100, double_shot: 96, phoenix_heart: 94,
+  wall_breaker: 91, ancient_scroll: 89, magnet: 87,
+  punching_glove: 84, thorn_armor: 82, treasure: 79,
+  block: 76, lucky: 73, god_run: 71, dummy_turtle: 68, sloth: 64,
+});
+
+function _botSetToggleButton(id, on) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.textContent = on ? 'ON' : 'OFF';
+  btn.style.background = on ? '#27ae60' : '';
+}
+
+function _syncBotUi() {
+  const slider = document.getElementById('c-bot-wpm');
+  if (slider) slider.value = String(_bot.wpm);
+  const value = document.getElementById('c-bot-wpm-val');
+  if (value) value.textContent = `${_bot.wpm} WPM`;
+  _botSetToggleButton('c-bot-toggle', _bot.enabled);
+  _botSetToggleButton('c-bot-move', _bot.autoMove);
+  _botSetToggleButton('c-bot-world', _bot.autoWorld);
+  _botSetToggleButton('c-bot-items', _bot.useItems);
+  _botSetToggleButton('c-bot-pickups', _bot.pickUpDrops);
+}
+
+function _resetBotStats() {
+  _bot.stats = { startedAt: performance.now(), jamoTyped: 0, wordsTyped: 0, idleMs: 0 };
+  _bot.lastStatsPaintAt = 0;
+}
+
+function _botEffectiveWpm(now = performance.now()) {
+  const elapsed = Math.max(1000, now - (_bot.stats.startedAt || now));
+  // Five jamo/keys is the familiar WPM unit; the bot's cadence itself is
+  // driven by countJamoKeys(), not by visible Korean syllable count.
+  return Math.round(_bot.stats.jamoTyped / 5 / (elapsed / 60000));
+}
+
+function _botInterfaceDelay(stage) {
+  const [fast, slow] = BOT_INTERFACE_TIMING[stage] || BOT_INTERFACE_TIMING.selectionScan;
+  const speedRatio = Math.max(0, Math.min(1, (_bot.wpm - 20) / 230));
+  return Math.round(slow - (slow - fast) * speedRatio);
+}
+
+function _paintBotStats(now = performance.now()) {
+  if (now - _bot.lastStatsPaintAt < 180) return;
+  _bot.lastStatsPaintAt = now;
+  const el = document.getElementById('c-bot-stats');
+  if (!el) return;
+  let state = 'Bot idle';
+  if (_bot.enabled) {
+    if (_bot.itemTask) state = `using ${_bot.itemTask.item}`;
+    else if (_bot.uiTask) state = `visiting ${_bot.uiTask.kind}`;
+    else if (_bot.task?.phase === 'erasing') state = 'retargeting';
+    else if (_bot.task) state = `typing ${_bot.task.kind}`;
+    else state = 'waiting';
+  }
+  el.textContent = `${state} · ${_botEffectiveWpm(now)} WPM · ${(_bot.stats.idleMs / 1000).toFixed(1)}s idle · ${_bot.stats.wordsTyped} inputs`;
+}
+
+function _clearBotTask({ clearInput = false } = {}) {
+  _bot.task = null;
+  _bot.itemTask = null;
+  _bot.uiTask = null;
+  _bot.forcedDestination = null;
+  _bot.nextDecisionAt = performance.now() + 30;
+  _bot.lastMode = G.mode;
+  _bot.lastRoomKey = _botCellKey(currentCell());
+  if (clearInput && typingEl) {
+    typingEl.value = '';
+    _imeCommitted = '';
+    _imeComposer.reset();
+    _updateEnterGlow();
+  }
+}
+
+function _botMonsterById(id) {
+  if (id == null) return null;
+  return (G.room?.monsters || []).find(m => m.id === id && _isTargetableMonster(m)) || null;
+}
+
+function _botCanReadMonster(m) {
+  const anim = m?.spawnAnim;
+  return !anim || anim.t >= (anim.dur || 0) * 0.76;
+}
+
+function _botPlayerPosition() {
+  const playerArea = document.getElementById('player-area');
+  return {
+    x: G.W * 0.5,
+    y: G.vH - (playerArea ? playerArea.offsetHeight + 10 : 90) - 20,
+  };
+}
+
+function _botThreatEta(m) {
+  const player = _botPlayerPosition();
+  const distance = Math.hypot((m.x || 0) - player.x, (m.y || 0) - player.y);
+  const speed = Math.max(40, m.spd || m.baseSpd || 90);
+  return distance / speed;
+}
+
+function _botIsKingMinion(m, monsters = G.room?.monsters || []) {
+  if (!m?.parentId) return false;
+  const parent = monsters.find(candidate => candidate.id === m.parentId);
+  return parent?.type === 'boss' && parent.special === 'king';
+}
+
+function _botMonsterKind(m) {
+  if (_botIsKingMinion(m)) return 'king minion';
+  if (m?.isProjectileMonster) return 'projectile';
+  return 'monster';
+}
+
+function _startBotTyping(word, kind, targetId = null) {
+  if (!word || _bot.task || !typingEl) return false;
+  const units = Array.from(word).map(char => ({
+    char,
+    keys: Math.max(1, countJamoKeys(char)),
+  }));
+  if (!units.length) return false;
+
+  // Bot text is inserted syllable by syllable so the normal input listener can
+  // exercise pre-spawn reservations before the synthetic Enter.
+  _imeCommitted = '';
+  _imeComposer.reset();
+  typingEl.value = '';
+  typingEl.dispatchEvent(new Event('input', { bubbles: true }));
+  _bot.task = {
+    phase: 'typing',
+    kind,
+    targetId,
+    units,
+    index: 0,
+    text: '',
+    nextAt: performance.now(),
+  };
+  return true;
+}
+
+function _startBotErase(target) {
+  if (!target || !typingEl) return false;
+  const units = Array.from(typingEl.value).map(char => ({
+    char,
+    keys: Math.max(1, countJamoKeys(char)),
+  }));
+  if (!units.length) {
+    _bot.task = null;
+    return _startBotTyping(target.word, _botMonsterKind(target), target.id);
+  }
+
+  _imeCommitted = '';
+  _imeComposer.reset();
+  _bot.task = {
+    phase: 'erasing',
+    kind: 'retarget',
+    queuedTargetId: target.id,
+    units,
+    index: units.length,
+    nextAt: performance.now(),
+  };
+  return true;
+}
+
+function _tickBotTyping(now) {
+  const task = _bot.task;
+  if (!task) return;
+  const msPerJamo = 60000 / Math.max(1, _bot.wpm * 5);
+
+  if (task.phase === 'erasing') {
+    let safety = 0;
+    while (task.index > 0 && now >= task.nextAt && safety++ < 8) {
+      const unit = task.units[--task.index];
+      typingEl.value = task.units.slice(0, task.index).map(entry => entry.char).join('');
+      typingEl.setSelectionRange(typingEl.value.length, typingEl.value.length);
+      typingEl.dispatchEvent(new Event('input', { bubbles: true }));
+      _bot.stats.jamoTyped += unit.keys;
+      task.nextAt += Math.max(12, unit.keys * msPerJamo);
+    }
+    if (task.index > 0 || now < task.nextAt + 35) return;
+
+    const target = _botMonsterById(task.queuedTargetId) || _botTarget();
+    _bot.task = null;
+    if (target) _startBotTyping(target.word, _botMonsterKind(target), target.id);
+    else _bot.nextDecisionAt = now + 35;
+    return;
+  }
+
+  let safety = 0;
+  while (task.index < task.units.length && now >= task.nextAt && safety++ < 8) {
+    const unit = task.units[task.index++];
+    task.text += unit.char;
+    typingEl.value = task.text;
+    typingEl.setSelectionRange(task.text.length, task.text.length);
+    typingEl.dispatchEvent(new Event('input', { bubbles: true }));
+    _bot.stats.jamoTyped += unit.keys;
+    task.nextAt += Math.max(12, unit.keys * msPerJamo);
+  }
+
+  if (task.index < task.units.length || now < task.nextAt + 35) return;
+  const typedKind = task.kind;
+  const typedTargetId = task.targetId;
+  _bot.task = null;
+  _bot.stats.wordsTyped++;
+  onInput();
+  // Once the last chosen ground item is actually collected, pause before
+  // looking for a door instead of snapping straight into the next room.
+  if (typedKind === 'pickup' && typedTargetId != null
+    && !(G.room?.groundItems || []).some(item => item.id === typedTargetId)
+    && !_botNextPickup()) {
+    _botQueueDoorScan(now);
+  }
+  const inputRecovery = typedKind === 'direction' ? 90 : 35;
+  _bot.nextDecisionAt = Math.max(_bot.nextDecisionAt, now + inputRecovery);
+}
+
+function _botTarget() {
+  const monsters = (G.room?.monsters || []).filter(m => _isTargetableMonster(m) && _botCanReadMonster(m));
+  if (!monsters.length) return null;
+
+  // King's ninja wave is intentionally tagged as a projectile monster in the
+  // combat system. It must always win over the boss itself, otherwise the King
+  // becomes untargetable while the bot keeps wasting a typed word on it.
+  const kingMinions = monsters.filter(m => _botIsKingMinion(m, monsters));
+  if (kingMinions.length) {
+    return kingMinions.reduce((best, m) => _botThreatEta(m) < _botThreatEta(best) ? m : best);
+  }
+
+  const projectiles = monsters.filter(m => m.isProjectileMonster);
+  if (projectiles.length) {
+    return projectiles.reduce((best, m) => _botThreatEta(m) < _botThreatEta(best) ? m : best);
+  }
+
+  const regular = monsters.filter(m => m.type !== 'boss');
+  if (regular.length) return regular.reduce((best, m) => (m.y > best.y ? m : best));
+  return monsters.reduce((best, m) => (m.y > best.y ? m : best));
+}
+
+function _botShouldInterrupt(task, target) {
+  if (task?.phase !== 'typing' || !task.targetId || !target || task.targetId === target.id) return false;
+  const activeTarget = _botMonsterById(task.targetId);
+  if (!activeTarget) return true;
+
+  // A King minion is a hard interrupt: the boss is waiting for this exact
+  // target to die, and those minions move significantly faster than normals.
+  if (_botIsKingMinion(target)) return true;
+  if (target.isProjectileMonster) {
+    return _botThreatEta(target) <= BOT_ITEM_THRESHOLDS.projectileInterruptSeconds;
+  }
+
+  // A non-boss that has reached the player lane also interrupts a boss word.
+  const player = _botPlayerPosition();
+  return activeTarget.type === 'boss'
+    && target.type !== 'boss'
+    && target.y >= player.y - 150;
+}
+
+function _botCellKey(cell) {
+  return cell ? cell.col + ',' + cell.row : '';
+}
+
+const _BOT_DIR_DELTA = { N:[0,-1], E:[1,0], S:[0,1], W:[-1,0] };
+const _BOT_SPECIAL_PRIORITY = { modifier: 5, treasure: 4, shop: 3, casino: 2, teacher: 1 };
+
+function _botNeighbour(cell, dir) {
+  const [dc, dr] = _BOT_DIR_DELTA[dir] || [0, 0];
+  let col = cell.col + dc;
+  let row = cell.row + dr;
+  if (G.run?.wallBreaker) {
+    col = (col + COLS) % COLS;
+    row = (row + ROWS) % ROWS;
+  }
+  return getCell(col, row);
+}
+
+function _botPathToCell(target) {
+  const start = currentCell();
+  if (!start || !target) return null;
+  const startKey = _botCellKey(start);
+  const targetKey = _botCellKey(target);
+  if (startKey === targetKey) return { dir: null, distance: 0 };
+
+  const visited = new Map([[startKey, { from: null, dir: null, distance: 0 }]]);
+  const queue = [start];
+  let queueIndex = 0;
+
+  while (queueIndex < queue.length) {
+    const cell = queue[queueIndex++];
+    if (_botCellKey(cell) === targetKey) break;
+    for (const dir of cell.connections || []) {
+      const next = _botNeighbour(cell, dir);
+      const nextKey = _botCellKey(next);
+      if (!next || visited.has(nextKey)) continue;
+      visited.set(nextKey, {
+        from: _botCellKey(cell),
+        dir,
+        distance: (visited.get(_botCellKey(cell))?.distance || 0) + 1,
+      });
+      queue.push(next);
+    }
+  }
+  if (!visited.has(targetKey)) return null;
+
+  let cursor = targetKey;
+  let step = visited.get(cursor);
+  while (step?.from && step.from !== startKey) {
+    cursor = step.from;
+    step = visited.get(cursor);
+  }
+  return { dir: step?.dir || null, distance: visited.get(targetKey)?.distance || 0 };
+}
+
+function _botTeacherHasStartableLesson(cell) {
+  if (!cell || cell._botHandled || G.playerHP < G.playerMax) return false;
+  const lesson = cell.currentLesson || getNextLesson(G.completedLessons || []);
+  if (!lesson || (G.completedLessons || []).includes(lesson.id)) return false;
+  try {
+    const timestamps = JSON.parse(localStorage.getItem('krr_lesson_cooldowns') || '{}');
+    const timestamp = timestamps[G.run?.worldIdx];
+    return timestamp === undefined || Date.now() - timestamp >= 31 * 60 * 1000;
+  } catch {
+    return true;
+  }
+}
+
+function _botCellNeedsVisit(cell) {
+  if (!cell || cell._botHandled) return false;
+  switch (cell.type) {
+    case 'shop':     return true;
+    case 'modifier': return !cell.rewardCollected;
+    case 'treasure': return !cell.rewardCollected;
+    case 'casino':   return !cell.casinoUsed;
+    case 'teacher':  return _botTeacherHasStartableLesson(cell);
+    default:         return false;
+  }
+}
+
+function _botCellIsVisible(cell) {
+  return !!(cell?.visited || cell?.guideRevealed || G.run?.mapRevealed);
+}
+
+function _botNearestSpecial(candidates) {
+  let best = null;
+  for (const cell of candidates) {
+    const path = _botPathToCell(cell);
+    if (!path) continue;
+    const priority = _BOT_SPECIAL_PRIORITY[cell.type] || 0;
+    if (!best || path.distance < best.path.distance
+      || (path.distance === best.path.distance && priority > best.priority)) {
+      best = { cell, path, priority };
+    }
+  }
+  return best;
+}
+
+function _botForcedDestination() {
+  const intent = _bot.forcedDestination;
+  if (!intent || intent.worldIdx !== G.run?.worldIdx) {
+    _bot.forcedDestination = null;
+    return null;
+  }
+  const cell = getCell(intent.col, intent.row);
+  if (!cell || (intent.type === 'casino' && cell.casinoUsed)) {
+    _bot.forcedDestination = null;
+    return null;
+  }
+  return cell;
+}
+
+function _botSetMasterKeyIntent() {
+  const grid = G.dungeon?.grid || [];
+  const casino = grid.find(cell => cell.type === 'casino' && !cell.visited && !cell.casinoUsed);
+  const target = casino || grid.find(cell => cell.type === 'boss');
+  if (!target) return;
+  _bot.forcedDestination = {
+    type: casino ? 'casino' : 'boss',
+    col: target.col,
+    row: target.row,
+    worldIdx: G.run?.worldIdx,
+  };
+}
+
+function _botAutoMoveDestination() {
+  const start = currentCell();
+  if (!start) return null;
+
+  // Night-time rest takes precedence over loot and boss routing. A tent is a
+  // reusable safe point, so do not burn another tent item when one is already
+  // reachable in this world.
+  const sleepTent = _botNearestTentToSleep();
+  if (sleepTent && _botCellKey(sleepTent) !== _botCellKey(start)) return sleepTent;
+
+  const forced = _botForcedDestination();
+  if (forced) return forced;
+
+  // A bright special door can be recognized when it is adjacent, even before
+  // the map has revealed the rest of the dungeon.
+  const adjacent = [];
+  for (const dir of start.connections || []) {
+    const cell = _botNeighbour(start, dir);
+    if (_botCellNeedsVisit(cell)) adjacent.push(cell);
+  }
+  const direct = _botNearestSpecial(adjacent);
+  if (direct) return direct.cell;
+
+  const knownSpecials = (G.dungeon?.grid || []).filter(cell =>
+    _botCellNeedsVisit(cell) && _botCellIsVisible(cell)
+  );
+  const visible = _botNearestSpecial(knownSpecials);
+  if (visible) return visible.cell;
+
+  return (G.dungeon?.grid || []).find(cell => cell.type === 'boss') || null;
+}
+
+function _botDirectionToBoss() {
+  const boss = (G.dungeon?.grid || []).find(cell => cell.type === 'boss');
+  return _botPathToCell(boss)?.dir || null;
+}
+
+function _botDirectionToAutoMove() {
+  return _botPathToCell(_botAutoMoveDestination())?.dir || null;
+}
+
+function _botRoomHasNoLiveMonsters() {
+  return !(G.room?.monsters || []).some(m => !m.dead && !m.fleeing && !m.defeatCommitted);
+}
+
+function _botQueueDoorScan(now) {
+  _bot.nextDecisionAt = Math.max(
+    _bot.nextDecisionAt || 0,
+    now + _botInterfaceDelay('doorScan'),
+  );
+}
+
+function _botObserveRoomClear(now) {
+  const roomKey = _botCellKey(currentCell());
+  const justUnlockedThisRoom = _bot.lastMode === 'combat'
+    && _bot.lastRoomKey === roomKey
+    && G.mode === 'navigate'
+    && (G.room?.exitUnlocked || G.room?.wPhase === 'clear');
+  if (justUnlockedThisRoom) _botQueueDoorScan(now);
+  _bot.lastMode = G.mode;
+  _bot.lastRoomKey = roomKey;
+}
+
+function _botNextPickup() {
+  if (!_bot.pickUpDrops || G.mode !== 'navigate' || !_botRoomHasNoLiveMonsters()) return null;
+  const roomKey = _botCellKey(currentCell());
+  for (const groundItem of G.room?.groundItems || []) {
+    const pickupKey = roomKey + ':' + groundItem.id;
+    if (groundItem.isHanja) {
+      if (!_bot.hanjaPickupDecisions.has(pickupKey)) {
+        _bot.hanjaPickupDecisions.set(pickupKey, Math.random() < 0.5);
+      }
+      if (!_bot.hanjaPickupDecisions.get(pickupKey)) continue;
+    }
+    const word = groundItem.keys?.[groundItem.keyIdx];
+    if (word) return { word, id: groundItem.id };
+  }
+  return null;
+}
+
+function _botItemStack(item) {
+  return (G.inventory?.stacks || []).find(stack => stack.item === item) || null;
+}
+
+function _botItemCount(item) {
+  return _botItemStack(item)?.count || 0;
+}
+
+function _botItemReady(item) {
+  if (!_botItemStack(item) || (G.run?._itemUseLock || 0) > 0) return false;
+  return (G.run?.itemCooldowns?.[item] || 0) <= 0;
+}
+
+function _botWorldHasDayNightCycle() {
+  return !G.dungeon?.worldDef?.fixedLighting;
+}
+
+function _botIsNight() {
+  if (!_botWorldHasDayNightCycle()) return false;
+  const hour = ((G.gameTime || 0) % 420) / 420 * 24;
+  return hour >= 20 || hour < 6;
+}
+
+function _botNearestTentToSleep() {
+  if (!_bot.useItems || !_botWorldHasDayNightCycle() || !_botIsNight()
+    || (G.run?.tentCooldown || 0) > 0) return null;
+
+  let best = null;
+  for (const cell of G.dungeon?.grid || []) {
+    if (!cell.isTent) continue;
+    const path = _botPathToCell(cell);
+    if (!path || (best && path.distance >= best.path.distance)) continue;
+    best = { cell, path };
+  }
+  return best?.cell || null;
+}
+
+function _botNeedsNewTentHere() {
+  const cell = currentCell();
+  return _bot.useItems
+    && _botWorldHasDayNightCycle()
+    && _botIsNight()
+    && (G.run?.tentCooldown || 0) <= 0
+    && _botItemCount('⛺') > 0
+    && cell?.type === 'normal'
+    && !cell.isTent
+    && !G.room?.npc
+    && !_botNearestTentToSleep();
+}
+
+function _botCanPitchTentHere() {
+  return _botNeedsNewTentHere()
+    && G.mode === 'navigate'
+    && G.room?.wPhase === 'clear'
+    && _botItemReady('⛺');
+}
+
+function _botShouldWaitForTentClear() {
+  return _botNeedsNewTentHere()
+    && G.mode === 'navigate'
+    && G.room?.wPhase !== 'clear';
+}
+
+function _botCanSleepAtCurrentTent(npc = G.room?.npc) {
+  const cell = currentCell();
+  return _bot.useItems
+    && _botWorldHasDayNightCycle()
+    && _botIsNight()
+    && (G.run?.tentCooldown || 0) <= 0
+    && G.mode === 'navigate'
+    && cell?.isTent
+    && npc?.active
+    && npc.type === 'tent'
+    && !!npc.word;
+}
+
+function _botFindItemToUse() {
+  if (!_bot.useItems || !G.run || (G.run._itemUseLock || 0) > 0) return null;
+  const canUse = item => _botItemReady(item);
+  const cell = currentCell();
+  const monsters = (G.room?.monsters || []).filter(m => _isTargetableMonster(m));
+  const crowd = monsters.length;
+  const tough = monsters.filter(m => (m.hp || 0) > 2).length;
+
+  // Camp before any teleporting or other backpack action. The predicate
+  // mirrors the item's real usability check, not the early hyper-typing exit.
+  if (_botCanPitchTentHere()) return '⛺';
+
+  // Movement-changing items are deliberately used from a safe room state.
+  if (canUse('🏯')) return '🏯';
+  if (canUse('🔑')) return '🔑';
+  if (canUse('📖')
+    && !G.run.mapRevealed
+    && !(G.run.permanents || []).includes('crystal_ball')
+    && (G.dungeon?.grid || []).some(room => room
+      && room.type !== 'normal' && room.type !== 'boss'
+      && !room.visited && !room.guideRevealed)) return '📖';
+  if (canUse('🕳️')) return '🕳️';
+
+  if (canUse('💛') && G.playerMax < 100) return '💛';
+  if (canUse('❤️‍🩹') && G.playerMax - G.playerHP >= 2) return '❤️‍🩹';
+
+  // These two are safe buffers, so the bot keeps them up whenever possible.
+  if (canUse('🎁')) return '🎁';
+  if (canUse('🛡️')) return '🛡️';
+
+  if (G.mode !== 'combat') return null;
+  if (canUse('🔇') && !G.room?.noiseCancelled && monsters.some(m => m.special === 'musician')) return '🔇';
+  if (canUse('⚔️') && crowd >= BOT_ITEM_THRESHOLDS.cleaveCrowd && !cell?._botCleaveUsed) return '⚔️';
+  if (canUse('🎯') && !G.autokillBubble) return '🎯';
+  if (canUse('⏰') && crowd >= BOT_ITEM_THRESHOLDS.freezeCrowd) return '⏰';
+  if (canUse('⏱️') && crowd >= BOT_ITEM_THRESHOLDS.slowCrowd) return '⏱️';
+  if (canUse('🔥') && tough >= BOT_ITEM_THRESHOLDS.critToughMonsters) return '🔥';
+  if (canUse('🤑') && crowd >= BOT_ITEM_THRESHOLDS.greedyCrowd && !cell?._botGreedyUsed) return '🤑';
+
+  // These were not given an explicit threshold in the brief. The bot treats
+  // them as last-resort crowd-control rather than letting them gather dust.
+  if (canUse('💣') && crowd >= 3) return '💣';
+  if (canUse('⚡') && crowd >= 3 && !G.stunBubble) return '⚡';
+  if (canUse('🎲')) return '🎲';
+  return null; // 📙 is intentionally ignored by the bot.
+}
+
+function _botAfterItemUse(item) {
+  const cell = currentCell();
+  if (item === '🔑') _botSetMasterKeyIntent();
+  if (item === '⚔️' && cell) cell._botCleaveUsed = true;
+  if (item === '🤑' && cell) cell._botGreedyUsed = true;
+}
+
+function _botBeginItemUse(item, now) {
+  if (!item || _bot.itemTask || G.ctrlPanelOpen) return false;
+  if (!_botItemReady(item)) return false;
+  _bot.itemTask = { item, stage: 'open', nextAt: now };
+  return true;
+}
+
+function _botFinishItemTask(now) {
+  const item = _bot.itemTask?.item;
+  if (G.ctrlPanelOpen) closeCtrlPanel();
+  if (item === '🔑' || item === '📖') {
+    document.getElementById('map-panel')?.classList.add('off');
+  }
+  _bot.itemTask = null;
+  _bot.nextDecisionAt = now + _botInterfaceDelay('nextDecision');
+}
+
+function _tickBotItemTask(now) {
+  const task = _bot.itemTask;
+  if (!task || now < task.nextAt) return;
+
+  if (task.stage === 'open') {
+    openCtrlPanel();
+    task.stage = 'select';
+    task.nextAt = now + _botInterfaceDelay('openReaction');
+    return;
+  }
+
+  if (task.stage === 'select') {
+    const stacks = G.inventory?.stacks || [];
+    const targetIndex = stacks.findIndex(stack => stack.item === task.item);
+    if (targetIndex < 0) {
+      _botFinishItemTask(now);
+      return;
+    }
+    const selectedIndex = G.inventory.sel || 0;
+    if (selectedIndex !== targetIndex) {
+      const forward = (targetIndex - selectedIndex + stacks.length) % stacks.length;
+      const backward = (selectedIndex - targetIndex + stacks.length) % stacks.length;
+      invNavigate(forward <= backward ? 1 : -1);
+      refreshCtrlInv();
+      task.nextAt = now + _botInterfaceDelay('navigationStep');
+      return;
+    }
+    task.stage = 'confirm';
+    task.nextAt = now + _botInterfaceDelay('selectionScan');
+    return;
+  }
+
+  if (task.stage === 'confirm') {
+    task.stage = 'use';
+    task.nextAt = now + _botInterfaceDelay('confirmUse');
+    return;
+  }
+
+  if (task.stage === 'use') {
+    // The final projectile can leave the room in navigate mode before its
+    // impact runs. Do not attempt camp placement until that impact marks the
+    // room genuinely clear; this also makes a stale backpack task harmless.
+    if (task.item === '⛺' && !_botCanPitchTentHere()) {
+      _botFinishItemTask(now);
+      return;
+    }
+    if ((G.run?._itemUseLock || 0) > 0) {
+      task.nextAt = now + 120;
+      return;
+    }
+    const stack = _botItemStack(task.item);
+    const before = stack?.count || 0;
+    invUse();
+    refreshCtrlInv();
+    if ((stack?.count || 0) < before) _botAfterItemUse(task.item);
+    if (G.inTransition || G.worldTransition) {
+      _botFinishItemTask(now);
+      return;
+    }
+    task.stage = 'close';
+    const postUseStage = task.item === '🔑' || task.item === '📖' ? 'mapReview' : 'postUse';
+    task.nextAt = now + _botInterfaceDelay(postUseStage);
+    return;
+  }
+
+  _botFinishItemTask(now);
+}
+
+function _botConsumableUtility(item) {
+  if (item === '📙') return Number.NEGATIVE_INFINITY;
+  if (item === '⛺' && _botItemCount(item) >= 1) return Number.NEGATIVE_INFINITY;
+  if (item === '❤️‍🩹' && _botItemCount(item) >= 3) return Number.NEGATIVE_INFINITY;
+
+  let value = BOT_ITEM_VALUE[item] || 30;
+  if (item === '⛺' && _botItemCount(item) === 0) value += 300;
+  if (item === '❤️‍🩹') value += (3 - _botItemCount(item)) * 80;
+  return value;
+}
+
+function _botEffectiveShopPrice(entry) {
+  if (entry.type !== 'consumable') return entry.basePrice || entry.price || 0;
+  return Math.round((entry.basePrice || entry.price || 0) * Math.pow(2, _botItemCount(entry.itemKey)));
+}
+
+function _botShopUtility(entry) {
+  if (entry.type === 'modifier') {
+    if ((G.run?.permanents || []).includes(entry.permId)) return Number.NEGATIVE_INFINITY;
+    const firstModifierBonus = (G.run?.permanents || []).length === 0 ? 400 : 0;
+    return 300 + firstModifierBonus + (BOT_PERMANENT_VALUE[entry.permId] || 50);
+  }
+  return _botConsumableUtility(entry.itemKey);
+}
+
+function _botChooseShopPurchase(cell) {
+  const wallet = G.run?.wallet || 0;
+  const choices = (cell?._shopInventory || [])
+    .map(entry => ({ entry, price: _botEffectiveShopPrice(entry), utility: _botShopUtility(entry) }))
+    .filter(choice => choice.price <= wallet && choice.utility > 0);
+  choices.sort((a, b) => b.utility - a.utility || a.price - b.price);
+  return choices[0] || null;
+}
+
+function _botChooseModifierChoice(cell) {
+  const choices = cell?.itemChoices || [];
+  const unownedModifiers = choices
+    .map((choice, index) => ({ choice, index }))
+    .filter(entry => entry.choice.type === 'permanent'
+      && !(G.run?.permanents || []).includes(entry.choice.item.id));
+  const candidates = unownedModifiers.length
+    ? unownedModifiers
+    : choices.map((choice, index) => ({ choice, index }));
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => {
+    const aValue = a.choice.type === 'permanent'
+      ? (BOT_PERMANENT_VALUE[a.choice.item.id] || 50)
+      : _botConsumableUtility(a.choice.itemKey);
+    const bValue = b.choice.type === 'permanent'
+      ? (BOT_PERMANENT_VALUE[b.choice.item.id] || 50)
+      : _botConsumableUtility(b.choice.itemKey);
+    return bValue - aValue;
+  });
+  return candidates[0].index;
+}
+
+function _botScreenOpen(id) {
+  const screen = document.getElementById(id);
+  return !!screen && !screen.classList.contains('off');
+}
+
+function _botMarkSpecialHandled(cell, now) {
+  if (cell) cell._botHandled = true;
+  if (G.room?.npc?.cell === cell) G.room.npc.active = false;
+  _bot.uiTask = null;
+  _bot.nextDecisionAt = now + _botInterfaceDelay('doorScan');
+}
+
+function _botMaybeStartUiTask(now) {
+  if (!_bot.autoMove || _bot.uiTask) return false;
+  const cell = currentCell();
+  if (!cell) return false;
+  const screens = [
+    ['shop', 'scr-shop'],
+    ['modifier', 'scr-modifier'],
+    ['treasure', 'scr-treasure'],
+    ['casino', 'scr-casino'],
+    ['teacher', 'scr-teacher'],
+  ];
+  const activeScreen = screens.find(([kind, id]) => kind === cell.type && _botScreenOpen(id));
+  if (!activeScreen) return false;
+  // A modal appearing is not an instant decision. Even a fast typer needs a
+  // beat to register which screen opened before moving the cursor/selection.
+  _bot.uiTask = {
+    kind: activeScreen[0],
+    cell,
+    stage: 'scan',
+    nextAt: now + _botInterfaceDelay('screenOpenReaction'),
+    purchases: 0,
+  };
+  return true;
+}
+
+function _scrollTeacherLessonToEnd() {
+  const viewer = document.querySelector('#scr-teacher .lesson-viewer');
+  if (!viewer) return false;
+
+  // .lesson-viewer has content-height on desktop, while its .menu-card is the
+  // actual scroll container. On a constrained layout the viewer itself can
+  // become scrollable, so move both possible owners and let the overflowing
+  // one visibly animate.
+  const scrollTargets = [viewer, viewer.closest('#scr-teacher .menu-card')]
+    .filter((el, index, all) => el && all.indexOf(el) === index);
+  for (const target of scrollTargets) {
+    const maxScroll = Math.max(0, target.scrollHeight - target.clientHeight);
+    if (typeof target.scrollTo === 'function') {
+      target.scrollTo({ top: maxScroll, behavior: 'smooth' });
+    } else {
+      target.scrollTop = maxScroll;
+    }
+    target.dispatchEvent(new Event('scroll', { bubbles: true }));
+  }
+  return true;
+}
+
+function _tickBotUiTask(now) {
+  const task = _bot.uiTask;
+  if (!task || now < task.nextAt) return;
+  if (_botCellKey(currentCell()) !== _botCellKey(task.cell)) {
+    _bot.uiTask = null;
+    _bot.nextDecisionAt = now + _botInterfaceDelay('nextDecision');
+    return;
+  }
+
+  if (task.kind === 'shop') {
+    if (task.stage === 'scan') {
+      const purchase = task.purchases < 5 ? _botChooseShopPurchase(task.cell) : null;
+      if (!purchase) {
+        task.stage = 'leave';
+        task.nextAt = now + _botInterfaceDelay('screenClose');
+        return;
+      }
+      task.purchase = purchase;
+      task.stage = 'buy';
+      task.nextAt = now + _botInterfaceDelay('screenClick');
+      return;
+    }
+    if (task.stage === 'buy') {
+      const purchase = task.purchase;
+      task.purchase = null;
+      if (purchase && shopBuy(task.cell, purchase.entry, purchase.price)) {
+        task.purchases++;
+        renderShopScreen(task.cell);
+        task.stage = 'scan';
+        task.nextAt = now + _botInterfaceDelay('screenRead');
+        return;
+      }
+    }
+    window.closeRunShop?.();
+    _botMarkSpecialHandled(task.cell, now);
+    return;
+  }
+
+  if (task.kind === 'modifier') {
+    if (task.stage === 'scan') {
+      const choiceIndex = _botChooseModifierChoice(task.cell);
+      if (choiceIndex === null) {
+        task.stage = 'close';
+        task.nextAt = now + _botInterfaceDelay('screenClose');
+        return;
+      }
+      task.choiceIndex = choiceIndex;
+      task.stage = 'choose';
+      task.nextAt = now + _botInterfaceDelay('screenClick');
+      return;
+    }
+    if (task.stage === 'choose') {
+      const cards = document.querySelectorAll('#modifier-choices .item-choice-card');
+      const card = cards[task.choiceIndex];
+      if (card) card.click();
+      else pickModifierItem(task.cell, task.choiceIndex);
+      task.stage = 'result';
+      task.nextAt = now + _botInterfaceDelay('screenResult');
+      return;
+    }
+    document.getElementById('modifier-skip')?.click();
+    _botMarkSpecialHandled(task.cell, now);
+    return;
+  }
+
+  if (task.kind === 'treasure') {
+    if (task.stage === 'scan') {
+      task.stage = task.cell.rewardCollected ? 'close' : 'collect';
+      task.nextAt = now + _botInterfaceDelay(task.cell.rewardCollected ? 'screenClose' : 'screenClick');
+      return;
+    }
+    if (task.stage === 'collect') {
+      const collect = document.getElementById('treasure-collect');
+      if (collect) collect.click();
+      else collectTreasure(task.cell);
+      task.stage = 'result';
+      task.nextAt = now + _botInterfaceDelay('screenResult');
+      return;
+    }
+    window.closeTreasure?.();
+    _botMarkSpecialHandled(task.cell, now);
+    return;
+  }
+
+  if (task.kind === 'casino') {
+    if (task.stage === 'scan') {
+      // Let the reels be visible for a moment; a player has to react to a
+      // moving screen before deciding when to stop it.
+      task.stage = 'stop';
+      task.nextAt = now + _botInterfaceDelay('casinoSpin');
+      return;
+    }
+    if (task.stage === 'stop') {
+      const stop = document.getElementById('casino-stop-btn');
+      if (!stop || stop.classList.contains('hidden')) {
+        task.nextAt = now + _botInterfaceDelay('screenRead');
+        return;
+      }
+      stop.click();
+      task.stage = 'review-result';
+      task.nextAt = now + _botInterfaceDelay('screenResult');
+      return;
+    }
+    if (task.stage === 'review-result') {
+      task.stage = 'accept';
+      task.nextAt = now + _botInterfaceDelay('screenClick');
+      return;
+    }
+    if (task.stage === 'accept') {
+      const accept = document.getElementById('casino-accept-btn');
+      if (!accept || accept.classList.contains('hidden')) {
+        task.nextAt = now + _botInterfaceDelay('screenRead');
+        return;
+      }
+      accept.click();
+      task.stage = 'result';
+      task.nextAt = now + _botInterfaceDelay('screenResult');
+      return;
+    }
+    _botMarkSpecialHandled(task.cell, now);
+    return;
+  }
+
+  if (task.kind === 'teacher') {
+    if (task.stage === 'scan') {
+      const start = document.getElementById('btn-start-lesson');
+      if (!start || start.classList.contains('disabled')) {
+        task.stage = 'close';
+        task.nextAt = now + _botInterfaceDelay('screenClose');
+        return;
+      }
+      task.stage = 'start';
+      task.nextAt = now + _botInterfaceDelay('screenClick');
+      return;
+    }
+    if (task.stage === 'start') {
+      const start = document.getElementById('btn-start-lesson');
+      if (!start || start.classList.contains('disabled')) {
+        task.stage = 'close';
+        task.nextAt = now + _botInterfaceDelay('screenClose');
+        return;
+      }
+      start.click();
+      const readDuration = _botInterfaceDelay('lessonRead');
+      task.lessonReadEndsAt = now + readDuration;
+      // A real player usually reads the top first, performs one decisive
+      // scroll through the lesson, then spends the remaining beat orienting at
+      // the bottom before confirming that they understood it.
+      task.stage = 'lesson-midpoint';
+      task.nextAt = now + Math.round(readDuration / 2);
+      return;
+    }
+    if (task.stage === 'lesson-midpoint') {
+      if (!_scrollTeacherLessonToEnd()) {
+        task.stage = 'close';
+        task.nextAt = now + _botInterfaceDelay('screenClose');
+        return;
+      }
+      task.stage = 'lesson-bottom-read';
+      task.nextAt = Math.max(now, task.lessonReadEndsAt || now);
+      return;
+    }
+    if (task.stage === 'lesson-bottom-read') {
+      task.stage = 'understood';
+      task.nextAt = now + _botInterfaceDelay('screenClick');
+      return;
+    }
+    if (task.stage === 'understood') {
+      document.getElementById('btn-lesson-done')?.click();
+      task.stage = 'close';
+      task.nextAt = now + _botInterfaceDelay('screenResult');
+      return;
+    }
+    window.closeTeacherScreen?.();
+    _botMarkSpecialHandled(task.cell, now);
+  }
+}
+
+function _tickBot(dt) {
+  if (!_bot.enabled) return;
+  if (G.mp?.active) {
+    _bot.enabled = false;
+    _clearBotTask({ clearInput: true });
+    _syncBotUi();
+    flashAnnounce('🤖 Bot is single-player only', '#ff8844');
+    return;
+  }
+  const now = performance.now();
+  if (G.phase !== 'run' || G.inTransition || G.transition || G.worldTransition || G.frozen) {
+    // World Skip and Wormhole can start a transition from the backpack. Do
+    // not leave that panel open across a freshly created room.
+    if (_bot.itemTask && G.ctrlPanelOpen) _botFinishItemTask(now);
+    _paintBotStats(now);
+    return;
+  }
+
+  _botObserveRoomClear(now);
+
+  if (_bot.itemTask) {
+    _tickBotItemTask(now);
+    _paintBotStats(now);
+    return;
+  }
+  if (_bot.uiTask || _botMaybeStartUiTask(now)) {
+    _tickBotUiTask(now);
+    _paintBotStats(now);
+    return;
+  }
+  // A manually opened backpack should still pause the bot. Its own backpack
+  // task is handled above and is allowed to advance while time is paused.
+  if (G.ctrlPanelOpen) {
+    _paintBotStats(now);
+    return;
+  }
+
+  if (_bot.task) {
+    if (G.mode === 'combat') {
+      const threat = _botTarget();
+      if (_botShouldInterrupt(_bot.task, threat)) _startBotErase(threat);
+    }
+    _tickBotTyping(now);
+    _paintBotStats(now);
+    return;
+  }
+  if (now < _bot.nextDecisionAt) {
+    _paintBotStats(now);
+    return;
+  }
+
+  const npc = G.room?.npc;
+  if (_botCanSleepAtCurrentTent(npc)) {
+    _startBotTyping(npc.word, 'tent');
+    _paintBotStats(now);
+    return;
+  }
+
+  // A fired final monster unlocks doors early for real hypertypers. A tent
+  // cannot be placed until the visible impact has cleared the room, however,
+  // so wait here instead of repeatedly opening the backpack and failing.
+  if (_botShouldWaitForTentClear()) {
+    _bot.stats.idleMs += dt * 1000;
+    _paintBotStats(now);
+    return;
+  }
+
+  // If a camp already exists, sleeping there is more valuable than picking up
+  // loot, shopping, or using a movement item. Auto-move performs the trip;
+  // when it is disabled the bot deliberately leaves movement to the player.
+  const sleepTent = _botNearestTentToSleep();
+  if (G.mode === 'navigate' && _bot.autoMove && sleepTent
+    && _botCellKey(sleepTent) !== _botCellKey(currentCell())) {
+    const dir = _botPathToCell(sleepTent)?.dir;
+    if (dir) _startBotTyping(DIR_NAMES[dir] || dir, 'direction');
+    else _bot.stats.idleMs += dt * 1000;
+    _paintBotStats(now);
+    return;
+  }
+
+  const item = _botFindItemToUse();
+  if (_botBeginItemUse(item, now)) {
+    _paintBotStats(now);
+    return;
+  }
+
+  if (G.mode === 'combat') {
+    const target = _botTarget();
+    if (target) _startBotTyping(target.word, _botMonsterKind(target), target.id);
+    else _bot.stats.idleMs += dt * 1000;
+  } else if (G.mode === 'navigate') {
+    const pickup = _botNextPickup();
+    if (pickup) {
+      _startBotTyping(pickup.word, 'pickup', pickup.id);
+      _paintBotStats(now);
+      return;
+    }
+
+    if (_bot.autoWorld && npc?.active && npc.type === 'next_world') {
+      _startBotTyping(npc.word, 'world');
+    } else if (_bot.autoMove && npc?.active && _botCellNeedsVisit(currentCell())) {
+      _startBotTyping(npc.word, npc.type);
+    } else if (_bot.autoMove) {
+      const dir = _botDirectionToAutoMove();
+      if (dir) _startBotTyping(DIR_NAMES[dir] || dir, 'direction');
+      else _bot.stats.idleMs += dt * 1000;
+    }
+  }
+  _paintBotStats(now);
+}
+
 function buildCheatMenu() {
+  const shortcut = document.getElementById('cheat-run-shortcut');
+  if (shortcut) {
+    shortcut.onclick = event => {
+      event.preventDefault();
+      openCheatMenu();
+    };
+  }
+
   // Tab switching via event delegation
   document.addEventListener('click', e => {
     const tab = e.target.closest('#cheat-tabs .cheat-tab');
@@ -5946,15 +7286,85 @@ function buildCheatMenu() {
     document.querySelectorAll('#cheat-tabs .cheat-tab').forEach(t => t.classList.toggle('active', t === tab));
     document.querySelectorAll('#cheat-menu .cheat-panel').forEach(p => p.classList.toggle('active', p.id === `cheat-panel-${panelId}`));
     if (panelId === 'room') _syncRoomColorInputs();
+    if (panelId === 'bot') _syncBotUi();
   });
 }
 
 let _cheatOpenedWhileRunning = false;
+let _cheatShortcutUnlockedThisRun = false;
+
+function _syncCheatRunShortcut() {
+  const shortcut = document.getElementById('cheat-run-shortcut');
+  if (!shortcut) return;
+  const isActiveRun = G.phase === 'run' || G.phase === 'paused';
+  shortcut.hidden = !_cheatShortcutUnlockedThisRun || !isActiveRun;
+}
+
+function _resetCheatRunState() {
+  _cheatOpenedWhileRunning = false;
+  _cheatShortcutUnlockedThisRun = false;
+
+  document.getElementById('cheat-menu')?.classList.remove('on');
+  document.body.classList.remove('cheat-open');
+  G.godMode = false;
+  G.autoShoot = false;
+
+  _bot.enabled = false;
+  _bot.wpm = 100;
+  _bot.autoMove = false;
+  _bot.autoWorld = false;
+  _bot.useItems = false;
+  _bot.pickUpDrops = false;
+  _bot.task = null;
+  _bot.itemTask = null;
+  _bot.uiTask = null;
+  _bot.forcedDestination = null;
+  _bot.hanjaPickupDecisions.clear();
+  _bot.nextDecisionAt = 0;
+  _bot.lastMode = null;
+  _bot.lastRoomKey = '';
+  _resetBotStats();
+
+  _botSetToggleButton('c-god', false);
+  _botSetToggleButton('c-auto', false);
+  _syncBotUi();
+  _paintBotStats();
+
+  document.querySelectorAll('#cheat-tabs .cheat-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.cheatTab === 'game');
+  });
+  document.querySelectorAll('#cheat-menu .cheat-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.id === 'cheat-panel-game');
+  });
+
+  const tod = document.getElementById('c-tod');
+  const todValue = document.getElementById('c-tod-val');
+  if (tod) tod.value = '7';
+  if (todValue) todValue.textContent = '7:00';
+
+  const notif = document.getElementById('dict-unlock-notif');
+  if (notif) {
+    notif.classList.remove('on');
+    notif.classList.add('off');
+    notif.style.top = '';
+    notif.style.left = '';
+    notif.style.width = '';
+  }
+  _syncCheatRunShortcut();
+}
+
 function openCheatMenu() {
   populateCheatItemSel();
   populateCheatModSel();
   document.getElementById('cheat-menu')?.classList.add('on');
   document.body.classList.add('cheat-open');
+  if (G.phase === 'run' || G.phase === 'paused') {
+    _cheatShortcutUnlockedThisRun = true;
+  }
+  _botSetToggleButton('c-god', !!G.godMode);
+  _botSetToggleButton('c-auto', !!G.autoShoot);
+  _syncBotUi();
+  _syncCheatRunShortcut();
   if (G.touchMode && G.phase === 'run') {
     _cheatOpenedWhileRunning = true;
     G.phase = 'paused';
@@ -5965,6 +7375,7 @@ window.closeCheatMenu = function() {
   document.body.classList.remove('cheat-open');
   if (G.touchMode && _cheatOpenedWhileRunning && G.phase === 'paused') G.phase = 'run';
   _cheatOpenedWhileRunning = false;
+  _syncCheatRunShortcut();
 };
 window.cheatToggleGod = function() {
   G.godMode = !G.godMode;
@@ -5976,6 +7387,43 @@ window.cheatToggleAuto = function() {
   const btn = document.getElementById('c-auto');
   if (btn) { btn.textContent = G.autoShoot ? 'ON' : 'OFF'; btn.style.background = G.autoShoot ? '#27ae60' : ''; }
 };
+window.cheatToggleBot = function() {
+  if (G.mp?.active) {
+    flashAnnounce('🤖 Bot is single-player only', '#ff8844');
+    return;
+  }
+  _bot.enabled = !_bot.enabled;
+  if (_bot.enabled) {
+    _clearBotTask({ clearInput: true });
+    _bot.hanjaPickupDecisions.clear();
+    _resetBotStats();
+  } else {
+    _clearBotTask({ clearInput: true });
+  }
+  _syncBotUi();
+};
+window.cheatToggleBotAutoMove = function() {
+  _bot.autoMove = !_bot.autoMove;
+  _syncBotUi();
+};
+// Kept as a debug-console compatibility alias for older recordings.
+window.cheatToggleBotBoss = window.cheatToggleBotAutoMove;
+window.cheatToggleBotWorld = function() {
+  _bot.autoWorld = !_bot.autoWorld;
+  _syncBotUi();
+};
+window.cheatToggleBotItems = function() {
+  _bot.useItems = !_bot.useItems;
+  _syncBotUi();
+};
+window.cheatToggleBotPickups = function() {
+  _bot.pickUpDrops = !_bot.pickUpDrops;
+  _syncBotUi();
+};
+document.getElementById('c-bot-wpm')?.addEventListener('input', e => {
+  _bot.wpm = Math.max(20, Math.min(250, parseInt(e.target.value, 10) || 100));
+  _syncBotUi();
+});
 window.cheatAddLives = function() {
   const n = parseInt(document.getElementById('c-lives-in')?.value) || 5;
   G.playerHP = Math.min(G.playerMax + n, 100);
@@ -6734,6 +8182,7 @@ function _mpHandleMessage(msg) {
         _hideMultiplayerModal(); // close join modal if open (reconnect flow)
         _hideMpDisconnectOverlay();
         resetRunState();
+        _resetCheatRunState();
         screenOff('scr-title'); screenOff('scr-over');
         if (hudEl) hudEl.style.display = 'flex';
         if (paEl)  { paEl.style.display = 'flex'; paEl.style.opacity = '1'; }
@@ -6822,7 +8271,7 @@ function _mpHandleMessage(msg) {
       const py = msg.py ?? (G.vH - 90);
       const dx = target.x - px, dy = target.y - py;
       const d  = Math.hypot(dx, dy) || 1;
-      const spd = 520;
+      const spd = Number.isFinite(msg.projectileSpeed) ? msg.projectileSpeed : 520;
       G.room.projs.push({
         x: px, y: py,
         emoji: msg.emoji || '🔮',
@@ -6830,6 +8279,7 @@ function _mpHandleMessage(msg) {
         vx: dx/d * spd, vy: dy/d * spd,
         rot: 0, rs: (Math.random() - 0.5) * 18,
         size: Math.round(48 * G.vH / 1080),
+        speed: spd,
         dead: false,
         born: performance.now(),
         _fromP2: true, // ghost projectile — no local hitMonster on impact
@@ -7357,6 +8807,7 @@ function _mpStartGame() {
   // Pre-generate world sequence + dungeon so blueprint can be sent synchronously
   // before the guest's lore animation ends (eliminates race condition)
   resetRunState();
+  _resetCheatRunState();
   const DIFF = { baby:50, easy:20, normal:10, hard:5, hardcore:1 };
   G.playerMax = DIFF[diffKey] || 10;
   G.playerHP  = G.playerMax;

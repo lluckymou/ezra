@@ -97,7 +97,11 @@ function minDiffForWave(wn) {
 }
 
 function pickWordsForRoom(waveNum, count, opts = {}) {
-  const { noVerbAdj = false } = opts;
+  const {
+    noVerbAdj = false,
+    enforceWaveMinDifficulty = false,
+    minDifficultyQuota = count,
+  } = opts;
   const effectiveWave = Math.max(1, waveNum + (G.run?.difficultyOffset || 0));
   const maxD = maxDiffForWave(effectiveWave);
   const minD = minDiffForWave(effectiveWave);
@@ -133,13 +137,27 @@ function pickWordsForRoom(waveNum, count, opts = {}) {
   // Avoid words already used in this room (across all waves)
   const roomUsed = G.room?.usedWords || new Set();
   const sh = [...pool].sort(() => Math.random() - 0.5);
+  let orderedPool = sh;
+  if (enforceWaveMinDifficulty) {
+    // Normal rooms stay broad so they remain vocabulary-first. Bosses opt in
+    // here: most of their health bar must use the minimum difficulty that the
+    // wave already calculated, while a small number of breaths can stay easy.
+    const hard = sh.filter(w => w.d >= minD);
+    const easy = sh.filter(w => w.d < minD);
+    const hardQuota = Math.max(0, Math.min(count, minDifficultyQuota));
+    orderedPool = [
+      ...hard.slice(0, hardQuota),
+      ...easy,
+      ...hard.slice(hardQuota),
+    ];
+  }
   const out = [];
-  for (const w of sh) {
+  for (const w of orderedPool) {
     if (!roomUsed.has(w.text)) { out.push(w.text); roomUsed.add(w.text); }
     if (out.length >= count) break;
   }
   // Fallback if pool exhausted (very small pools)
-  while (out.length < count) out.push(sh[out.length % sh.length]?.text || '가');
+  while (out.length < count) out.push(orderedPool[out.length % orderedPool.length]?.text || '가');
   if (G.room) G.room.usedWords = roomUsed;
   return out;
 }
@@ -149,6 +167,19 @@ export function pickWordsForMonster(waveNum, hp, opts = {}) {
   const noVerbAdj = hp > 1 ? true : (opts.noVerbAdj || false);
   const effectiveWave = hp <= 1 ? waveNum : Math.max(1, waveNum - (hp - 1) * 4);
   return pickWordsForRoom(effectiveWave, hp, { noVerbAdj });
+}
+
+function pickBossWords(waveNum, count) {
+  // Keep roughly one word in five as a recovery beat, but make the rest meet
+  // the existing wave minimum. This changes bosses only, not room vocabulary.
+  const breatherCount = count >= 5 ? Math.max(1, Math.round(count * 0.2)) : 0;
+  const words = pickWordsForRoom(waveNum, count, {
+    enforceWaveMinDifficulty: true,
+    minDifficultyQuota: count - breatherCount,
+  });
+  // Spread the recovery words across the fight instead of leaving an easy
+  // final phase after all of the demanding ones.
+  return words.sort(() => Math.random() - 0.5);
 }
 
 /* ================================================================
@@ -370,7 +401,7 @@ export function mkMonster(tmpl) {
     y = -(size * 3);
     spawnNX = 0.5;
     spawnNY = landNY;
-    spawnAnim = { t: 0, dur: 0.9, landNY };
+    spawnAnim = { t: 0, dur: tmpl.spawnDur ?? 0.9, landNY };
   } else if (tmpl.isProjectileMonster) {
     // Projectile monsters spawn near their parent - keep current door logic
     const doors = G.room?.openDoors;
@@ -392,7 +423,7 @@ export function mkMonster(tmpl) {
     y = -(size * 3);
     spawnNX = tmpl.spawnNX;
     spawnNY = tmpl.spawnNY;
-    spawnAnim = { t: 0, dur: 0.65, landNY: tmpl.spawnNY };
+    spawnAnim = { t: 0, dur: tmpl.spawnDur ?? 0.65, landNY: tmpl.spawnNY };
   } else {
     // Normal monsters: always spawn near room borders, with spacing check
     const MIN_DIST = Math.max(60, size * 1.8);
@@ -427,7 +458,7 @@ export function mkMonster(tmpl) {
     y = -(size * 3);
     spawnNX = landX / G.W;
     spawnNY = landY / G.vH;
-    spawnAnim = { t: 0, dur: 0.65, landNY: landY / G.vH };
+    spawnAnim = { t: 0, dur: tmpl.spawnDur ?? 0.65, landNY: landY / G.vH };
   }
 
   // Wield icon - use secondaryEmoji from current word if available
@@ -520,6 +551,9 @@ export function mkMonster(tmpl) {
 ================================================================ */
 export function initRoomSpawner(templates) {
   G.room.wTemplates = [...templates];
+  G.room.wPrepared = [];
+  G.room.wPending = 0;
+  G.room.pendingWordLoad = 0;
   G.room.wKilled   = 0;
   G.room.wTotal    = templates.length;
   G.room.wPhase    = 'spawning';
@@ -547,42 +581,128 @@ function wordCap(wn) {
   return 13;
 }
 
-function sendNextGroup() {
-  if (!G.room.wTemplates.length) return;
-  const room = G.room; // capture reference so timeouts target THIS room, not a future room
+function _prepared(room) {
+  return room.wPrepared || (room.wPrepared = []);
+}
+
+function _templateCount(room) {
+  return (room.wTemplates?.length || 0) + _prepared(room).length;
+}
+
+function _takeNextTemplate(room) {
+  return _prepared(room).shift() || room.wTemplates?.shift() || null;
+}
+
+function _isFlowEligible(room = G.room) {
+  // The tutorial should retain its deliberate cadence. Co-op remains on the
+  // conservative cap until spawn timing is made host-authoritative.
+  return !!room && !G.mp?.active && !(G.run?.tutorial && (G.run?.worldIdx ?? 0) <= 1);
+}
+
+function _recordSuccessfulFire(room) {
+  if (!_isFlowEligible(room)) return;
+  const now = performance.now();
+  const flow = room.flow || (room.flow = { level: 0, rapidStreak: 0, lastFireAt: 0 });
+  const gap = flow.lastFireAt ? now - flow.lastFireAt : null;
+  flow.lastFireAt = now;
+
+  if (gap == null) return;
+  if (gap <= 1450) flow.rapidStreak = Math.min(8, (flow.rapidStreak || 0) + 1);
+  else flow.rapidStreak = Math.max(0, (flow.rapidStreak || 0) - 2);
+
+  flow.level = flow.rapidStreak >= 6 ? 2 : flow.rapidStreak >= 3 ? 1 : 0;
+}
+
+function _targetCap(room) {
+  const base = groupSize(room.wave || 1);
+  const bonus = _isFlowEligible(room) ? (room.flow?.level || 0) : 0;
+  return Math.min(4, base + bonus);
+}
+
+function _normalMonsters(room, { includeCommitted = true } = {}) {
+  return room.monsters.filter(m =>
+    !m.dead && !m.isProjectileMonster && (includeCommitted || !m.defeatCommitted)
+  );
+}
+
+function _maybeFinishEmptyRoom(room) {
+  if (G.room !== room || room.wPhase !== 'spawning') return;
+  if (_templateCount(room) > 0 || (room.wPending || 0) > 0) return;
+  // A committed final kill stays visible until its projectile connects. Do not
+  // pay rewards or remove it from the room before that visual resolution.
+  if (_normalMonsters(room).length === 0) onRoomCleared();
+}
+
+function _scheduleMonsterSpawn(room, tmpl, { delay = 0, spawnDur = null } = {}) {
+  if (!tmpl) return false;
+  room.wPending = (room.wPending || 0) + 1;
+  room.pendingWordLoad = (room.pendingWordLoad || 0) + (tmpl.words?.length || 1);
+  const scheduledTemplate = spawnDur == null ? tmpl : { ...tmpl, spawnDur };
+
+  setTimeout(() => {
+    // A queued callback must never populate a room that has since been left.
+    if (G.room === room && G.phase === 'run' && room.wPhase === 'spawning') {
+      room.monsters.push(mkMonster(scheduledTemplate));
+    }
+    room.wPending = Math.max(0, (room.wPending || 0) - 1);
+    room.pendingWordLoad = Math.max(0, (room.pendingWordLoad || 0) - (tmpl.words?.length || 1));
+    _maybeFinishEmptyRoom(room);
+  }, Math.max(0, delay));
+  return true;
+}
+
+function sendNextGroup({ count = null, stagger = null, spawnDur = null } = {}) {
+  const room = G.room;
+  if (!room || !_templateCount(room)) return;
   const wn = room.wave || 1;
-  const n = groupSize(wn);
-  // Stagger between monsters in a group - longer pauses in early waves
-  const stagger = wn <= 4 ? 1000 : wn <= 8 ? 700 : wn <= 15 ? 500 : 350;
-  for (let i = 0; i < n && room.wTemplates.length > 0; i++) {
-    const tmpl = room.wTemplates.shift();
-    room.wPending = (room.wPending || 0) + 1;
-    setTimeout(() => {
-      if (G.phase === 'run' && room.wPhase === 'spawning') {
-        room.monsters.push(mkMonster(tmpl));
-      }
-      room.wPending = Math.max(0, (room.wPending || 0) - 1);
-      // Check if room should now clear (all in-flight monsters spawned and all dead)
-      if (room.wPhase === 'spawning' && room.wPending === 0 && room.wTemplates.length === 0) {
-        const alive = room.monsters.filter(m => !m.dead && !m.isProjectileMonster).length;
-        if (alive === 0) onRoomCleared();
-      }
-    }, i * stagger);
+  const n = count ?? groupSize(wn);
+  // Entrance groups remain cinematic. Reactive combat spawns use their own,
+  // much tighter stagger below.
+  const groupStagger = stagger ?? (wn <= 4 ? 1000 : wn <= 8 ? 700 : wn <= 15 ? 500 : 350);
+  for (let i = 0; i < n && _templateCount(room) > 0; i++) {
+    const tmpl = _takeNextTemplate(room);
+    _scheduleMonsterSpawn(room, tmpl, { delay: i * groupStagger, spawnDur });
   }
 }
 
-// Check spawn condition treating firedAt monsters as already gone.
-// Called both at fire-time and on monster death.
-function _maybeTriggerSpawn() {
-  if (G.room.wPhase !== 'spawning' || !G.room.wTemplates?.length) return;
-  const active       = G.room.monsters.filter(m => !m.dead && !m.firedAt).length;
-  const currentWords = G.room.monsters.filter(m => !m.dead && !m.firedAt).reduce((s,m) => s + m.words.length, 0);
-  if (active <= Math.max(1, groupSize(G.room.wave) - 1) && currentWords < wordCap(G.room.wave)) {
-    const wn = G.room.wave || 1;
-    const delay = wn <= 4 ? 2000 : wn <= 8 ? 1200 : wn <= 15 ? 700 : 350;
-    setTimeout(() => {
-      if (G.phase === 'run' && G.room.wPhase === 'spawning') sendNextGroup();
-    }, delay);
+// Reserve a template as soon as the player has completed a valid word. It is
+// intentionally invisible until Enter, so a correction/backspace never creates
+// a phantom enemy, but the generator work is already out of the critical path.
+export function primeNextSpawn() {
+  const room = G.room;
+  if (!room || room.wPhase !== 'spawning' || room.exitUnlocked) return false;
+  if (_prepared(room).length || !room.wTemplates?.length) return false;
+  _prepared(room).push(room.wTemplates.shift());
+  return true;
+}
+
+// Keep an appropriate number of readable targets on screen. A normal player
+// gets the historical group size; sustained fast typing earns one or two
+// additional incoming targets, with no fixed post-kill downtime.
+function _maybeTriggerSpawn({ projectileFlightMs = 0 } = {}) {
+  const room = G.room;
+  if (!room || room.wPhase !== 'spawning' || room.exitUnlocked || !_templateCount(room)) return;
+
+  const active = _normalMonsters(room, { includeCommitted: false }).length;
+  const cap = _targetCap(room);
+  let slots = Math.max(0, cap - active - (room.wPending || 0));
+  let wordLoad = _normalMonsters(room, { includeCommitted: false })
+    .reduce((sum, m) => sum + (m.words?.length || 1), 0) + (room.pendingWordLoad || 0);
+  const flowLevel = _isFlowEligible(room) ? (room.flow?.level || 0) : 0;
+  const stagger = flowLevel >= 2 ? 70 : flowLevel >= 1 ? 110 : 150;
+  const spawnDur = projectileFlightMs > 0
+    ? Math.max(0.28, Math.min(0.65, projectileFlightMs / 1000 * 0.9))
+    : 0.42;
+
+  for (let i = 0; i < slots && _templateCount(room) > 0; i++) {
+    const tmpl = _takeNextTemplate(room);
+    const nextWords = tmpl.words?.length || 1;
+    if (wordLoad + nextWords > wordCap(room.wave || 1)) {
+      _prepared(room).unshift(tmpl);
+      break;
+    }
+    _scheduleMonsterSpawn(room, tmpl, { delay: i * stagger, spawnDur });
+    wordLoad += nextWords;
   }
 }
 
@@ -590,23 +710,21 @@ export function onMonsterRemoved(m) {
   G.room.wKilled++;
   if (G.run && !m?.isProjectileMonster) G.run.monstersKilled++;
   // Tutorial: hide "type to kill" when first (tutorial) monster dies
-  if (m._tutorialStop && typeof window !== 'undefined') window._hideTutorial?.();
+  if (m?._tutorialStop && typeof window !== 'undefined') window._hideTutorial?.();
   const remaining = G.room.monsters.filter(m => !m.dead && !m.isProjectileMonster).length
-                  + (G.room.wTemplates?.length || 0)
+                  + _templateCount(G.room)
                   + (G.room.wPending || 0); // include in-flight stagger spawns
   if (remaining === 0 && G.room.wPhase === 'spawning') {
     onRoomCleared();
     return;
   }
-  // Spawn check already triggered at fire() time for targeted monsters
-  if (m?.firedAt) return;
   _maybeTriggerSpawn();
 }
 
 function checkStall() {
   if (G.room.wPhase !== 'spawning') return;
   const realAlive = G.room.monsters.filter(m => !m.dead && !m.isProjectileMonster).length;
-  const templatesLeft = (G.room.wTemplates?.length || 0) + (G.room.wPending || 0);
+  const templatesLeft = _templateCount(G.room) + (G.room.wPending || 0);
   if (realAlive === 0 && templatesLeft === 0) onRoomCleared();
 }
 
@@ -619,7 +737,7 @@ export function startFleeEffects(cell) {
 
   // 2. Save room state snapshot for when player returns
   const spawnedIdx = cell._templates
-    ? cell._templates.length - (G.room.wTemplates?.length || 0) - (G.room.wPending || 0)
+    ? cell._templates.length - (G.room.wTemplates?.length || 0) - (G.room.wPrepared?.length || 0) - (G.room.wPending || 0)
     : 0;
 
   cell._savedRoom = {
@@ -679,9 +797,24 @@ export function setCoinsCollectedCallback(cb) { _onCoinsCollectedCallback = cb; 
 function onRoomCleared() {
   if (G.room.wPhase === 'clear') return;
   G.room.wPhase = 'clear';
+  G.room.exitUnlocked = true;
+  G.room.clearPending = false;
   G.mode = 'navigate';
   sfx('roomClear');
   if (_onRoomClearedCallback) _onRoomClearedCallback();
+}
+
+// Finish a logically-cleared room before its room object is discarded. This is
+// called by enterRoom when a hyper typer has already walked through a door
+// while the last projectile was still travelling.
+export function finalizePendingCombat() {
+  const room = G.room;
+  if (!room?.clearPending || room.wPhase === 'clear') return false;
+  for (const m of [...room.monsters]) {
+    if (!m.dead && m.defeatCommitted) hitMonster(m);
+  }
+  _maybeFinishEmptyRoom(room);
+  return true;
 }
 
 /* ================================================================
@@ -882,7 +1015,7 @@ function genBoss(wn) {
   const hp = Math.min(4 + worldIdx, 12); // Stretched: reaches max HP at world 8 instead of 4
   // Boss words: skip the hp-based reduction and boost waveNum for harder words
   const bossWn = wn + 10;
-  const words = pickWordsForRoom(bossWn, hp);
+  const words = pickBossWords(bossWn, hp);
   // Every boss must have a special - no exceptions, not even in tutorial
   const bossSpecials = ['archer', 'ice', 'musician', 'warrior', 'eruptor', 'king'];
   const bossSpecial = bossSpecials[Math.floor(Math.random() * bossSpecials.length)];
@@ -911,7 +1044,55 @@ function rollNextSpell() {
   if (ico) ico.textContent = _nextSpell;
 }
 
-export function fire(monster) {
+function _willShotDefinitelyKill(m) {
+  if (!m || m.dead || m.isProjectileMonster) return false;
+  // Bosses can synchronously create phase reinforcements when hit. Keep their
+  // finale on the established resolution path until that special case has a
+  // dedicated cinematic-aware unlock flow.
+  if (m.type === 'boss') return false;
+  if (m.special === 'warrior' && m.shielded) return false;
+  // The shield effect consumes the incoming hit, so do not unlock a room on
+  // a prediction that we already know will be blocked.
+  if (G.run?.shieldHits > 0) return false;
+  // A stored critical can be spent by another in-flight projectile first
+  // (for example, a double shot), so only base one-damage kills are safe to
+  // resolve ahead of impact.
+  return m.hp <= 1;
+}
+
+function _maybeUnlockRoomExit(room) {
+  if (!room || room.exitUnlocked || room.wPhase !== 'spawning') return false;
+  if (_templateCount(room) > 0 || (room.wPending || 0) > 0) return false;
+  const stillFighting = _normalMonsters(room, { includeCommitted: false });
+  if (stillFighting.length) return false;
+  // Gameplay can advance immediately; the normal clear callback still runs on
+  // impact so coins, vocabulary, map state, and boss rewards stay one-shot.
+  room.exitUnlocked = true;
+  room.clearPending = true;
+  G.mode = 'navigate';
+  return true;
+}
+
+// Projectile travel begins at the original pace. A 60 WPM attempt (using the
+// game's 5-jamo WPM convention) is that baseline: 200 ms per jamo. The bonus
+// scales continuously until 120 WPM, where it reaches the deliberate 2× cap.
+const PROJECTILE_BASE_SPEED = 520;
+const PROJECTILE_BASE_MS_PER_JAMO = 200;
+const PROJECTILE_MAX_TYPING_MULTIPLIER = 2;
+
+export function projectileSpeedMultiplierForTyping(typedJamo, elapsedMs) {
+  const jamo = Math.max(1, Number(typedJamo) || 1);
+  const elapsed = Number(elapsedMs);
+  if (!Number.isFinite(elapsed) || elapsed < 0) return 1;
+  const baselineMs = jamo * PROJECTILE_BASE_MS_PER_JAMO;
+  return Math.max(1, Math.min(
+    PROJECTILE_MAX_TYPING_MULTIPLIER,
+    baselineMs / Math.max(1, elapsed),
+  ));
+}
+
+export function fire(monster, { typedJamo = null, typingDurationMs = null } = {}) {
+  if (!monster || monster.dead || monster.firedAt || monster.defeatCommitted) return false;
   sfx('arrowShoot');
   const emoji = _nextSpell || '🔮';
   const px    = G.W / 2;
@@ -926,7 +1107,10 @@ export function fire(monster) {
   }
   const dx    = monster.x - px, dy = monster.y - py;
   const d     = Math.hypot(dx, dy) || 1;
-  const spd   = 520 * (G.run?.projSpeedMult || 1);
+  const typingSpeedMult = projectileSpeedMultiplierForTyping(typedJamo, typingDurationMs);
+  const spd   = PROJECTILE_BASE_SPEED * (G.run?.projSpeedMult || 1) * typingSpeedMult;
+  const projectileFlightMs = d / spd * 1000;
+  const room = G.room;
 
   G.room.projs.push({
     x: px, y: py, emoji,
@@ -934,12 +1118,15 @@ export function fire(monster) {
     vx: dx/d * spd, vy: dy/d * spd,
     rot: 0, rs: (Math.random() - 0.5) * 18,
     size: Math.round(48 * G.vH / 1080), dead: false,
+    speed: spd,
     born: performance.now(),
   });
 
   if (G.run?.doubleShot) {
     // Second projectile targets a different alive monster
-    const others = (G.room?.monsters || []).filter(m => !m.dead && m.id !== monster.id);
+    const others = (G.room?.monsters || []).filter(m =>
+      !m.dead && !m.firedAt && !m.defeatCommitted && m.id !== monster.id
+    );
     const t2 = others[Math.floor(Math.random() * others.length)];
     if (t2) {
       const dx2 = t2.x - px, dy2 = t2.y - py, d2 = Math.hypot(dx2, dy2) || 1;
@@ -949,27 +1136,35 @@ export function fire(monster) {
         vx: dx2/d2 * spd, vy: dy2/d2 * spd,
         rot: 0, rs: -(Math.random() - 0.5) * 18,
         size: Math.round(40 * G.vH / 1080), dead: false,
+        speed: spd,
         born: performance.now(),
       });
       t2.firedAt = true;
+      if (_willShotDefinitelyKill(t2)) t2.defeatCommitted = true;
     }
   }
 
-  // Mark primary target as in-flight so the spawn slot opens immediately
+  // Mark primary target as in-flight. If this is the final deterministic hit,
+  // navigation opens now while the projectile remains visible and resolves.
   monster.firedAt = true;
-  _maybeTriggerSpawn();
+  if (_willShotDefinitelyKill(monster)) monster.defeatCommitted = true;
+  _recordSuccessfulFire(room);
+  _maybeUnlockRoomExit(room);
+  _maybeTriggerSpawn({ projectileFlightMs });
 
   // Multiplayer: broadcast projectile so partner can see it in their view
   if (G.mp?.active) {
     mpSend({
       type:  'proj_fire',
       emoji, px, py,
+      projectileSpeed: spd,
       mpId:  monster._mpId ?? null,
       words: monster.words,  // fallback for _mpId lookup
     });
   }
 
   rollNextSpell();
+  return true;
 }
 
 /* ================================================================
@@ -995,12 +1190,14 @@ let _onHitCallback = null;
 export function setOnHitCallback(cb) { _onHitCallback = cb; }
 
 export function hitMonster(m) {
-  if (m.special === 'warrior' && m.shielded) return;
-  if (m.type === 'boss' && m.special === 'king' && m.kingWaiting) return;
+  if (m.special === 'warrior' && m.shielded) { m.firedAt = false; m.defeatCommitted = false; return; }
+  if (m.type === 'boss' && m.special === 'king' && m.kingWaiting) { m.firedAt = false; m.defeatCommitted = false; return; }
 
   // Shield perk
   if (G.run?.shieldHits > 0 && !m.isProjectileMonster) {
     G.run.shieldHits--;
+    m.firedAt = false;
+    m.defeatCommitted = false;
     sfx('damageBlocked');
     flashAnnounce('🛡️ Blocked!', '#88aaff');
     return;
@@ -1037,6 +1234,10 @@ export function hitMonster(m) {
       spawnBossReinforcements(m);
     } else if (m.bossPhase === 1 && pct <= 0.25) {
       m.bossPhase = 2;
+      // Non-King bosses get one compact final wave. It adds concurrent targets
+      // instead of simply inflating their HP; the King keeps its established
+      // ninja cadence and quantity.
+      if (m.special !== 'king') spawnBossReinforcements(m, { latePhase: true });
       // Force activate special ability
       if (m.special === 'eruptor') { m.eruptActive = 5; m.nextFireball = 0; }
       if (m.special === 'king' && !m.kingWaiting) { m.kingCooldown = 0; }
@@ -1066,7 +1267,9 @@ export function hitMonster(m) {
     G.room.roomPool = (G.room.roomPool || 0) + killBonus;
     // Update pending counter live
     const _pEl = document.getElementById('hs-best');
-    if (_pEl) _pEl.textContent = formatKoreanNumber(G.room.roomPool) + '원';
+    if (_pEl) _pEl.textContent = formatKoreanNumber(G.room.roomPool);
+    const _pRow = document.getElementById('hs-best-row');
+    if (_pRow) _pRow.hidden = false;
 
     // Spawn coin particles from dead monster (1–3 coins)
     if (!m.isProjectileMonster) spawnCoins(m.x, m.y, 1 + Math.floor(Math.random() * 3));
@@ -1116,6 +1319,11 @@ export function hitMonster(m) {
       checkStall();
     }
   } else {
+    // This target is ready for its next word as soon as the hit resolves.
+    // Keeping firedAt strictly in-flight prevents duplicate projectiles while
+    // still allowing multi-HP enemies to remain part of the target cap.
+    m.firedAt = false;
+    m.defeatCommitted = false;
     // Knockback: push away from player
     {
       const emojiElK = document.getElementById('pl-emoji');
@@ -1151,22 +1359,30 @@ export function hitMonster(m) {
   }
 }
 
-function spawnBossReinforcements(boss) {
-  const wn = G.room.wave;
+function spawnBossReinforcements(boss, { latePhase = false } = {}) {
+  const room = G.room;
+  const wn = room.wave;
   const biome = G.dungeon?.worldDef?.id || 'forest';
-  const count = 2 + Math.floor(Math.random() * 2);
+  // The King retains the old 2–3 generic reinforcement count; its dedicated
+  // ninja summons are intentionally untouched. Other bosses make the fight
+  // denser at half health and receive a smaller final-wave pulse.
+  const count = boss.special === 'king'
+    ? 2 + Math.floor(Math.random() * 2)
+    : latePhase ? 2 : 3 + Math.floor(Math.random() * 2);
   for (let i = 0; i < count; i++) {
     const words = pickWordsForMonster(wn, 1, biome);
     const entry = WORD_DICT.find(w => w.text === words[0]);
     setTimeout(() => {
-      if (G.phase === 'run' && !boss.dead) {
-        G.room.monsters.push(mkMonster({
-          type:'normal', hp:2, maxHp:2, words,
+      if (G.phase === 'run' && G.room === room && !boss.dead) {
+        room.monsters.push(mkMonster({
+          // Reinforcements test multitarget pressure, not repeated copies of
+          // a word. One word therefore always means one decisive hit.
+          type:'normal', hp:1, maxHp:1, words,
           wordEmoji: entry?.emoji || null,
-          spdMult: 1.2,
+          spdMult: latePhase ? 1.15 : 1.1,
         }));
       }
-    }, i * 600);
+    }, i * (latePhase ? 500 : 550));
   }
   flashAnnounce('🐉 Reinforcements!', '#ff8800');
 }
@@ -1317,16 +1533,36 @@ export function tickBossSpecial(m, dt, px, py) {
   if (m.special === 'king') {
     if (m.kingWaiting === undefined) m.kingWaiting = false;
     if (m.kingCooldown === undefined) m.kingCooldown = 7 + Math.random() * 4;
+    if (m.kingNinjaQueued === undefined) m.kingNinjaQueued = 0;
+    if (m.kingNinjaSpawnCooldown === undefined) m.kingNinjaSpawnCooldown = 0;
     if (m.kingWaiting) {
-      const alive = G.room.monsters.some(n => n.parentId === m.id && !n.dead);
-      if (!alive) { m.kingWaiting = false; m.kingCooldown = 6 + Math.random() * 4; }
+      const alive = G.room.monsters.filter(n => n.parentId === m.id && !n.dead).length;
+      // A wave can contain up to four ninjas overall, but no more than two
+      // can be active. The cooldown does not run while both slots are full,
+      // so every refill gives the player a genuine typing grace period.
+      if (m.kingNinjaQueued > 0 && alive < 2) {
+        m.kingNinjaSpawnCooldown = Math.max(0, m.kingNinjaSpawnCooldown - dt);
+        if (m.kingNinjaSpawnCooldown <= 0) {
+          spawnNinja(m);
+          m.kingNinjaQueued--;
+          m.kingNinjaSpawnCooldown = 0.75;
+          return;
+        }
+      }
+      if (m.kingNinjaQueued <= 0 && alive === 0) {
+        m.kingWaiting = false;
+        m.kingNinjaSpawnCooldown = 0;
+        m.kingCooldown = 6 + Math.random() * 4;
+      }
       return;
     }
     m.kingCooldown -= dt;
     if (m.kingCooldown <= 0) {
       m.kingWaiting = true;
-      const count = 2 + Math.floor(Math.random() * 3);
-      for (let i = 0; i < count; i++) spawnNinja(m);
+      m.kingNinjaQueued = 2 + Math.floor(Math.random() * 3);
+      // The first ninja enters on the next update. Each later spawn gets a
+      // visible grace period rather than arriving as a four-enemy swarm.
+      m.kingNinjaSpawnCooldown = 0;
     }
   }
 
@@ -1433,12 +1669,16 @@ function spawnNinja(king) {
     emoji:'🥷', parentId:king.id,
     x: nx, y: ny,
     spawnNX: nx / G.W, spawnNY: ny / G.vH, progress: 0,
-    hp:2, maxHp:2, words, wi:0,
+    // A King ninja is an urgent projectile-style add: one word, one hit.
+    // Keeping it at two HP with one word made it reappear as the same word.
+    hp:1, maxHp:1, words, wi:0,
     get word() { return this.words[this.wi]; },
     size:44, baseSpd: monsterSpeed(words, false) * 1.5,
     get spd() { return this.baseSpd * (G.vH/G.H); },
     tracking:true, dead:false, flash:0, wob:Math.random()*Math.PI*2, scl:1, sclDir:1,
     isProjectileMonster:true,
+    autokillTargetable:true,
+    alwaysRevealWord:true,
   });
 }
 
@@ -1506,6 +1746,14 @@ export function tickMonsters(dt) {
       // Impact flash
       if (prog >= 0.79 && prog < 0.84) m.flash = 1.5;
       continue; // skip normal movement & collision during spawn
+    }
+
+    // The final word was accepted, so this monster is already out of the
+    // gameplay state. Let the projectile/impact finish visually, but never let
+    // it walk into or damage a player during that short overlap window.
+    if (m.defeatCommitted) {
+      if (m.flash > 0) m.flash -= dt * 5;
+      continue;
     }
 
     // Knockback - integrate velocity into a position offset (kbX/kbY) separate from
@@ -1613,14 +1861,15 @@ export function tickMonsters(dt) {
 }
 
 export function tickProjs(dt) {
-  const PROJ_SPD = 520 * (G.run?.projSpeedMult || 1);
+  const defaultProjSpeed = PROJECTILE_BASE_SPEED * (G.run?.projSpeedMult || 1);
   for (const p of G.room.projs) {
     const t = G.room.monsters.find(m => m.id === p.tid && !m.dead);
     if (!t) { p.dead = true; continue; }
     const dx = t.x - p.x, dy = t.y - p.y;
     const d  = Math.hypot(dx, dy) || 1;
-    p.vx = (dx/d) * PROJ_SPD;
-    p.vy = (dy/d) * PROJ_SPD;
+    const speed = Number.isFinite(p.speed) ? p.speed : defaultProjSpeed;
+    p.vx = (dx/d) * speed;
+    p.vy = (dy/d) * speed;
     p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.rs * dt;
     if (Math.hypot(p.x - t.x, p.y - t.y) < t.size * 0.4 + 8) {
       if (!p._fromP2) hitMonster(t); // ghost P2 projectiles don't trigger local hit (kill comes via monster_kill msg)
@@ -2078,7 +2327,7 @@ export function applyPowerup(item) {
     case '⚔️':
       for (const m of G.room.monsters) { if (!m.dead) { explode(m.x,m.y,m.size); m.dead=true; } }
       G.room.monsters = []; G.room.projs = [];
-      if (G.room.wPhase === 'spawning') { G.room.wTemplates = []; onRoomCleared(); }
+      if (G.room.wPhase === 'spawning') { G.room.wTemplates = []; G.room.wPrepared = []; onRoomCleared(); }
       flashAnnounce('⚔️ CLEAVE!', '#ff2244');
       break;
     case '📙': {
@@ -2195,15 +2444,20 @@ export function checkBubbleCollisions() {
   const py = G.vH - (paEl ? paEl.offsetHeight + 10 : 90) - 20;
   const r  = G.stunBubble ? 180 : 130;
   for (const m of G.room.monsters) {
-    if (m.dead || m.isProjectileMonster) continue;
+    // Projectile-style enemies are usually excluded from bubbles, but King
+    // ninjas are urgent adds rather than untargetable shots. Preserve their
+    // bot-priority flag while allowing Auto Kill to consume them normally.
+    const canAutoKill = G.autokillBubble && (!m.isProjectileMonster || m.autokillTargetable);
+    const canStun = G.stunBubble && !m.isProjectileMonster;
+    if (m.dead || (!canAutoKill && !canStun)) continue;
     const dist = Math.hypot(m.x - px, m.y - py);
     if (dist < r + m.size * 0.3) {
-      if (G.autokillBubble) {
+      if (canAutoKill) {
         explode(m.x,m.y,m.size); m.dead=true;
         if (!m.isProjectileMonster) onMonsterRemoved(m); else checkStall();
         hideBubble(); G.autokillBubble = false;
         if (G.activeEffect?.type === 'autokill') { G.activeEffect=null; refreshInventoryUI(); }
-      } else if (G.stunBubble && !m._stunned) {
+      } else if (canStun && !m._stunned) {
         m._stunned = true; m._stunnedTimer = 3.0;
         hideBubble(); G.stunBubble = false;
         if (G.activeEffect?.type === 'stun') { G.activeEffect=null; refreshInventoryUI(); }
@@ -2317,6 +2571,7 @@ function showDictUnlockNotif(words) {
   const hcard = document.getElementById('hcard-wave');
   if (hcard) {
     const r = hcard.getBoundingClientRect();
+    notif.style.left  = r.left + 'px';
     notif.style.top   = (r.bottom + 6) + 'px';
     notif.style.width = r.width + 'px';
   }
@@ -2411,9 +2666,15 @@ export function tickAnnounce(dt) {
 function updateWalletDisplay() {
   const el = document.getElementById('hs-val');
   if (!el) return;
-  el.textContent = formatKoreanNumber(G.run?.wallet || 0);
+  const wallet = G.run?.wallet || 0;
+  const pending = G.room?.roomPool || 0;
+  el.textContent = `${formatKoreanNumber(wallet)}원`;
+  const lbl = document.getElementById('hs-best-lbl');
+  if (lbl) lbl.textContent = i18n('hud.pending') + ': ';
   const pendingEl = document.getElementById('hs-best');
-  if (pendingEl) pendingEl.textContent = formatKoreanNumber(G.room?.roomPool || 0) + '원';
+  if (pendingEl) pendingEl.textContent = pending > 0 ? formatKoreanNumber(pending) : '';
+  const pendingRow = document.getElementById('hs-best-row');
+  if (pendingRow) pendingRow.hidden = pending <= 0;
   if (typeof window !== 'undefined' && window._hudUpdate) window._hudUpdate();
 }
 
@@ -2740,7 +3001,14 @@ export function drawMonsters({
   const LABEL_FONTS = ['"Pretendard"', '"Song Myung"', '"Nanum Myeongjo"'];
   const shouldDrawLabel = labelFilter || bodyFilter;
   for (const m of monsters) {
-    if (m.dead) continue;
+    // A deterministic final hit has already removed this enemy from gameplay.
+    // Keep its body for the projectile impact, but remove the obsolete word so
+    // a fast player never reads two targets that no longer exist.
+    if (m.dead || m.defeatCommitted) continue;
+    // While a multi-HP target has an in-flight hit bound to it, its current
+    // word is no longer actionable. Hide it until impact reveals its next
+    // form/word, rather than presenting a stale typing target.
+    if (m.maxHp > 1 && m.firedAt) continue;
     if (shouldDrawLabel && !shouldDrawLabel(m)) continue;
     if (m.fleeing) continue;
     // Hide label until monster lands (last 25% of spawn)
@@ -2781,7 +3049,7 @@ export function drawMonsters({
       const isNoun = wordDef && wordDef.category !== 'verb' && wordDef.category !== 'adjective';
       let shouldHideWord = false;
 
-      if (G.run?.worldIdx === 0) {
+      if (m.alwaysRevealWord || G.run?.worldIdx === 0) {
         shouldHideWord = false;
       } else if (isNoun) {
         // Noun hiding: based on kill count
@@ -3029,7 +3297,9 @@ export function killAllEnemies() {
   if (!G.room) return;
   // Clear pending spawn queue so no more enemies arrive
   G.room.wTemplates = [];
+  G.room.wPrepared = [];
   G.room.wPending = 0;
+  G.room.pendingWordLoad = 0;
   for (const m of [...G.room.monsters]) {
     if (!m.dead) {
       m.hp = 0;

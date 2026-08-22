@@ -324,19 +324,26 @@
         <div id="pause-run-stats" style="display:none"></div>
       </div>
       <div id="pause-mid-opts">
-        <div class="pause-opt-row pause-opt-full">
+        <div class="pause-opt-row pause-opt-full pause-ui-size-row">
+          <label class="pause-opt-label" for="pause-ui-size">📐 <span data-i18n="pause.uiSize">UI Size</span></label>
+          <div class="pause-ui-size-control">
+            <input type="range" id="pause-ui-size" min="75" max="130" step="5" value="100" aria-describedby="pause-ui-size-value">
+            <output id="pause-ui-size-value" for="pause-ui-size">1×</output>
+          </div>
+        </div>
+        <div class="pause-opt-row pause-opt-full pause-sfx-row">
           <span class="pause-opt-label"><span id="pause-sfx-emoji">🔉</span> SFX</span>
           <input type="range" id="pause-sfx-vol" min="0" max="100" value="50" style="width:90px;accent-color:#4a9eff">
         </div>
-        <div class="pause-opt-row pause-opt-full">
+        <div class="pause-opt-row pause-opt-full pause-music-row">
           <span class="pause-opt-label"><span id="pause-music-emoji">🎵</span> <span data-i18n="options.ambientMusic">Ambient Music</span></span>
           <input type="range" id="pause-music-vol" min="0" max="100" value="35" style="width:90px;accent-color:#4a9eff">
         </div>
-        <div class="pause-opt-row pause-opt-full">
+        <div class="pause-opt-row pause-opt-full pause-tts-row">
           <span class="pause-opt-label" data-i18n="options.speakWords">🔊 Speak Words</span>
           <label class="gopt-toggle"><input type="checkbox" id="pause-chk-tts" checked><span class="gopt-track"><span class="gopt-thumb"></span></span></label>
         </div>
-        <div class="pause-opt-row pause-opt-full">
+        <div class="pause-opt-row pause-opt-full pause-weather-row">
           <span class="pause-opt-label" data-i18n="options.weather">🌤️ Weather</span>
           <select id="pause-sel-weather" class="gopt-select" style="width:auto">
             <option value="1"    data-i18n-opt="options.weatherHighlyDetailed">Highly Detailed</option>
@@ -347,11 +354,11 @@
             <option value="0"    data-i18n-opt="options.weatherOff">Disabled</option>
           </select>
         </div>
-        <div class="pause-opt-row mp-session-row">
+        <div class="pause-opt-row mp-session-row pause-translation-row">
           <span class="pause-opt-label" data-i18n="options.translations">💬 Translations</span>
           <label class="gopt-toggle"><input type="checkbox" id="pause-chk-translation" checked><span class="gopt-track"><span class="gopt-thumb"></span></span></label>
         </div>
-        <div class="pause-opt-row mp-session-row">
+        <div class="pause-opt-row mp-session-row pause-hanja-row">
           <span class="pause-opt-label" data-i18n="options.hanjaOnMonsters">漢 Hanja on Monsters</span>
           <label class="gopt-toggle"><input type="checkbox" id="pause-chk-hanja-monsters"><span class="gopt-track"><span class="gopt-thumb"></span></span></label>
         </div>
@@ -428,7 +435,10 @@
 
 <!-- ── TUTORIAL BOX ───────────────────────────────────────── -->
 <div id="tutorial-box" class="off">
-  <button id="tutorial-close" onclick="window._hideTutorial(true)"><span class="icon-close"></span></button>
+  <div id="tutorial-actions">
+    <button id="tutorial-hide" onclick="window._hideTutorialsForRun?.()" data-i18n="tutorial.hide">Hide</button>
+    <button id="tutorial-close" onclick="window._hideTutorial(true)"><span class="icon-close"></span></button>
+  </div>
   <span id="tutorial-emoji"></span>
   <span id="tutorial-text"></span>
 </div>
@@ -502,9 +512,9 @@
     <div class="hlbl">💰 <span data-i18n="hud.wallet">돈</span></div>
     <div class="score-body">
       <div class="score-vals">
-        <div id="hs-val">0</div>
-        <div id="hs-best-row">
-          <span id="hs-best-lbl"></span><span id="hs-best">0</span>
+        <div id="hs-val">0원</div>
+        <div id="hs-best-row" hidden>
+          <span id="hs-best-lbl" data-i18n="hud.pending">Pending</span><span id="hs-best"></span>
         </div>
       </div>
       <button id="btn-pause" onclick="pauseGame()"><img src="assets/img/pause.svg" alt="Pause" width="22" height="22"></button>
@@ -877,6 +887,7 @@
     <button class="cheat-tab"        data-cheat-tab="summon" data-i18n="cheat.tab.summon">👾 Summon</button>
     <button class="cheat-tab"        data-cheat-tab="world"  data-i18n="cheat.tab.world">🌍 World</button>
     <button class="cheat-tab"        data-cheat-tab="room"   data-i18n="cheat.tab.room">🏛 Sala</button>
+    <button class="cheat-tab"        data-cheat-tab="bot">🤖 Bot</button>
   </div>
 
   <!-- ── Tab: Game ── -->
@@ -1038,7 +1049,39 @@
       <button class="cheat-btn red" onclick="cheatResetRoomColors()" data-i18n="cheat.btn.reset">Reset</button>
     </div>
   </div>
+
+  <!-- ── Tab: Bot benchmark ── -->
+  <div class="cheat-panel" id="cheat-panel-bot">
+    <p class="cheat-disclaimer">Uses the real typing, doors, boss and portal flow. Single-player only.</p>
+    <div class="cheat-row">
+      <label>🤖 Bot</label>
+      <button class="cheat-btn" id="c-bot-toggle" onclick="cheatToggleBot()">OFF</button>
+    </div>
+    <div class="cheat-row">
+      <label>Speed</label>
+      <input id="c-bot-wpm" type="range" min="20" max="250" step="1" value="100" style="width:150px">
+      <span id="c-bot-wpm-val">100 WPM</span>
+    </div>
+    <div class="cheat-row">
+      <label>Automove</label>
+      <button class="cheat-btn" id="c-bot-move" onclick="cheatToggleBotAutoMove()">OFF</button>
+    </div>
+    <div class="cheat-row">
+      <label>Type next world</label>
+      <button class="cheat-btn" id="c-bot-world" onclick="cheatToggleBotWorld()">OFF</button>
+    </div>
+    <div class="cheat-row">
+      <label>Use items</label>
+      <button class="cheat-btn" id="c-bot-items" onclick="cheatToggleBotItems()">OFF</button>
+    </div>
+    <div class="cheat-row">
+      <label>Pick up drops</label>
+      <button class="cheat-btn" id="c-bot-pickups" onclick="cheatToggleBotPickups()">OFF</button>
+    </div>
+    <div class="cheat-bot-stats" id="c-bot-stats">Bot idle · 0 WPM · 0s idle</div>
+  </div>
 </div>
+<a id="cheat-run-shortcut" href="#" hidden aria-label="Open Cheatcode">cheatcode</a>
 
 <!-- ── DOOR TRANSITION OVERLAY ─────────────────────────────── -->
 <div id="door-overlay"></div>

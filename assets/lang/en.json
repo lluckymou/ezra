@@ -120,6 +120,7 @@
     "title": "Paused",
     "resume": "▶ Resume",
     "mainMenu": "Main Menu",
+    "uiSize": "UI Size",
     "pauseShort": "PAUSE",
     "stat": {
       "monsters": "Monsters Killed",
@@ -700,7 +701,10 @@
     "challengeTitle": "Challenge",
     "exit": "Exit",
     "back": "← Back",
-    "understood": "Got it!",
+    "understood": "Got it! Level up, please!",
+    "levelUp": "Level Up",
+    "levelUpMonsterTypes": "Level up monster types",
+    "levelUpMonsters": "Level up monsters",
     "close": "Close",
     "retryNextWorld": "Try again next world",
     "alreadyAttempted": "Already attempted",
@@ -746,7 +750,8 @@
     "pickHanja": "Type the hanja syllable to pick up an item — if you own and use a Dictionary item, the hanja will be revealed",
     "typeToAdvance": "Type the word to advance to the next world",
     "findTeacher": "Finding the teacher can teach you a lesson and increase the challenge",
-    "casinoLuck": "Why not try your luck risking it all?"
+    "casinoLuck": "Why not try your luck risking it all?",
+    "hide": "Hide"
   },
   "words": {
     "집": "house",

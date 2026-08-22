@@ -3,7 +3,7 @@
 ================================================================ */
 import { G, resetRoomState, savePersistentState, recordWorldReached } from './state.js';
 import { get as i18n } from './i18n.js';
-import { genRoomEnemies, initRoomSpawner, setRoomClearedCallback, announce, dismissAnnounce, flashAnnounce, addToInventory, mkMonster, collectCoins, explodeCoins } from './combat.js';
+import { genRoomEnemies, initRoomSpawner, setRoomClearedCallback, announce, dismissAnnounce, flashAnnounce, addToInventory, mkMonster, collectCoins, explodeCoins, finalizePendingCombat } from './combat.js';
 import { mpSend, getMpTemplates } from './multiplayer.js';
 import { rollModifierChoices, PERMANENTS } from '../data/items.js';
 import { POWERUP_DEFS, POWERUP_KEYS } from '../data/items.js';
@@ -147,7 +147,7 @@ export const WORLDS = [
     bossEmoji: '🦈',       // Great white shark - deep East Sea
     bossName: '상어왕',
     biome: 'ocean',
-    forbiddenWeathers: ['snowing', 'blizzard'],
+    forbiddenWeathers: ['snowing', 'blizzard','blossom'],
     wind: 0.88,
     floorColor:     '#001628',  floorColorAlt: '#001020',
     wallColor:      '#001c38',  altWallColor:  '#003058',  // abyssal dark; door shows faint bioluminescence
@@ -255,7 +255,7 @@ export const WORLDS = [
     bossEmoji: '👾',       // Space invader - cosmic void boss
     bossName: '우주괴물',
     biome: 'cosmos',
-    forbiddenWeathers: ['raining', 'drizzle', 'snowing', 'blizzard', 'foggy'],
+    forbiddenWeathers: ['raining', 'drizzle', 'snowing', 'blizzard', 'blossom'],
     wind: 0.18,
     floorColor:     '#060012',  floorColorAlt: '#04000c',
     wallColor:      '#080018',  altWallColor:  '#140030',  // void black; door cracks show deep space purple
@@ -303,6 +303,12 @@ function shuffle(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+function _modifierChoicesHaveOwnedPermanent(choices) {
+  const owned = new Set(G.run?.permanents || []);
+  return (choices || []).some(choice => choice.type === 'permanent'
+    && owned.has(choice.item?.id));
 }
 
 function carve(grid, col, row) {
@@ -1020,6 +1026,10 @@ function closeMapOnRoomChange() {
 }
 
 export function enterRoom(col, row, fromDir = null) {
+  // A hyper typer may cross a door while their final projectile is still in
+  // flight. Resolve that old room once before replacing G.room so rewards and
+  // map state cannot be lost with the outgoing animation.
+  finalizePendingCombat();
   // Room changes always dismiss the map, regardless of how navigation started.
   // The minimap click path used to do this itself, but door navigation and
   // room-code teleports could leave the panel visible over the new room.
@@ -1135,7 +1145,12 @@ export function enterRoom(col, row, fromDir = null) {
 
     case 'modifier':
       G.mode = 'navigate';
-      if (!cell.itemChoices) cell.itemChoices = rollModifierChoices(G);
+      // A room can be opened, left, and revisited after the same upgrade was
+      // obtained elsewhere. Refresh that stale gift instead of displaying an
+      // unclaimable duplicate; an exhausted modifier pool becomes items only.
+      if (!cell.itemChoices || _modifierChoicesHaveOwnedPermanent(cell.itemChoices)) {
+        cell.itemChoices = rollModifierChoices(G);
+      }
       spawnRoomNpc('modifier', '✨', cell);
       announce(i18n('world.modifierPrompt'), null);
       break;
@@ -1358,15 +1373,23 @@ export function setCombatRef(_ref) {}
 const DIR_DELTA = { N: [0,-1], S: [0,1], E: [1,0], W: [-1,0] };
 const DIR_NAMES = { N: '북', S: '남', E: '동', W: '서' };
 
+function isAvailableDir(cell, dir) {
+  if (!cell?.connections.has(dir)) return false;
+  const delta = DIR_DELTA[dir];
+  if (!delta) return false;
+  const [dc, dr] = delta;
+  const nc = cell.col + dc, nr = cell.row + dr;
+  // Wall Breaker deliberately creates border connections. They are portals to
+  // the opposite edge, so typed navigation must expose the same doors that
+  // the clickable-door layer already accepts.
+  return G.run?.wallBreaker || (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS);
+}
+
 export function getAvailableDirs() {
   if (!G.currentRoom || !G.dungeon) return [];
   const cell = currentCell();
   if (!cell) return [];
-  return [...cell.connections].filter(dir => {
-    const [dc, dr] = DIR_DELTA[dir];
-    const nc = cell.col + dc, nr = cell.row + dr;
-    return nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS;
-  });
+  return [...cell.connections].filter(dir => isAvailableDir(cell, dir));
 }
 
 export function navigate(dir) {
@@ -1374,7 +1397,7 @@ export function navigate(dir) {
   if (G.phase !== 'run') return;
 
   const cell = currentCell();
-  if (!cell || !cell.connections.has(dir)) return;
+  if (!isAvailableDir(cell, dir)) return;
 
   const [dc, dr] = DIR_DELTA[dir];
   // Wrap around for wall-breaker border portals
@@ -1760,6 +1783,13 @@ export function pickModifierItem(cell, choiceIdx) {
   if (!cell.itemChoices) return;
   const choice = cell.itemChoices[choiceIdx];
   if (!choice) return;
+
+  // Defensive guard for a choice that became stale while its UI was open.
+  // Never consume the room for a duplicate permanent; replace its offers.
+  if (choice.type === 'permanent' && G.run.permanents.includes(choice.item?.id)) {
+    cell.itemChoices = rollModifierChoices(G);
+    return;
+  }
 
   if (choice.type === 'permanent') {
     const perm = choice.item;

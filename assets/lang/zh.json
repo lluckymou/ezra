@@ -120,6 +120,7 @@
     "title": "已暂停",
     "resume": "▶ 简历",
     "mainMenu": "主菜单",
+    "uiSize": "界面大小",
     "pauseShort": "暂停",
     "stat": {
       "monsters": "杀死怪物",
@@ -700,7 +701,10 @@
     "challengeTitle": "挑战",
     "exit": "退出",
     "back": "← 返回",
-    "understood": "明白了！",
+    "understood": "明白了！请让我升级！",
+    "levelUp": "升级",
+    "levelUpMonsterTypes": "升级怪物类型",
+    "levelUpMonsters": "升级怪物",
     "close": "关闭",
     "retryNextWorld": "下一个世界再试一次",
     "alreadyAttempted": "已经尝试过",
@@ -746,7 +750,8 @@
     "pickHanja": "输入汉字音节来选择一个项目 - 如果您拥有并使用字典项目，汉字将会显示",
     "typeToAdvance": "输入单词即可进入下一个世界",
     "findTeacher": "找到老师可以给你上一课，增加挑战",
-    "casinoLuck": "为什么不赌上一切去碰碰运气呢？"
+    "casinoLuck": "为什么不赌上一切去碰碰运气呢？",
+    "hide": "隐藏"
   },
   "words": {
     "집": "房子",

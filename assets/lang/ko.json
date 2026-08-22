@@ -120,6 +120,7 @@
     "title": "일시정지",
     "resume": "▶ 계속",
     "mainMenu": "메인 메뉴",
+    "uiSize": "UI 크기",
     "pauseShort": "정지",
     "stat": {
       "monsters": "처치한 몬스터",
@@ -307,7 +308,10 @@
     "challengeTitle": "도전",
     "exit": "나가기",
     "back": "← 뒤로",
-    "understood": "이해했어요!",
+    "understood": "이해했어요! 레벨 업 해주세요!",
+    "levelUp": "레벨 업",
+    "levelUpMonsterTypes": "몬스터 종류 레벨 업",
+    "levelUpMonsters": "몬스터 레벨 업",
     "close": "닫기",
     "retryNextWorld": "다음 세계에서 재시도",
     "alreadyAttempted": "이미 시도됨",
@@ -353,7 +357,8 @@
     "pickHanja": "한자의 음절을 입력해서 아이템을 집으세요 — 사전 아이템을 보유하고 사용하면 한자가 공개돼요",
     "typeToAdvance": "단어를 입력해서 다음 세계로 넘어가세요",
     "findTeacher": "선생님을 찾으면 수업을 들을 수 있고 도전 난이도가 높아져요",
-    "casinoLuck": "모든 것을 걸고 운을 시험해 보는 건 어떨까요?"
+    "casinoLuck": "모든 것을 걸고 운을 시험해 보는 건 어떨까요?",
+    "hide": "숨기기"
   },
   "gameOver": {
     "victory": "🏆 클리어!",

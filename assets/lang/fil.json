@@ -120,6 +120,7 @@
     "title": "Naka-pause",
     "resume": "▶ Ipagpatuloy",
     "mainMenu": "Pangunahing Menu",
+    "uiSize": "Laki ng UI",
     "pauseShort": "PAUSE",
     "stat": {
       "monsters": "Pinatay ang mga Halimaw",
@@ -700,7 +701,10 @@
     "challengeTitle": "Hamon",
     "exit": "Lumabas",
     "back": "← Bumalik",
-    "understood": "Nakuha ko!",
+    "understood": "Nakuha ko! Mag-level up tayo!",
+    "levelUp": "Mag-level up",
+    "levelUpMonsterTypes": "I-level up ang mga uri ng halimaw",
+    "levelUpMonsters": "I-level up ang mga halimaw",
     "close": "Isara",
     "retryNextWorld": "Subukan muli ang susunod na mundo",
     "alreadyAttempted": "Sinubukan na",
@@ -746,7 +750,8 @@
     "pickHanja": "I-type ang pantig ng hanja para kunin ang isang item — kung pagmamay-ari mo at gagamit ka ng item sa Dictionary, ipapakita ang hanja",
     "typeToAdvance": "I-type ang salita upang sumulong sa susunod na mundo",
     "findTeacher": "Ang paghahanap ng guro ay maaaring magturo sa iyo ng isang aralin at madagdagan ang hamon",
-    "casinoLuck": "Bakit hindi subukan ang iyong kapalaran ipagsapalaran ang lahat ng ito?"
+    "casinoLuck": "Bakit hindi subukan ang iyong kapalaran ipagsapalaran ang lahat ng ito?",
+    "hide": "Itago"
   },
   "words": {
     "집": "bahay",

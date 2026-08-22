@@ -120,6 +120,7 @@
     "title": "Dijeda",
     "resume": "▶ Lanjutkan",
     "mainMenu": "Menu Utama",
+    "uiSize": "Ukuran UI",
     "pauseShort": "JEDA",
     "stat": {
       "monsters": "Monster Dibunuh",
@@ -700,7 +701,10 @@
     "challengeTitle": "Tantangan",
     "exit": "Keluar",
     "back": "← Kembali",
-    "understood": "Mengerti!",
+    "understood": "Mengerti! Naikkan level, ya!",
+    "levelUp": "Naik Level",
+    "levelUpMonsterTypes": "Naikkan level jenis monster",
+    "levelUpMonsters": "Naikkan level monster",
     "close": "Tutup",
     "retryNextWorld": "Coba lagi di dunia berikutnya",
     "alreadyAttempted": "Sudah mencoba",
@@ -746,7 +750,8 @@
     "pickHanja": "Ketik suku kata hanja untuk mengambil item — jika Anda memiliki dan menggunakan item Kamus, hanja akan terungkap",
     "typeToAdvance": "Ketikkan kata untuk maju ke dunia berikutnya",
     "findTeacher": "Menemukan guru dapat memberi Anda pelajaran dan meningkatkan tantangan",
-    "casinoLuck": "Mengapa tidak mencoba keberuntungan Anda dengan mempertaruhkan segalanya?"
+    "casinoLuck": "Mengapa tidak mencoba keberuntungan Anda dengan mempertaruhkan segalanya?",
+    "hide": "Sembunyikan"
   },
   "words": {
     "집": "rumah",

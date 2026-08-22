@@ -120,6 +120,7 @@
     "title": "Đã tạm dừng",
     "resume": "► Tiếp tục",
     "mainMenu": "Thực đơn chính",
+    "uiSize": "Kích thước giao diện",
     "pauseShort": "TẠM DỪNG",
     "stat": {
       "monsters": "Quái vật bị giết",
@@ -700,7 +701,10 @@
     "challengeTitle": "Thử thách",
     "exit": "Thoát",
     "back": "← Trở lại",
-    "understood": "Hiểu rồi!",
+    "understood": "Hiểu rồi! Cho tôi lên cấp nhé!",
+    "levelUp": "Lên cấp",
+    "levelUpMonsterTypes": "Nâng cấp loại quái vật",
+    "levelUpMonsters": "Nâng cấp quái vật",
     "close": "Đóng",
     "retryNextWorld": "Hãy thử lại thế giới tiếp theo",
     "alreadyAttempted": "Đã cố gắng",
@@ -746,7 +750,8 @@
     "pickHanja": "Nhập âm tiết hanja để chọn một mục - nếu bạn sở hữu và sử dụng một mục Từ điển, hanja sẽ được hiển thị",
     "typeToAdvance": "Gõ từ để tiến tới thế giới tiếp theo",
     "findTeacher": "Tìm thầy có thể dạy cho bạn một bài học và tăng thêm thử thách",
-    "casinoLuck": "Tại sao không thử vận may của mình và mạo hiểm tất cả?"
+    "casinoLuck": "Tại sao không thử vận may của mình và mạo hiểm tất cả?",
+    "hide": "Ẩn"
   },
   "words": {
     "집": "nhà ở",

@@ -49,13 +49,17 @@ export function updateLives() {
 export function updateWallet() {
   const el = document.getElementById('hs-val');
   if (!el) return;
-  el.textContent = formatKoreanNumber(G.run?.wallet ?? 0);
+  const wallet = G.run?.wallet ?? 0;
+  const pending = G.room?.roomPool || 0;
+  el.textContent = `${formatKoreanNumber(wallet)}원`;
   const lbl = document.getElementById('hs-best-lbl');
   if (lbl) {
     lbl.textContent = i18n('hud.pending') + ': ';
   }
   const pendingEl = document.getElementById('hs-best');
-  if (pendingEl) pendingEl.textContent = formatKoreanNumber(G.room?.roomPool || 0) + '원';
+  if (pendingEl) pendingEl.textContent = pending > 0 ? formatKoreanNumber(pending) : '';
+  const pendingRow = document.getElementById('hs-best-row');
+  if (pendingRow) pendingRow.hidden = pending <= 0;
 }
 
 export function updateWorldIndicator() {
@@ -134,8 +138,12 @@ export function renderShopScreen(cell) {
   const wallet = G.run?.wallet || 0;
   const walletEl = document.getElementById('run-shop-wallet');
   if (walletEl) walletEl.textContent = `💰 ${formatKoreanNumber(wallet)}원`;
-  // Generate shop inventory once per room visit; cache on cell
-  if (!cell._shopInventory) {
+  // Keep a shop's stock stable, except when one of its cached upgrades was
+  // acquired somewhere else. In that case reroll it from the remaining pool;
+  // once every modifier is owned this naturally leaves consumables only.
+  const ownsCachedModifier = entry => entry.type === 'modifier'
+    && (G.run?.permanents || []).includes(entry.permId);
+  if (!cell._shopInventory || cell._shopInventory.some(ownsCachedModifier)) {
     cell._shopInventory = generateShopInventory(G, G.run?.worldIdx || 0);
   }
   const inventory = cell._shopInventory;
@@ -855,6 +863,8 @@ export function renderTeacherScreen(cell) {
         <div class="choice-badge">${i18n('teacher.lessonBadge')}</div>
         <div class="choice-emoji">${lesson.emoji}</div>
         <div class="choice-name">${i18n(lesson.title_key)}</div>
+        <div class="teacher-level-up">— ${i18n('teacher.levelUp')} —</div>
+        <div class="teacher-level-up-desc">${i18n('teacher.levelUpMonsterTypes')}</div>
         ${alreadyLearned ? '<div class="choice-desc" style="color:#3aaf80">✓</div>' : ''}
         ${onCooldown ? `<div class="teacher-lesson-cooldown">${cdMins}분</div>` : ''}
       </div>`;
@@ -884,6 +894,8 @@ export function renderTeacherScreen(cell) {
         <div class="choice-badge">${i18n('teacher.challengeBadge')}</div>
         <div class="choice-emoji">💪</div>
         <div class="choice-name">${i18n('teacher.challengeTitle')}</div>
+        <div class="teacher-level-up">— ${i18n('teacher.levelUp')} —</div>
+        <div class="teacher-level-up-desc">${i18n('teacher.levelUpMonsters')}</div>
         ${gaveUp ? `<div class="choice-desc" style="font-size:.78rem;opacity:.65">${i18n('teacher.alreadyAttempted')}</div>` : ''}
       </div>
     </div>
@@ -933,6 +945,12 @@ function showLessonContent(container, lesson, cell) {
       <button class="pause-btn" onclick="window._teacherBack()" style="opacity:0.7">${i18n('teacher.back')}</button>
     </div>
   `;
+
+  // The teacher card, not the lesson body, owns the actual viewport scroll.
+  // Always begin a lesson at its top so the bot's later midpoint scroll is
+  // visible and manual revisits are predictable too.
+  const teacherCard = container.closest('.menu-card');
+  if (teacherCard) teacherCard.scrollTop = 0;
 
   container.querySelector('#btn-lesson-done').onclick = () => {
     sfx('lessonDone');
@@ -1087,19 +1105,23 @@ export function renderCasinoScreen(cell) {
 
   // Build item pool: shop-style goods + bad outcomes
   const shopInv = generateShopInventory(G, G.run?.worldIdx || 0);
-  const goodItems = shopInv.map(e => {
-    if (e.type === 'consumable') {
-      const def = POWERUP_DEFS[e.itemKey];
-      if (!def) return null;
-      const name = i18n('items.' + def.id + '.name');
-      return { emoji: e.itemKey, name, isBad: false, itemKey: e.itemKey };
-    } else {
+  const ownedPerms = new Set(G.run?.permanents || []);
+  const goodItems = shopInv
+    // generateShopInventory already filters these, but keeping the casino's
+    // reward pool defensive guarantees it never displays an owned modifier.
+    .filter(e => e.type !== 'modifier' || !ownedPerms.has(e.permId))
+    .map(e => {
+      if (e.type === 'consumable') {
+        const def = POWERUP_DEFS[e.itemKey];
+        if (!def) return null;
+        const name = i18n('items.' + def.id + '.name');
+        return { emoji: e.itemKey, name, isBad: false, itemKey: e.itemKey };
+      }
       const perm = PERMANENTS.find(p => p.id === e.permId);
       if (!perm) return null;
       const name = i18n('items.' + perm.id + '.name');
       return { emoji: perm.emoji, name, isBad: false, permId: e.permId };
-    }
-  }).filter(Boolean);
+    }).filter(Boolean);
 
   const pool = [...goodItems, ...BAD_OUTCOMES.map(b => {
     const name = i18n('casino.' + b.id + '.name');
